@@ -1,43 +1,25 @@
 'use strict';
-const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
-const {WebSocketServer}=require('ws');
-const PORT=Number(process.env.PORT||8000),ROOT=path.join(__dirname,'public');
-const W=2600,H=1800,MAX_GEMS=210,SPEED=250;
-const players=new Map(),gems=new Map();
-const rand=(a,b)=>a+Math.random()*(b-a), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const cleanName=s=>String(s||'Player').replace(/[^\p{L}\p{N} _-]/gu,'').trim().slice(0,16)||'Player';
-const newGem=()=>{const id=crypto.randomUUID();gems.set(id,{id,x:rand(35,W-35),y:rand(35,H-35),v:Math.random()<.1?5:1});};
-for(let i=0;i<MAX_GEMS;i++)newGem();
-const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
-const server=http.createServer((req,res)=>{
-  let pathname;try{pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname)}catch{res.writeHead(400);return res.end();}
-  if(pathname==='/health'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({ok:true,players:players.size}));}
-  const file=path.resolve(ROOT,'.'+(pathname==='/'?'/index.html':pathname));
-  if(!(file===ROOT||file.startsWith(ROOT+path.sep))){res.writeHead(403);return res.end();}
-  fs.stat(file,(err,st)=>{if(err||!st.isFile()){res.writeHead(404);return res.end('Not found');}
-    res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream','Cache-Control':'no-cache'});fs.createReadStream(file).pipe(res);
-  });
-});
-const wss=new WebSocketServer({server,path:'/ws',maxPayload:2048});
-function send(ws,data){if(ws.readyState===1)ws.send(JSON.stringify(data));}
-function snapshot(){const state=JSON.stringify({t:'state',p:[...players.values()].map(({id,name,x,y,score,color})=>({id,name,x:Math.round(x),y:Math.round(y),score,color})),g:[...gems.values()]});for(const ws of wss.clients)if(ws.readyState===1&&ws.bufferedAmount<200000)ws.send(state);}
-wss.on('connection',ws=>{
- const id=crypto.randomUUID(),color=Math.floor(rand(0,360));
- const p={id,name:'Player',x:rand(80,W-80),y:rand(80,H-80),score:0,color,dx:0,dy:0};
- players.set(id,p);send(ws,{t:'hello',id,w:W,h:H});
- ws.on('message',raw=>{let msg;try{msg=JSON.parse(raw)}catch{return;}if(!msg||typeof msg!=='object')return;
-  if(msg.t==='join')p.name=cleanName(msg.name);
-  if(msg.t==='input'){let dx=Number(msg.x),dy=Number(msg.y);if(!Number.isFinite(dx)||!Number.isFinite(dy))return;let l=Math.hypot(dx,dy);p.dx=l?clamp(dx/l,-1,1):0;p.dy=l?clamp(dy/l,-1,1):0;}
- });
- ws.on('close',()=>players.delete(id));ws.on('error',()=>{});
-});
-let last=Date.now();setInterval(()=>{
- const now=Date.now(),dt=Math.min((now-last)/1000,.07);last=now;
- for(const p of players.values()){
-  const speed=SPEED*(1+Math.min(p.score,250)/1000);
-  p.x=clamp(p.x+p.dx*speed*dt,20,W-20);p.y=clamp(p.y+p.dy*speed*dt,20,H-20);
-  for(const [id,g] of gems)if(Math.hypot(p.x-g.x,p.y-g.y)<27){p.score+=g.v;gems.delete(id);newGem();}
- }
-},1000/30);
-setInterval(snapshot,100);
-server.listen(PORT,'0.0.0.0',()=>console.log(`NEON STEVE ARENA http://localhost:${PORT}`));
+const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),{WebSocketServer}=require('ws');
+const PORT=process.env.PORT||8000,ROOT=path.join(__dirname,'public'),players=new Map(),rooms=new Map(),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const clean=s=>String(s||'Player').replace(/[^\p{L}\p{N}_ -]/gu,'').trim().slice(0,16)||'Player';
+const maps=[{id:'dust',name:'DUST DISTRICT',blocks:[[-18,-10,8,16],[18,10,8,16],[0,-25,20,4],[0,25,20,4],[-35,20,8,8],[35,-20,8,8]]},{id:'ice',name:'FROST BASE',blocks:[[-25,0,5,30],[25,0,5,30],[0,-30,24,5],[0,30,24,5],[-10,15,10,5],[15,-15,10,5]]},{id:'yard',name:'CONTAINER YARD',blocks:[[-30,-20,18,5],[-30,-10,18,5],[30,20,18,5],[30,10,18,5],[0,0,10,10],[0,35,24,5]]}];
+const server=http.createServer((req,res)=>{let u;try{u=new URL(req.url,'http://localhost')}catch{res.writeHead(400);return res.end()}if(u.pathname==='/health'){res.writeHead(200,{'content-type':'application/json'});return res.end(JSON.stringify({ok:true,players:players.size,rooms:rooms.size,uptime:Math.round(process.uptime())}))}let p=u.pathname==='/'?'/index.html':u.pathname,f=path.resolve(ROOT,'.'+decodeURIComponent(p));if(!f.startsWith(ROOT+path.sep)){res.writeHead(403);return res.end()}fs.stat(f,(e,s)=>{if(e||!s.isFile()){res.writeHead(404);return res.end('Not found')}res.writeHead(200,{'content-type':({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[path.extname(f)]||'application/octet-stream','cache-control':'no-cache'});fs.createReadStream(f).pipe(res)})});
+const wss=new WebSocketServer({server,path:'/ws',perMessageDeflate:false,maxPayload:2048});
+function send(p,m){if(p.ws.readyState===1&&p.ws.bufferedAmount<65536)p.ws.send(JSON.stringify(m))}
+function pub(p){return {id:p.id,name:p.name,x:p.x,z:p.z,yaw:p.yaw,pitch:p.pitch,hp:p.hp,kills:p.kills,deaths:p.deaths,weapon:p.weapon,skin:p.skin,room:p.room}}
+function roomFor(name,map){let k=name+'|'+map;if(!rooms.has(k))rooms.set(k,{key:k,name,map,players:new Set(),chat:[]});return rooms.get(k)}
+function spawn(p){p.x=(Math.random()-.5)*55;p.z=(Math.random()-.5)*55;p.hp=100;p.yaw=Math.random()*6.28;p.respawnAt=0}
+function hit(a,b){let dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz);if(d>70||d<.01)return false;let aim=Math.atan2(-dx,-dz),diff=Math.atan2(Math.sin(a.yaw-aim),Math.cos(a.yaw-aim));return Math.abs(diff)<(a.weapon==='scout'?.04:.075)}
+function broadcast(r,m){const s=JSON.stringify(m);for(const id of r.players){let p=players.get(id);if(p&&p.ws.readyState===1&&p.ws.bufferedAmount<65536)p.ws.send(s)}}
+function damage(a,b,n){b.hp=Math.max(0,b.hp-n);if(!b.hp){b.deaths++;a.kills++;b.respawnAt=Date.now()+1800;broadcast(roomFor(a.room,a.map),{t:'kill',killer:a.name,victim:b.name})}broadcast(roomFor(a.room,a.map),{t:'update',player:pub(b)})}
+wss.on('connection',ws=>{let p=null;ws.on('message',raw=>{let m;try{m=JSON.parse(raw)}catch{return}if(!m||!m.t)return;
+if(m.t==='join'&&!p){let map=maps.some(v=>v.id===m.map)?m.map:'dust',name=clean(m.room||'QUICK MATCH').toUpperCase().slice(0,20),r=roomFor(name,map);p={id:crypto.randomUUID(),ws,name:clean(m.name),room:name,map,x:0,z:0,yaw:0,pitch:0,hp:100,kills:0,deaths:0,weapon:'sniper',skin:'standard',mx:0,mz:0,lastShot:0,respawnAt:0};spawn(p);players.set(p.id,p);r.players.add(p.id);send(p,{t:'welcome',id:p.id,map:maps.find(v=>v.id===map),players:[...r.players].map(id=>players.get(id)).filter(Boolean).map(pub),chat:r.chat.slice(-25)});broadcast(r,{t:'join',player:pub(p)});return}
+if(!p)return;
+if(m.t==='input'){p.mx=clamp(Number(m.mx)||0,-1,1);p.mz=clamp(Number(m.mz)||0,-1,1);if(Number.isFinite(Number(m.yaw)))p.yaw=Number(m.yaw);p.pitch=clamp(Number(m.pitch)||0,-1.35,1.35);if(['sniper','scout','knife'].includes(m.weapon))p.weapon=m.weapon}
+if(m.t==='shoot'){let now=Date.now(),cd=p.weapon==='knife'?450:p.weapon==='scout'?420:850;if(now-p.lastShot<cd||p.hp<=0)return;p.lastShot=now;let r=roomFor(p.room,p.map);if(p.weapon==='knife'){for(let id of r.players){let q=players.get(id);if(q&&q.id!==p.id&&q.hp>0&&Math.hypot(q.x-p.x,q.z-p.z)<3.4&&hit(p,q)){damage(p,q,100);break}}}else{let best=null,dist=Infinity;for(let id of r.players){let q=players.get(id);if(!q||q.id===p.id||q.hp<=0||!hit(p,q))continue;let d=Math.hypot(q.x-p.x,q.z-p.z);if(d<dist){dist=d;best=q}}if(best)damage(p,best,p.weapon==='scout'?55:100)}broadcast(r,{t:'shot',id:p.id,weapon:p.weapon,at:now})}
+if(m.t==='change'){if(['sniper','scout','knife'].includes(m.weapon))p.weapon=m.weapon;if(['standard','ember','frost','toxic','gold'].includes(m.skin))p.skin=m.skin}
+if(m.t==='chat'){let text=String(m.text||'').replace(/[<>]/g,'').trim().slice(0,180);if(text){let r=roomFor(p.room,p.map),item={name:p.name,text,at:Date.now()};r.chat.push(item);r.chat=r.chat.slice(-50);broadcast(r,{t:'chat',item})}}
+});ws.on('close',()=>{if(p){let r=roomFor(p.room,p.map);r.players.delete(p.id);players.delete(p.id);broadcast(r,{t:'leave',id:p.id})}});ws.on('error',()=>{})});
+let last=Date.now();setInterval(()=>{let now=Date.now(),dt=Math.min((now-last)/1000,.05);last=now;for(let r of rooms.values()){for(let id of r.players){let p=players.get(id);if(!p)continue;if(p.hp<=0){if(now>=p.respawnAt){spawn(p);send(p,{t:'respawned'})}continue}let mx=p.mx,mz=p.mz,l=Math.hypot(mx,mz);if(l>1){mx/=l;mz/=l}let speed=p.weapon==='knife'?9:p.weapon==='scout'?7.7:6.8,nx=clamp(p.x+mx*speed*dt,-48,48),nz=clamp(p.z+mz*speed*dt,-48,48),map=maps.find(v=>v.id===p.map),blocked=map.blocks.some(([x,z,w,d])=>nx>x-w/2-.8&&nx<x+w/2+.8&&nz>z-d/2-.8&&nz<z+d/2+.8);if(!blocked){p.x=nx;p.z=nz}}
+let snapshot=JSON.stringify({t:'state',time:now,players:[...r.players].map(id=>players.get(id)).filter(Boolean).map(pub)});for(let id of r.players){let p=players.get(id);if(p&&p.ws.readyState===1&&p.ws.bufferedAmount<65536)p.ws.send(snapshot)}}},50);
+server.listen(PORT,'0.0.0.0',()=>console.log('SNIPER ARENA listening on '+PORT));
