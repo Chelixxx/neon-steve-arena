@@ -10,7 +10,10 @@ function save(){const tmp=DB+'.tmp';fs.writeFileSync(tmp,JSON.stringify(store));
 const cleanName=s=>String(s||'').normalize('NFKC').replace(/[^\p{L}\p{N}_. -]/gu,'').trim().slice(0,24);
 const publicUser=u=>({id:u.id,name:u.name,online:(clients.get(u.id)?.size||0)>0,bio:u.bio||'',avatar:u.avatar||''});
 const clients=new Map();
-if(!store.channels.length){store.channels.push({id:'pulse-news',name:'Pulse News',description:'Новости Pulse',type:'channel',owner:'system',members:[],createdAt:Date.now()});save()}
+if(!store.channels.length){store.channels.push({id:'pulse-news',name:'Pulse News',description:'Новости Pulse',type:'channel',owner:'system',members:[],createdAt:Date.now()})}
+if(!store.posts.some(p=>p.id==='pulse-welcome'))store.posts.push({id:'pulse-welcome',title:'Добро пожаловать в наш мессенджер!',body:'Добро пожаловать в Pulse Messenger — место для общения, идей и новых знакомств! 💜\n\nПроект создан @Chelixxx при помощи @ChatGPT. @Chelixxx — автор и создатель Pulse, а @ChatGPT помогал придумывать функции, продумывать интерфейс и писать код. Главная идея Pulse — удобное общение и развитие вместе с вами.\n\nСпасибо, что вы с нами. Это только начало! 🚀',link:'',author:'@Chelixxx × @ChatGPT',at:Date.now()});
+if(!store.messages.some(m=>m.id==='pulse-welcome-message'))store.messages.push({id:'pulse-welcome-message',from:'system',name:'Pulse News',to:null,channelId:'pulse-news',text:'Добро пожаловать в наш мессенджер!\n\nПроект создан @Chelixxx при помощи @ChatGPT. @Chelixxx — автор и создатель Pulse, а @ChatGPT помогал с идеями, интерфейсом и разработкой. Спасибо, что вы с нами! 💜',at:Date.now(),readBy:[],deliveredTo:[]});
+save();
 const publicChannel=c=>({id:c.id,name:c.name,description:c.description||'',type:c.type,owner:c.owner,createdAt:c.createdAt});
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.mp4':'video/mp4','.webm':'video/webm','.mov':'video/quicktime','.m4v':'video/mp4','.mp3':'audio/mpeg','.m4a':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.pdf':'application/pdf','.txt':'text/plain; charset=utf-8','.md':'text/markdown; charset=utf-8','.csv':'text/csv; charset=utf-8','.json':'application/json','.zip':'application/zip','.7z':'application/x-7z-compressed','.rar':'application/vnd.rar','.doc':'application/msword','.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','.xls':'application/vnd.ms-excel','.xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','.ppt':'application/vnd.ms-powerpoint','.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','.rtf':'application/rtf','.aac':'audio/aac','.flac':'audio/flac'};
 function sign(uid){const payload=Buffer.from(JSON.stringify({uid,exp:Date.now()+30*864e5})).toString('base64url');return payload+'.'+crypto.createHmac('sha256',SECRET).update(payload).digest('base64url')}
@@ -27,6 +30,13 @@ async function twilioVerify(path,params){
  if(!sid||!token||!service)throw Object.assign(new Error('SMS-подтверждение пока не настроено: администратору нужно добавить Twilio credentials в Railway Variables.'),{status:503});
  const form=new URLSearchParams(params);const r=await fetch('https://verify.twilio.com/v2/Services/'+encodeURIComponent(service)+path,{method:'POST',headers:{authorization:'Basic '+Buffer.from(sid+':'+token).toString('base64'),'content-type':'application/x-www-form-urlencoded'},body:form});
  const data=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(data.message||'Не удалось выполнить SMS-подтверждение'),{status:r.status===429?429:400});return data;
+}
+async function sendEmailCode(to,code){
+ const host=process.env.SMTP_HOST,user=process.env.SMTP_USER,pass=process.env.SMTP_PASS,from=process.env.SMTP_FROM||user;
+ if(!host||!user||!pass||!from)throw Object.assign(new Error('Подтверждение по email пока не настроено. Администратору нужно добавить SMTP_HOST, SMTP_USER, SMTP_PASS и SMTP_FROM в Railway Variables.'),{status:503});
+ const nodemailer=require('nodemailer');
+ const transport=nodemailer.createTransport({host,port:Number(process.env.SMTP_PORT||587),secure:process.env.SMTP_SECURE==='true',auth:{user,pass}});
+ await transport.sendMail({from,to,subject:'Код подтверждения Pulse Messenger',text:'Твой код Pulse: '+code+'\nКод действует 10 минут. Никому его не сообщай.',html:'<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;background:#10121f;color:#f6f7ff;border-radius:18px"><h1 style="color:#8d7bff">PULSE</h1><p>Твой код подтверждения:</p><div style="font-size:32px;font-weight:bold;letter-spacing:8px;padding:18px;background:#1d2034;border-radius:12px;text-align:center">'+code+'</div><p>Код действует 10 минут. Никому его не сообщай.</p></div>'});
 }
 function userById(id){return store.users.find(u=>u.id===id)}
 function userByName(name){return store.users.find(u=>u.name.toLowerCase()===name.toLowerCase())}
@@ -47,33 +57,41 @@ const server=http.createServer(async(req,res)=>{
  if(u.pathname==='/health')return json(res,200,{ok:true,app:'Pulse Messenger',accounts:store.users.length,online:clients.size,messages:store.messages.length});
  if(req.method==='POST'&&u.pathname==='/api/register/start'){
   try{
-   const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||''),email=normalizeEmail(b.email),phone=normalizePhone(b.phone);
+   const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||''),method=b.method==='phone'?'phone':'email',email=normalizeEmail(b.email),phone=normalizePhone(b.phone);
    if(name.length<3||name.length>24)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'});
    if(password.length<8||password.length>200)return json(res,400,{error:'Пароль должен быть не короче 8 символов'});
-   if(!validEmail(email))return json(res,400,{error:'Укажи корректную электронную почту'});
-   if(!/^\+[1-9]\d{7,14}$/.test(phone))return json(res,400,{error:'Номер нужен в международном формате, например +4915123456789'});
    if(userByName(name))return json(res,409,{error:'Этот ник уже занят'});
-   if(store.users.some(x=>x.email&&x.email===email))return json(res,409,{error:'Эта электронная почта уже используется'});
-   if(store.users.some(x=>x.phone&&x.phone===phone))return json(res,409,{error:'Этот номер уже используется'});
+   if(method==='email'&&!validEmail(email))return json(res,400,{error:'Укажи корректную электронную почту'});
+   if(method==='phone'&&!/^\+[1-9]\d{7,14}$/.test(phone))return json(res,400,{error:'Номер нужен в международном формате, например +4915123456789'});
+   const contact=method==='email'?email:phone;
+   if(store.users.some(x=>method==='email'?x.email&&x.email===email:x.phone&&x.phone===phone))return json(res,409,{error:method==='email'?'Эта электронная почта уже используется':'Этот номер уже используется'});
    for(const [key,p] of pendingRegistrations)if(p.expires<Date.now())pendingRegistrations.delete(key);
-   const recent=[...pendingRegistrations.values()].filter(p=>p.phone===phone&&Date.now()-p.createdAt<60000);if(recent.length)return json(res,429,{error:'Подожди минуту перед повторной отправкой кода'});
-   const salt=crypto.randomBytes(16).toString('hex');const id=crypto.randomUUID();
-   await twilioVerify('/Verifications',{To:phone,Channel:'sms'});
-   pendingRegistrations.set(id,{name,passwordHash:passwordHash(password,salt),salt,email,phone,createdAt:Date.now(),expires:Date.now()+10*60*1000});
-   return json(res,200,{ok:true,registrationId:id,message:'SMS-код отправлен. Он действует 10 минут.'});
+   const recent=[...pendingRegistrations.values()].filter(p=>p.method===method&&p.contact===contact&&Date.now()-p.createdAt<60000);if(recent.length)return json(res,429,{error:'Подожди минуту перед повторной отправкой кода'});
+   const salt=crypto.randomBytes(16).toString('hex'),id=crypto.randomUUID();
+   const pending={name,passwordHash:passwordHash(password,salt),salt,email:method==='email'?email:'',phone:method==='phone'?phone:'',method,contact,createdAt:Date.now(),expires:Date.now()+10*60*1000,attempts:0};
+   if(method==='phone'){await twilioVerify('/Verifications',{To:phone,Channel:'sms'});}
+   else{const code=String(crypto.randomInt(100000,1000000));pending.codeHash=crypto.createHash('sha256').update(id+':'+code).digest('hex');await sendEmailCode(email,code);}
+   pendingRegistrations.set(id,pending);
+   return json(res,200,{ok:true,registrationId:id,method,message:method==='phone'?'SMS-код отправлен. Он действует 10 минут.':'Код отправлен на email. Он действует 10 минут.'});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось начать регистрацию'})}
  }
  if(req.method==='POST'&&u.pathname==='/api/register/verify'){
   try{
    const b=await parseBody(req),id=String(b.registrationId||''),code=String(b.code||'').trim(),pending=pendingRegistrations.get(id);
    if(!pending||pending.expires<Date.now()){pendingRegistrations.delete(id);return json(res,400,{error:'Заявка истекла. Начни регистрацию заново.'})}
-   if(!/^\d{4,10}$/.test(code))return json(res,400,{error:'Введи код из SMS'});
-   const check=await twilioVerify('/VerificationCheck',{To:pending.phone,Code:code});
-   if(check.status!=='approved')return json(res,400,{error:'Код неверный или уже истёк'});
-   if(userByName(pending.name)||store.users.some(x=>x.email===pending.email||x.phone===pending.phone)){pendingRegistrations.delete(id);return json(res,409,{error:'Ник, почта или номер уже используются. Начни заново.'})}
-   const user={id:crypto.randomUUID(),name:pending.name,salt:pending.salt,hash:pending.passwordHash,email:pending.email,phone:pending.phone,phoneVerified:true,createdAt:Date.now()};
-   store.users.push(user);save();pendingRegistrations.delete(id);setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,email:user.email,phone:user.phone}});
-  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось подтвердить номер'})}
+   if(!/^\d{6}$/.test(code))return json(res,400,{error:'Введи шестизначный код подтверждения'});
+   if(++pending.attempts>5){pendingRegistrations.delete(id);return json(res,429,{error:'Слишком много попыток. Начни регистрацию заново.'})}
+   if(pending.method==='phone'){
+    const check=await twilioVerify('/VerificationCheck',{To:pending.phone,Code:code});
+    if(check.status!=='approved')return json(res,400,{error:'Код неверный или уже истёк'});
+   }else{
+    const hash=crypto.createHash('sha256').update(id+':'+code).digest('hex');
+    if(hash!==pending.codeHash)return json(res,400,{error:'Код неверный или уже истёк'});
+   }
+   if(userByName(pending.name)||store.users.some(x=>(pending.email&&x.email===pending.email)||(pending.phone&&x.phone===pending.phone))){pendingRegistrations.delete(id);return json(res,409,{error:'Ник, почта или номер уже используются. Начни заново.'})}
+   const user={id:crypto.randomUUID(),name:pending.name,salt:pending.salt,hash:pending.passwordHash,email:pending.email||undefined,phone:pending.phone||undefined,emailVerified:pending.method==='email',phoneVerified:pending.method==='phone',createdAt:Date.now()};
+   store.users.push(user);save();pendingRegistrations.delete(id);setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,email:user.email||'',phone:user.phone||''}});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось подтвердить контакт'})}
  }
  if(req.method==='POST'&&['/api/register','/api/login'].includes(u.pathname)){
   try{const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||'');
