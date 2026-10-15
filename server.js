@@ -22,6 +22,8 @@ function cookieToken(req){const v=String(req.headers.cookie||'').split(';').map(
 function setCookie(res,uid){res.setHeader('set-cookie','pulse_session='+encodeURIComponent(sign(uid))+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000')}
 function clearCookie(res){res.setHeader('set-cookie','pulse_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')}
 const pendingRegistrations=new Map();
+const pendingContacts=new Map();
+const pendingRecoveries=new Map();
 function normalizeEmail(v){return String(v||'').trim().toLowerCase()}
 function normalizePhone(v){return String(v||'').replace(/[\s().-]/g,'')}
 function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)&&v.length<=254}
@@ -110,8 +112,65 @@ const server=http.createServer(async(req,res)=>{
   }catch(e){return json(res,e.status||400,{error:e.message||'Ошибка запроса'})}
  }
  if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);return user?json(res,200,{user:{id:user.id,name:user.name}}):json(res,401,{error:'Не авторизован'})}
+ if(req.method==='POST'&&u.pathname==='/api/contact/start'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});
+  try{
+   const b=await parseBody(req),method=b.method==='phone'?'phone':'email',email=normalizeEmail(b.contact),phone=normalizePhone(b.contact),contact=method==='email'?email:phone;
+   if(method==='email'&&!validEmail(email))return json(res,400,{error:'Укажи корректную электронную почту'});
+   if(method==='phone'&&!/^\+[1-9]\d{7,14}$/.test(phone))return json(res,400,{error:'Номер нужен в международном формате, например +4915123456789'});
+   if(store.users.some(x=>x.id!==uid&&(method==='email'?x.email===contact:x.phone===contact)))return json(res,409,{error:'Этот контакт уже привязан к другому аккаунту'});
+   const previous=pendingContacts.get(uid);if(previous&&Date.now()-previous.createdAt<60000)return json(res,429,{error:'Подожди минуту перед повторной отправкой кода'});
+   const id=crypto.randomUUID(),code=String(crypto.randomInt(100000,1000000)),pending={id,uid,method,contact,createdAt:Date.now(),expires:Date.now()+10*60*1000,attempts:0};
+   if(method==='phone')await twilioVerify('/Verifications',{To:contact,Channel:'sms'});
+   else{pending.codeHash=crypto.createHash('sha256').update(id+':'+code).digest('hex');await sendEmailCode(contact,code)}
+   pendingContacts.set(uid,pending);return json(res,200,{ok:true,message:method==='phone'?'Код отправлен по SMS.':'Код отправлен на почту.',method});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось отправить код'})}
+ }
+ if(req.method==='POST'&&u.pathname==='/api/contact/verify'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});
+  try{
+   const b=await parseBody(req),code=String(b.code||'').trim(),pending=pendingContacts.get(uid);
+   if(!pending||pending.expires<Date.now()){pendingContacts.delete(uid);return json(res,400,{error:'Код истёк. Запроси новый.'})}
+   if(!/^\d{6}$/.test(code))return json(res,400,{error:'Введи шестизначный код'});
+   if(++pending.attempts>5){pendingContacts.delete(uid);return json(res,429,{error:'Слишком много попыток. Запроси новый код.'})}
+   if(pending.method==='phone'){const check=await twilioVerify('/VerificationCheck',{To:pending.contact,Code:code});if(check.status!=='approved')return json(res,400,{error:'Неверный или истёкший код'})}
+   else{const hash=crypto.createHash('sha256').update(pending.id+':'+code).digest('hex');if(hash!==pending.codeHash)return json(res,400,{error:'Неверный или истёкший код'})}
+   if(store.users.some(x=>x.id!==uid&&(pending.method==='email'?x.email===pending.contact:x.phone===pending.contact))){pendingContacts.delete(uid);return json(res,409,{error:'Этот контакт уже привязан к другому аккаунту'})}
+   const user=userById(uid);if(pending.method==='email'){user.email=pending.contact;user.emailVerified=true}else{user.phone=pending.contact;user.phoneVerified=true}
+   save();pendingContacts.delete(uid);return json(res,200,{ok:true,message:'Контакт подтверждён и привязан для восстановления.'});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось подтвердить контакт'})}
+ }
+ if(req.method==='POST'&&u.pathname==='/api/recovery/start'){
+  try{
+   const b=await parseBody(req),method=b.method==='phone'?'phone':'email',contact=method==='email'?normalizeEmail(b.contact):normalizePhone(b.contact);
+   if(method==='email'&&!validEmail(contact))return json(res,400,{error:'Укажи корректную почту'});
+   if(method==='phone'&&!/^\+[1-9]\d{7,14}$/.test(contact))return json(res,400,{error:'Укажи номер в международном формате, например +4915123456789'});
+   const user=store.users.find(x=>method==='email'?(x.email===contact&&x.emailVerified===true):(x.phone===contact&&x.phoneVerified===true));
+   const id=crypto.randomUUID();
+   if(user){
+    const code=String(crypto.randomInt(100000,1000000)),pending={id,uid:user.id,method,contact,createdAt:Date.now(),expires:Date.now()+10*60*1000,attempts:0};
+    if(method==='phone')await twilioVerify('/Verifications',{To:contact,Channel:'sms'});
+    else{pending.codeHash=crypto.createHash('sha256').update(id+':'+code).digest('hex');await sendEmailCode(contact,code)}
+    pendingRecoveries.set(id,pending);
+   }
+   return json(res,200,{ok:true,recoveryId:id,message:'Если этот контакт привязан и подтверждён, код восстановления отправлен. Проверь почту или SMS.'});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось начать восстановление'})}
+ }
+ if(req.method==='POST'&&u.pathname==='/api/recovery/complete'){
+  try{
+   const b=await parseBody(req),id=String(b.recoveryId||''),code=String(b.code||'').trim(),password=String(b.password||''),pending=pendingRecoveries.get(id);
+   if(!pending||pending.expires<Date.now()){pendingRecoveries.delete(id);return json(res,400,{error:'Запрос истёк или контакт не найден. Начни восстановление заново.'})}
+   if(password.length<8||password.length>200)return json(res,400,{error:'Новый пароль должен содержать от 8 до 200 символов'});
+   if(!/^\d{6}$/.test(code))return json(res,400,{error:'Введи шестизначный код'});
+   if(++pending.attempts>5){pendingRecoveries.delete(id);return json(res,429,{error:'Слишком много попыток. Начни восстановление заново.'})}
+   if(pending.method==='phone'){const check=await twilioVerify('/VerificationCheck',{To:pending.contact,Code:code});if(check.status!=='approved')return json(res,400,{error:'Неверный или истёкший код'})}
+   else{const hash=crypto.createHash('sha256').update(id+':'+code).digest('hex');if(hash!==pending.codeHash)return json(res,400,{error:'Неверный или истёкший код'})}
+   const user=userById(pending.uid);if(!user){pendingRecoveries.delete(id);return json(res,400,{error:'Аккаунт не найден'})}
+   const salt=crypto.randomBytes(16).toString('hex');user.salt=salt;user.hash=passwordHash(password,salt);save();pendingRecoveries.delete(id);return json(res,200,{ok:true,message:'Пароль изменён. Теперь войди с новым паролем.'});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось восстановить аккаунт'})}
+ }
  if(req.method==='POST'&&u.pathname==='/api/logout'){clearCookie(res);return json(res,200,{ok:true})}
- if(req.method==='GET'&&u.pathname==='/api/community'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'}); return json(res,200,{channels:store.channels.map(publicChannel),posts:store.posts.slice(-100).reverse(),bots:[{id:'pulse-verify',name:'Pulse Verify',description:'Подтверждение номера SMS',configured:!!(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_VERIFY_SERVICE_SID)},{id:'pulse-news',name:'Pulse News',description:'Новости в канале и общей ленте',active:true}],profile:(()=>{const x=userById(uid);return {name:x.name,email:x.email||'',phone:x.phone||'',bio:x.bio||'',avatar:x.avatar||''}})()}); }
+ if(req.method==='GET'&&u.pathname==='/api/community'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'}); return json(res,200,{channels:store.channels.map(publicChannel),posts:store.posts.slice(-100).reverse(),bots:[{id:'pulse-verify',name:'Pulse Verify',description:'Подтверждение номера SMS',configured:!!(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_VERIFY_SERVICE_SID)},{id:'pulse-news',name:'Pulse News',description:'Новости в канале и общей ленте',active:true}],profile:(()=>{const x=userById(uid);return {name:x.name,email:x.email||'',phone:x.phone||'',emailVerified:!!x.emailVerified,phoneVerified:!!x.phoneVerified,bio:x.bio||'',avatar:x.avatar||''}})()}); }
  if(req.method==='POST'&&u.pathname==='/api/profile'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'}); try{const b=await parseBody(req,1500000),user=userById(uid),name=cleanName(b.name||user.name),bio=String(b.bio||'').slice(0,240),avatar=String(b.avatar||''); if(name.length<3)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'}); if(store.users.some(x=>x.id!==uid&&x.name.toLowerCase()===name.toLowerCase()))return json(res,409,{error:'Этот ник уже занят'}); if(avatar&&(!avatar.startsWith('data:image/')||avatar.length>1100000))return json(res,400,{error:'Аватар должен быть изображением до 800 КБ'}); user.name=name;user.bio=bio;if(avatar)user.avatar=avatar;save();broadcast({t:'presence',users:onlineUsers()});return json(res,200,{profile:{name:user.name,bio:user.bio,avatar:user.avatar||''}})}catch(e){return json(res,e.status||400,{error:e.message||'Ошибка профиля'})} }
  if(req.method==='POST'&&u.pathname==='/api/channels'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'}); try{const b=await parseBody(req),name=String(b.name||'').trim().slice(0,40),description=String(b.description||'').trim().slice(0,240),type=b.type==='group'?'group':'channel';if(name.length<2)return json(res,400,{error:'Название должно быть не короче 2 символов'});const c={id:crypto.randomUUID(),name,description,type,owner:uid,members:[uid],createdAt:Date.now()};store.channels.push(c);save();broadcast({t:'channels',channels:store.channels.map(publicChannel)});return json(res,201,{channel:publicChannel(c)})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось создать канал'})} }
  if(req.method==='POST'&&u.pathname==='/api/news'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'});const token=String(req.headers['x-pulse-admin-token']||'');if(!process.env.PULSE_ADMIN_TOKEN||token!==process.env.PULSE_ADMIN_TOKEN)return json(res,403,{error:'Нужен админ-токен Pulse для публикации новостей'});try{const b=await parseBody(req),title=String(b.title||'').trim().slice(0,120),body=String(b.body||'').trim().slice(0,5000),link=String(b.link||'').trim().slice(0,500);if(title.length<3||body.length<3)return json(res,400,{error:'Заполни заголовок и текст новости'});const post={id:crypto.randomUUID(),title,body,link,author:userById(uid).name,at:Date.now()};store.posts.push(post);if(store.posts.length>1000)store.posts=store.posts.slice(-1000);let c=store.channels.find(x=>x.id==='pulse-news');if(!c){c={id:'pulse-news',name:'Pulse News',description:'Новости Pulse',type:'channel',owner:'system',members:[],createdAt:Date.now()};store.channels.unshift(c)}const msg={id:crypto.randomUUID(),from:uid,name:'Pulse News',to:null,channelId:c.id,text:title+'\\n\\n'+body+(link?'\\n\\n'+link:''),at:Date.now(),readBy:[],deliveredTo:[],newsPostId:post.id};store.messages.push(msg);save();broadcast({t:'message',message:msg});broadcast({t:'news-post',post});return json(res,201,{post})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось опубликовать новость'})} }
