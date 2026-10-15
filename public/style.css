@@ -78,3 +78,5 @@ body[data-theme="light"] .settings-list label{color:#292d42}
 .sticker-image{display:block;width:min(220px,55vw);max-height:220px;object-fit:contain;border-radius:14px;filter:drop-shadow(0 6px 12px #0005)}
 .sticker-draft-item img{width:32px;height:32px;object-fit:contain;border-radius:5px}
 .sticker-creator input[type=file],.admin-avatar-panel input[type=file]{font-size:11px;padding:9px}
+
+.admin-avatar-preview{display:flex;justify-content:center;align-items:center;min-height:0;margin:8px 0}.admin-avatar-preview:empty{display:none}.admin-avatar-preview img{width:92px;height:92px;border-radius:50%;object-fit:cover;border:2px solid #a99bff;box-shadow:0 0 22px #8b6cff55;background:#171a29}
