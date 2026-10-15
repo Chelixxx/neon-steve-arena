@@ -76,7 +76,7 @@ function online(id){return (clients.get(id)?.size||0)>0}
 function markRead(uid,ids){const touched=[];for(const m of store.messages){if(ids.includes(m.id)&&m.to===uid&&m.from!==uid&&!m.readBy.includes(uid)){m.readBy.push(uid);touched.push(m)}}if(touched.length){save();for(const m of touched)sendUser(m.from,{t:'read-receipt',ids:touched.filter(x=>x.from===m.from).map(x=>x.id),reader:uid})}}
 const server=http.createServer(async(req,res)=>{
  let u;try{u=new URL(req.url,'http://localhost')}catch{return json(res,400,{error:'Bad request'})}
- let deviceId=deviceIdFrom(req);if(!deviceId){deviceId=crypto.randomUUID();res.setHeader('set-cookie','pulse_device='+encodeURIComponent(deviceId)+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000')}
+ let deviceId=deviceIdFrom(req);if(!deviceId){deviceId=crypto.randomUUID();req.headers.cookie=(req.headers.cookie?req.headers.cookie+'; ':'')+'pulse_device='+encodeURIComponent(deviceId);res.setHeader('set-cookie','pulse_device='+encodeURIComponent(deviceId)+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000')}
  if(store.deviceBans[deviceId]&&(u.pathname.startsWith('/api/')||u.pathname==='/upload'||u.pathname.startsWith('/uploads/')))return json(res,403,{error:'Это устройство заблокировано'+(store.deviceBans[deviceId].reason?': '+String(store.deviceBans[deviceId].reason).slice(0,200):'')})
  if(u.pathname==='/health')return json(res,200,{ok:true,app:'Pulse Messenger',accounts:store.users.length,online:clients.size,messages:store.messages.length});
  if(req.method==='POST'&&u.pathname==='/api/register/start'){
@@ -259,6 +259,7 @@ const server=http.createServer(async(req,res)=>{
    store.giftTransactions=store.giftTransactions.filter(t=>t.userId!==targetId&&t.adminId!==targetId);
    delete store.messageHides[targetId];
    save();
+   broadcast({t:'messages-deleted',ids:[...removedIds]});
    const sockets=clients.get(targetId);if(sockets)for(const ws of [...sockets]){try{send(ws,{t:'banned',reason:'Аккаунт удалён администратором'});ws.close(1008,'Account deleted')}catch{}}
    for(const url of candidateFiles){const stillUsed=store.messages.some(m=>m.attachment?.url===url);if(!stillUsed){const file=path.join(UPLOADS,path.basename(url));try{fs.unlinkSync(file)}catch{}}}
    broadcastPresence();
