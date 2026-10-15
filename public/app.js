@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const $=id=>document.getElementById(id);let ws=null,myId=null,myName='',activeId=null,tab='chats',users=[],messagesByChat=new Map(),unreadCounts=new Map(),typingTimer=null,authMode='login',toastTimer=null,mediaRecorder=null,recordChunks=[],localStream=null,pc=null,callPeer=null,callType='audio',callInitiator=false,micMuted=false,cameraOff=false,pendingCandidates=[];
+const $=id=>document.getElementById(id);let ws=null,myId=null,myName='',activeId=null,tab='chats',users=[],messagesByChat=new Map(),unreadCounts=new Map(),typingTimer=null,authMode='login',toastTimer=null,registrationId=null,smsStep=false,mediaRecorder=null,recordChunks=[],localStream=null,pc=null,callPeer=null,callType='audio',callInitiator=false,micMuted=false,cameraOff=false,pendingCandidates=[];
 const globalKey='global',dmKey=id=>'dm:'+id;
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function avatar(name){return esc((name||'?').trim().slice(0,1).toUpperCase())}
@@ -10,7 +10,7 @@ function currentKey(){return activeId===globalKey?globalKey:dmKey(activeId)}
 function labelFor(id){if(id===globalKey)return 'Общий чат';return users.find(u=>u.id===id)?.name||'Пользователь'}
 function init(){
  $('loginForm').onsubmit=e=>{e.preventDefault();authenticate()};
- $('authSwitch').onclick=()=>{authMode=authMode==='login'?'register':'login';$('authTitle').textContent=authMode==='login'?'Связь без границ.':'Создай свой Pulse.';$('authSubtitle').textContent=authMode==='login'?'Войди, чтобы открыть свои чаты и сообщения.':'Регистрация сохранит твой аккаунт и переписки.';$('authSubmit').innerHTML=authMode==='login'?'Войти в Pulse <span>↗</span>':'Создать аккаунт <span>↗</span>';$('authSwitch').textContent=authMode==='login'?'Нет аккаунта? Создать':'Уже есть аккаунт? Войти';$('password').autocomplete=authMode==='login'?'current-password':'new-password';$('loginError').textContent=''};
+ $('authSwitch').onclick=()=>{authMode=authMode==='login'?'register':'login';registrationId=null;smsStep=false;$('registrationFields').classList.toggle('hidden',authMode!=='register');$('email').required=authMode==='register';$('phone').required=authMode==='register';$('smsCode').classList.add('hidden');$('codeLabel').classList.add('hidden');$('smsCode').required=false;$('authTitle').textContent=authMode==='login'?'Связь без границ.':'Создай свой Pulse.';$('authSubtitle').textContent=authMode==='login'?'Войди, чтобы открыть свои чаты и сообщения.':'Регистрация сохранит твой аккаунт и переписки.';$('authSubmit').innerHTML=authMode==='login'?'Войти в Pulse <span>↗</span>':'Создать аккаунт <span>↗</span>';$('authSwitch').textContent=authMode==='login'?'Нет аккаунта? Создать':'Уже есть аккаунт? Войти';$('password').autocomplete=authMode==='login'?'current-password':'new-password';$('loginError').textContent=''};
  $('logoutBtn').onclick=logout;
  $('newChat').onclick=()=>{tab='people';renderTabs();$('search').focus();renderList()};
  $('profileBtn').onclick=()=>toast('Твой профиль: '+myName);
@@ -35,9 +35,16 @@ function init(){
 }
 async function authenticate(){
  const name=$('nickname').value.trim(),password=$('password').value;
- $('authSubmit').disabled=true;$('loginError').textContent=authMode==='login'?'Входим…':'Создаём аккаунт…';
- try{const r=await fetch('/api/'+authMode,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,password})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Не удалось войти');myName=data.user.name;connect()}
- catch(e){$('loginError').textContent=e.message||'Ошибка соединения'}
+ $('authSubmit').disabled=true;$('loginError').textContent=authMode==='login'?'Входим…':(smsStep?'Проверяем код…':'Отправляем SMS-код…');
+ try{
+  let endpoint,body;
+  if(authMode==='login'){endpoint='/api/login';body={name,password}}
+  else if(!smsStep){endpoint='/api/register/start';body={name,password,email:$('email').value.trim(),phone:$('phone').value.trim()}}
+  else{endpoint='/api/register/verify';body={registrationId,code:$('smsCode').value.trim()}}
+  const r=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Не удалось выполнить запрос');
+  if(authMode==='register'&&!smsStep){registrationId=data.registrationId;smsStep=true;$('smsCode').classList.remove('hidden');$('codeLabel').classList.remove('hidden');$('smsCode').required=true;$('authTitle').textContent='Проверь SMS';$('authSubtitle').textContent='Введи код из SMS, чтобы подтвердить номер телефона. Код действует 10 минут.';$('authSubmit').innerHTML='Подтвердить номер <span>✓</span>';$('loginError').textContent=data.message||'Код отправлен';$('smsCode').focus();return}
+  myName=data.user.name;connect();
+ }catch(e){$('loginError').textContent=e.message||'Ошибка соединения'}
  finally{$('authSubmit').disabled=false}
 }
 async function checkSession(){
