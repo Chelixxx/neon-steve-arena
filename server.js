@@ -16,6 +16,16 @@ function verifyToken(token){try{const [p,s]=String(token||'').split('.');const s
 function cookieToken(req){const v=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('pulse_session='));return v?decodeURIComponent(v.slice(14)):''}
 function setCookie(res,uid){res.setHeader('set-cookie','pulse_session='+encodeURIComponent(sign(uid))+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000')}
 function clearCookie(res){res.setHeader('set-cookie','pulse_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')}
+const pendingRegistrations=new Map();
+function normalizeEmail(v){return String(v||'').trim().toLowerCase()}
+function normalizePhone(v){return String(v||'').replace(/[\\s().-]/g,'')}
+function validEmail(v){return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v)&&v.length<=254}
+async function twilioVerify(path,params){
+ const sid=process.env.TWILIO_ACCOUNT_SID,token=process.env.TWILIO_AUTH_TOKEN,service=process.env.TWILIO_VERIFY_SERVICE_SID;
+ if(!sid||!token||!service)throw Object.assign(new Error('SMS-подтверждение пока не настроено: администратору нужно добавить Twilio credentials в Railway Variables.'),{status:503});
+ const form=new URLSearchParams(params);const r=await fetch('https://verify.twilio.com/v2/Services/'+encodeURIComponent(service)+path,{method:'POST',headers:{authorization:'Basic '+Buffer.from(sid+':'+token).toString('base64'),'content-type':'application/x-www-form-urlencoded'},body:form});
+ const data=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(data.message||'Не удалось выполнить SMS-подтверждение'),{status:r.status===429?429:400});return data;
+}
 function userById(id){return store.users.find(u=>u.id===id)}
 function userByName(name){return store.users.find(u=>u.name.toLowerCase()===name.toLowerCase())}
 function send(ws,m){if(ws?.readyState===1&&ws.bufferedAmount<1e6)ws.send(JSON.stringify(m))}
@@ -33,6 +43,36 @@ function markRead(uid,ids){const touched=[];for(const m of store.messages){if(id
 const server=http.createServer(async(req,res)=>{
  let u;try{u=new URL(req.url,'http://localhost')}catch{return json(res,400,{error:'Bad request'})}
  if(u.pathname==='/health')return json(res,200,{ok:true,app:'Pulse Messenger',accounts:store.users.length,online:clients.size,messages:store.messages.length});
+ if(req.method==='POST'&&u.pathname==='/api/register/start'){
+  try{
+   const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||''),email=normalizeEmail(b.email),phone=normalizePhone(b.phone);
+   if(name.length<3||name.length>24)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'});
+   if(password.length<8||password.length>200)return json(res,400,{error:'Пароль должен быть не короче 8 символов'});
+   if(!validEmail(email))return json(res,400,{error:'Укажи корректную электронную почту'});
+   if(!/^\\+[1-9]\\d{7,14}$/.test(phone))return json(res,400,{error:'Номер нужен в международном формате, например +4915123456789'});
+   if(userByName(name))return json(res,409,{error:'Этот ник уже занят'});
+   if(store.users.some(x=>x.email&&x.email===email))return json(res,409,{error:'Эта электронная почта уже используется'});
+   if(store.users.some(x=>x.phone&&x.phone===phone))return json(res,409,{error:'Этот номер уже используется'});
+   for(const [key,p] of pendingRegistrations)if(p.expires<Date.now())pendingRegistrations.delete(key);
+   const recent=[...pendingRegistrations.values()].filter(p=>p.phone===phone&&Date.now()-p.createdAt<60000);if(recent.length)return json(res,429,{error:'Подожди минуту перед повторной отправкой кода'});
+   const salt=crypto.randomBytes(16).toString('hex');const id=crypto.randomUUID();
+   await twilioVerify('/Verifications',{To:phone,Channel:'sms'});
+   pendingRegistrations.set(id,{name,passwordHash:passwordHash(password,salt),salt,email,phone,createdAt:Date.now(),expires:Date.now()+10*60*1000});
+   return json(res,200,{ok:true,registrationId:id,message:'SMS-код отправлен. Он действует 10 минут.'});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось начать регистрацию'})}
+ }
+ if(req.method==='POST'&&u.pathname==='/api/register/verify'){
+  try{
+   const b=await parseBody(req),id=String(b.registrationId||''),code=String(b.code||'').trim(),pending=pendingRegistrations.get(id);
+   if(!pending||pending.expires<Date.now()){pendingRegistrations.delete(id);return json(res,400,{error:'Заявка истекла. Начни регистрацию заново.'})}
+   if(!/^\\d{4,10}$/.test(code))return json(res,400,{error:'Введи код из SMS'});
+   const check=await twilioVerify('/VerificationCheck',{To:pending.phone,Code:code});
+   if(check.status!=='approved')return json(res,400,{error:'Код неверный или уже истёк'});
+   if(userByName(pending.name)||store.users.some(x=>x.email===pending.email||x.phone===pending.phone)){pendingRegistrations.delete(id);return json(res,409,{error:'Ник, почта или номер уже используются. Начни заново.'})}
+   const user={id:crypto.randomUUID(),name:pending.name,salt:pending.salt,hash:pending.passwordHash,email:pending.email,phone:pending.phone,phoneVerified:true,createdAt:Date.now()};
+   store.users.push(user);save();pendingRegistrations.delete(id);setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,email:user.email,phone:user.phone}});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось подтвердить номер'})}
+ }
  if(req.method==='POST'&&['/api/register','/api/login'].includes(u.pathname)){
   try{const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||'');
    if(name.length<3||name.length>24)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'});
