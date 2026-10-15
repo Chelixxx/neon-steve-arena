@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "Pulse Messenger",
+  "short_name": "Pulse",
+  "description": "Личные сообщения, файлы и звонки",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0a0b13",
+  "background_color": "#0a0b13",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

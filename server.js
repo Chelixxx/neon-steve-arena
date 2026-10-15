@@ -1,59 +1,95 @@
 'use strict';
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),{WebSocketServer}=require('ws');
-const ROOT=path.join(__dirname,'public'),UPLOADS=path.join(ROOT,'uploads'),PORT=process.env.PORT||8080;
+const PORT=process.env.PORT||8080,ROOT=path.join(__dirname,'public'),DATA=process.env.DATA_DIR||'/data',UPLOADS=path.join(DATA,'uploads'),DB=path.join(DATA,'pulse-store.json'),SECRET_FILE=path.join(DATA,'.pulse-secret'),MAX_UPLOAD=25*1024*1024;
 fs.mkdirSync(UPLOADS,{recursive:true});
-const clients=new Map(),history=new Map(),MAX_UPLOAD=25*1024*1024;
-const clean=s=>String(s||'User').replace(/[^\p{L}\p{N}_ .-]/gu,'').trim().slice(0,24)||'User';
-const pair=(a,b)=>[a,b].sort().join(':');
-function roomKey(a,b){return b?'dm:'+pair(a,b):'global'}
-function send(c,m){if(c?.ws?.readyState===1&&c.ws.bufferedAmount<1e6)c.ws.send(JSON.stringify(m))}
-function broadcast(m){for(const c of clients.values())send(c,m)}
-function users(){return [...clients.values()].map(c=>({id:c.id,name:c.name,online:true}))}
-function store(k,m){const h=history.get(k)||[];h.push(m);history.set(k,h.slice(-150))}
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.mp4':'video/mp4','.webm':'video/webm','.pdf':'application/pdf','.mp3':'audio/mpeg','.ogg':'audio/ogg','.wav':'audio/wav'};
-const server=http.createServer((req,res)=>{
- let u;try{u=new URL(req.url,'http://localhost')}catch{res.writeHead(400);return res.end('Bad request')}
- if(u.pathname==='/health'){res.writeHead(200,{'content-type':'application/json'});return res.end(JSON.stringify({ok:true,app:'Pulse Messenger',online:clients.size}))}
- if(req.method==='POST'&&u.pathname==='/upload'){
-  const rawName=String(u.searchParams.get('name')||'file').split(/[\\/]/).pop().slice(0,180);
-  const ext=path.extname(rawName).toLowerCase();
-  const allowed=['.png','.jpg','.jpeg','.webp','.gif','.bmp','.svg','.mp4','.webm','.mov','.m4v','.avi','.mp3','.m4a','.ogg','.wav','.aac','.flac','.pdf','.txt','.md','.csv','.json','.zip','.7z','.rar','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.rtf'];
-  if(!allowed.includes(ext)){res.writeHead(415,{'content-type':'text/plain; charset=utf-8'});return res.end('Этот формат файла пока не поддерживается: '+(ext||'без расширения'))}
-  const declared=Number(req.headers['content-length']||0);
-  if(declared>MAX_UPLOAD){res.writeHead(413,{'content-type':'text/plain; charset=utf-8'});return res.end('Файл больше 25 МБ')}
-  const id=crypto.randomBytes(12).toString('hex')+ext,file=path.join(UPLOADS,id),chunks=[];let size=0,failed=false;
-  req.on('data',chunk=>{if(failed)return;size+=chunk.length;if(size>MAX_UPLOAD){failed=true;chunks.length=0;res.writeHead(413,{'content-type':'text/plain; charset=utf-8'});res.end('Файл больше 25 МБ');req.resume();return}chunks.push(chunk)});
-  req.on('error',()=>{failed=true});
-  req.on('end',()=>{if(failed)return;fs.writeFile(file,Buffer.concat(chunks),{flag:'wx'},err=>{if(err){if(!res.headersSent){res.writeHead(500,{'content-type':'text/plain; charset=utf-8'});res.end('Не удалось сохранить файл')}return}
-    if(res.writableEnded)return;
-    res.writeHead(201,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
-    res.end(JSON.stringify({url:'/uploads/'+id,name:rawName,size,mime:req.headers['content-type']||mime[ext]||'application/octet-stream'}));
-  })});return
+if(!fs.existsSync(SECRET_FILE))fs.writeFileSync(SECRET_FILE,crypto.randomBytes(48),{mode:0o600,flag:'wx'});
+const SECRET=fs.readFileSync(SECRET_FILE);
+let store={users:[],messages:[]};
+try{const raw=JSON.parse(fs.readFileSync(DB,'utf8'));if(Array.isArray(raw.users)&&Array.isArray(raw.messages))store=raw}catch{}
+function save(){const tmp=DB+'.tmp';fs.writeFileSync(tmp,JSON.stringify(store));fs.renameSync(tmp,DB)}
+const cleanName=s=>String(s||'').normalize('NFKC').replace(/[^\p{L}\p{N}_. -]/gu,'').trim().slice(0,24);
+const publicUser=u=>({id:u.id,name:u.name,online:(clients.get(u.id)?.size||0)>0});
+const clients=new Map();
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.mp4':'video/mp4','.webm':'video/webm','.mov':'video/quicktime','.m4v':'video/mp4','.mp3':'audio/mpeg','.m4a':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.pdf':'application/pdf','.txt':'text/plain; charset=utf-8','.md':'text/markdown; charset=utf-8','.csv':'text/csv; charset=utf-8','.json':'application/json','.zip':'application/zip','.7z':'application/x-7z-compressed','.rar':'application/vnd.rar','.doc':'application/msword','.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','.xls':'application/vnd.ms-excel','.xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','.ppt':'application/vnd.ms-powerpoint','.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','.rtf':'application/rtf','.aac':'audio/aac','.flac':'audio/flac'};
+function sign(uid){const payload=Buffer.from(JSON.stringify({uid,exp:Date.now()+30*864e5})).toString('base64url');return payload+'.'+crypto.createHmac('sha256',SECRET).update(payload).digest('base64url')}
+function verifyToken(token){try{const [p,s]=String(token||'').split('.');const sig=crypto.createHmac('sha256',SECRET).update(p).digest('base64url');if(!p||!s||!crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(s)))return null;const d=JSON.parse(Buffer.from(p,'base64url').toString());return d.exp>Date.now()&&store.users.some(u=>u.id===d.uid)?d.uid:null}catch{return null}}
+function cookieToken(req){const v=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('pulse_session='));return v?decodeURIComponent(v.slice(14)):''}
+function setCookie(res,uid){res.setHeader('set-cookie','pulse_session='+encodeURIComponent(sign(uid))+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000')}
+function clearCookie(res){res.setHeader('set-cookie','pulse_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')}
+function userById(id){return store.users.find(u=>u.id===id)}
+function userByName(name){return store.users.find(u=>u.name.toLowerCase()===name.toLowerCase())}
+function send(ws,m){if(ws?.readyState===1&&ws.bufferedAmount<1e6)ws.send(JSON.stringify(m))}
+function sendUser(uid,m){for(const ws of clients.get(uid)||[])send(ws,m)}
+function broadcast(m){for(const set of clients.values())for(const ws of set)send(ws,m)}
+function onlineUsers(){return store.users.map(publicUser)}
+function parseBody(req,limit=32000){return new Promise((resolve,reject)=>{let b='',size=0;req.on('data',c=>{size+=c.length;if(size>limit){reject(Object.assign(new Error('Слишком большой запрос'),{status:413}));req.destroy();return}b+=c.toString('utf8')});req.on('end',()=>{try{resolve(JSON.parse(b||'{}'))}catch{reject(Object.assign(new Error('Некорректный JSON'),{status:400}))}});req.on('error',reject)})}
+function json(res,status,obj){res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(obj))}
+function passwordHash(password,salt){return crypto.scryptSync(password,salt,64).toString('hex')}
+function directHistory(uid,other){return store.messages.filter(m=>(m.to===other&&m.from===uid)||(m.to===uid&&m.from===other)).slice(-250)}
+function chatHistory(uid,to){return to?directHistory(uid,to):store.messages.filter(m=>!m.to).slice(-250)}
+function unreadFor(uid){const counts={};for(const m of store.messages){if(m.to===uid&&m.from!==uid&&!m.readBy.includes(uid))counts['dm:'+m.from]=(counts['dm:'+m.from]||0)+1}return counts}
+function online(id){return (clients.get(id)?.size||0)>0}
+function markRead(uid,ids){const touched=[];for(const m of store.messages){if(ids.includes(m.id)&&m.to===uid&&m.from!==uid&&!m.readBy.includes(uid)){m.readBy.push(uid);touched.push(m)}}if(touched.length){save();for(const m of touched)sendUser(m.from,{t:'read-receipt',ids:touched.filter(x=>x.from===m.from).map(x=>x.id),reader:uid})}}
+const server=http.createServer(async(req,res)=>{
+ let u;try{u=new URL(req.url,'http://localhost')}catch{return json(res,400,{error:'Bad request'})}
+ if(u.pathname==='/health')return json(res,200,{ok:true,app:'Pulse Messenger',accounts:store.users.length,online:clients.size,messages:store.messages.length});
+ if(req.method==='POST'&&['/api/register','/api/login'].includes(u.pathname)){
+  try{const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||'');
+   if(name.length<3||name.length>24)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'});
+   if(password.length<8||password.length>200)return json(res,400,{error:'Пароль должен быть не короче 8 символов'});
+   let user=userByName(name);
+   if(u.pathname==='/api/register'){
+    if(user)return json(res,409,{error:'Этот ник уже занят'});
+    const salt=crypto.randomBytes(16).toString('hex');user={id:crypto.randomUUID(),name,salt,hash:passwordHash(password,salt),createdAt:Date.now()};store.users.push(user);save();
+   }else{
+    if(!user)return json(res,401,{error:'Неверный ник или пароль'});
+    const actual=Buffer.from(passwordHash(password,user.salt),'hex'),expected=Buffer.from(user.hash,'hex');
+    if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))return json(res,401,{error:'Неверный ник или пароль'});
+   }
+   setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name}})
+  }catch(e){return json(res,e.status||400,{error:e.message||'Ошибка запроса'})}
  }
- if(req.method==='OPTIONS'&&u.pathname==='/upload'){res.writeHead(204,{'access-control-allow-methods':'POST,OPTIONS','access-control-allow-headers':'content-type'});return res.end()}
- const requested=u.pathname==='/'?'/index.html':u.pathname;
- let file;try{file=path.resolve(ROOT,'.'+decodeURIComponent(requested))}catch{res.writeHead(400);return res.end()}
- if(!file.startsWith(ROOT+path.sep)){res.writeHead(403);return res.end('Forbidden')}
- fs.stat(file,(e,st)=>{if(e||!st.isFile()){res.writeHead(404);return res.end('Not found')}res.writeHead(200,{'content-type':mime[path.extname(file).toLowerCase()]||'application/octet-stream','cache-control':path.extname(file)==='.html'?'no-cache':'public, max-age=3600','x-content-type-options':'nosniff'});fs.createReadStream(file).pipe(res)})
+ if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);return user?json(res,200,{user:{id:user.id,name:user.name}}):json(res,401,{error:'Не авторизован'})}
+ if(req.method==='POST'&&u.pathname==='/api/logout'){clearCookie(res);return json(res,200,{ok:true})}
+ if(req.method==='POST'&&u.pathname==='/upload'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Войди в аккаунт, чтобы отправлять файлы'});
+  const rawName=String(u.searchParams.get('name')||'file').split(/[\\/]/).pop().slice(0,180),ext=path.extname(rawName).toLowerCase();
+  const allowed=Object.keys(mime).filter(x=>!['.html','.js','.css','.webmanifest'].includes(x));
+  if(!allowed.includes(ext))return json(res,415,{error:'Этот формат файла пока не поддерживается'});
+  const declared=Number(req.headers['content-length']||0);if(declared>MAX_UPLOAD)return json(res,413,{error:'Файл больше 25 МБ'});
+  const id=crypto.randomBytes(16).toString('hex')+ext,file=path.join(UPLOADS,id),chunks=[];let size=0,failed=false;
+  req.on('data',c=>{size+=c.length;if(size>MAX_UPLOAD){failed=true;chunks.length=0;if(!res.headersSent)json(res,413,{error:'Файл больше 25 МБ'});req.resume()}else if(!failed)chunks.push(c)});
+  req.on('end',()=>{if(failed)return;fs.writeFile(file,Buffer.concat(chunks),{flag:'wx'},err=>{if(err)return json(res,500,{error:'Не удалось сохранить файл'});json(res,201,{url:'/uploads/'+id,name:rawName,size,mime:req.headers['content-type']||mime[ext]||'application/octet-stream'})})});
+  req.on('error',()=>{failed=true});return
+ }
+ if(u.pathname.startsWith('/uploads/')){const id=path.basename(u.pathname),file=path.join(UPLOADS,id);return fs.stat(file,(e,st)=>{if(e||!st.isFile())return res.writeHead(404).end('Not found');res.writeHead(200,{'content-type':mime[path.extname(file).toLowerCase()]||'application/octet-stream','content-length':st.size,'cache-control':'private, max-age=86400','x-content-type-options':'nosniff','content-disposition':'inline; filename="'+id.replace(/["\\]/g,'')+'"'});fs.createReadStream(file).pipe(res)})}
+ const requested=u.pathname==='/'?'/index.html':u.pathname;let file;try{file=path.resolve(ROOT,'.'+decodeURIComponent(requested))}catch{return json(res,400,{error:'Bad path'})}
+ if(!file.startsWith(ROOT+path.sep))return res.writeHead(403).end('Forbidden');
+ fs.stat(file,(e,st)=>{if(e||!st.isFile())return res.writeHead(404).end('Not found');res.writeHead(200,{'content-type':mime[path.extname(file).toLowerCase()]||'application/octet-stream','cache-control':path.extname(file)==='.html'?'no-cache':'public, max-age=3600','x-content-type-options':'nosniff'});fs.createReadStream(file).pipe(res)})
 });
 const wss=new WebSocketServer({server,path:'/ws',perMessageDeflate:false,maxPayload:2*1024*1024});
-wss.on('connection',ws=>{
- let c=null;
+wss.on('connection',(ws,req)=>{
+ const uid=verifyToken(cookieToken(req)),user=uid&&userById(uid);if(!user){send(ws,{t:'auth-required'});ws.close(1008,'Login required');return}
+ ws.uid=uid;let set=clients.get(uid);if(!set){set=new Set();clients.set(uid,set)}set.add(ws);
+ send(ws,{t:'welcome',id:uid,user:{id:uid,name:user.name},users:onlineUsers(),history:chatHistory(uid,null),unread:unreadFor(uid)});
+ broadcast({t:'presence',users:onlineUsers()});
  ws.on('message',raw=>{
   let m;try{m=JSON.parse(raw)}catch{return}if(!m||typeof m.t!=='string')return;
-  if(m.t==='join'&&!c){c={id:crypto.randomUUID(),ws,name:clean(m.name),joined:Date.now()};clients.set(c.id,c);send(c,{t:'welcome',id:c.id,users:users(),history:history.get('global')||[]});broadcast({t:'presence',users:users()});return}
-  if(!c)return;
   if(m.t==='message'){
-   const text=String(m.text||'').slice(0,4000),to=typeof m.to==='string'&&clients.has(m.to)?m.to:null,attachment=m.attachment&&typeof m.attachment.url==='string'?{url:m.attachment.url,name:clean(m.attachment.name),mime:String(m.attachment.mime||'').slice(0,100),size:Math.min(Number(m.attachment.size)||0,MAX_UPLOAD)}:null;
-   if(!text.trim()&&!attachment)return;
-   const msg={id:crypto.randomUUID(),from:c.id,name:c.name,to,text,attachment,at:Date.now()},key=roomKey(c.id,to);
-   store(key,msg);if(to){send(c,{t:'message',message:msg});const other=clients.get(to);if(other){store(roomKey(to,c.id),msg);send(other,{t:'message',message:msg})}}else{for(const q of clients.values())send(q,{t:'message',message:msg})}return
+   const text=String(m.text||'').slice(0,4000),to=typeof m.to==='string'&&m.to!==uid&&userById(m.to)?m.to:null;
+   const a=m.attachment&&typeof m.attachment.url==='string'&&/^\/uploads\/[a-f0-9]+\.[a-z0-9]+$/i.test(m.attachment.url)?{url:m.attachment.url,name:String(m.attachment.name||'file').slice(0,180),mime:String(m.attachment.mime||'').slice(0,120),size:Math.min(Number(m.attachment.size)||0,MAX_UPLOAD)}:null;
+   if(!text.trim()&&!a)return;
+   const msg={id:crypto.randomUUID(),from:uid,name:user.name,to,text,attachment:a,at:Date.now(),readBy:[],deliveredTo:[]};
+   store.messages.push(msg);if(store.messages.length>20000)store.messages=store.messages.slice(-20000);
+   if(to){if(online(to))msg.deliveredTo.push(to);save();sendUser(uid,{t:'message',message:msg});sendUser(to,{t:'message',message:msg});if(online(to))sendUser(uid,{t:'delivery-receipt',ids:[msg.id],reader:to})}
+   else{save();broadcast({t:'message',message:msg})}return
   }
-  if(m.t==='typing'){const to=typeof m.to==='string'?m.to:null;if(to)send(clients.get(to),{t:'typing',from:c.id,name:c.name});else for(const q of clients.values())if(q.id!==c.id)send(q,{t:'typing',from:c.id,name:c.name});return}
-  if(['call-offer','call-answer','ice','call-end','call-reject'].includes(m.t)){const target=clients.get(String(m.to||''));if(target)send(target,{...m,from:c.id,fromName:c.name});else send(c,{t:'call-error',message:'Пользователь уже не в сети'});return}
-  if(m.t==='history'){const to=typeof m.to==='string'&&clients.has(m.to)?m.to:null;send(c,{t:'history',to,items:history.get(roomKey(c.id,to))||[]})}
+  if(m.t==='history'){const to=typeof m.to==='string'&&userById(m.to)&&m.to!==uid?m.to:null;send(ws,{t:'history',to,items:chatHistory(uid,to)});return}
+  if(m.t==='read'){if(Array.isArray(m.ids))markRead(uid,m.ids.filter(x=>typeof x==='string').slice(0,300));return}
+  if(m.t==='typing'){const to=typeof m.to==='string'?m.to:null;if(to)sendUser(to,{t:'typing',from:uid,name:user.name});else for(const [id,set2] of clients)if(id!==uid)for(const q of set2)send(q,{t:'typing',from:uid,name:user.name});return}
+  if(['call-offer','call-answer','ice','call-end','call-reject'].includes(m.t)){const to=String(m.to||'');if(userById(to)&&online(to))sendUser(to,{...m,from:uid,fromName:user.name});else send(ws,{t:'call-error',message:'Пользователь уже не в сети'});return}
  });
- ws.on('close',()=>{if(c){clients.delete(c.id);broadcast({t:'presence',users:users()});for(const q of clients.values())send(q,{t:'call-end',from:c.id,reason:'offline'})}});
+ ws.on('close',()=>{const s=clients.get(uid);s?.delete(ws);if(s&&!s.size){clients.delete(uid);broadcast({t:'presence',users:onlineUsers()});for(const set2 of clients.values())for(const q of set2)send(q,{t:'call-end',from:uid,reason:'offline'})}});
  ws.on('error',()=>{});
 });
-server.listen(PORT,'0.0.0.0',()=>console.log('Pulse Messenger listening on '+PORT));
+server.listen(PORT,'0.0.0.0',()=>console.log('Pulse Messenger listening on '+PORT+'; persistent data at '+DATA));
