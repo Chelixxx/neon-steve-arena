@@ -54,7 +54,7 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='POST'&&u.pathname==='/upload'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Войди в аккаунт, чтобы отправлять файлы'});
   const rawName=String(u.searchParams.get('name')||'file').split(/[\\/]/).pop().slice(0,180),ext=path.extname(rawName).toLowerCase();
-  const allowed=Object.keys(mime).filter(x=>!['.html','.js','.css','.webmanifest'].includes(x));
+  const allowed=Object.keys(mime).filter(x=>!['.html','.js','.css','.webmanifest','.svg'].includes(x));
   if(!allowed.includes(ext))return json(res,415,{error:'Этот формат файла пока не поддерживается'});
   const declared=Number(req.headers['content-length']||0);if(declared>MAX_UPLOAD)return json(res,413,{error:'Файл больше 25 МБ'});
   const id=crypto.randomBytes(16).toString('hex')+ext,file=path.join(UPLOADS,id),chunks=[];let size=0,failed=false;
@@ -62,7 +62,7 @@ const server=http.createServer(async(req,res)=>{
   req.on('end',()=>{if(failed)return;fs.writeFile(file,Buffer.concat(chunks),{flag:'wx'},err=>{if(err)return json(res,500,{error:'Не удалось сохранить файл'});json(res,201,{url:'/uploads/'+id,name:rawName,size,mime:req.headers['content-type']||mime[ext]||'application/octet-stream'})})});
   req.on('error',()=>{failed=true});return
  }
- if(u.pathname.startsWith('/uploads/')){const id=path.basename(u.pathname),file=path.join(UPLOADS,id);return fs.stat(file,(e,st)=>{if(e||!st.isFile())return res.writeHead(404).end('Not found');res.writeHead(200,{'content-type':mime[path.extname(file).toLowerCase()]||'application/octet-stream','content-length':st.size,'cache-control':'private, max-age=86400','x-content-type-options':'nosniff','content-disposition':'inline; filename="'+id.replace(/["\\]/g,'')+'"'});fs.createReadStream(file).pipe(res)})}
+ if(u.pathname.startsWith('/uploads/')){if(!verifyToken(cookieToken(req)))return json(res,401,{error:'Войди в аккаунт, чтобы открыть файл'});const id=path.basename(u.pathname),file=path.join(UPLOADS,id);return fs.stat(file,(e,st)=>{if(e||!st.isFile())return res.writeHead(404).end('Not found');res.writeHead(200,{'content-type':mime[path.extname(file).toLowerCase()]||'application/octet-stream','content-length':st.size,'cache-control':'private, max-age=86400','x-content-type-options':'nosniff','content-disposition':'inline; filename="'+id.replace(/["\\]/g,'')+'"'});fs.createReadStream(file).pipe(res)})}
  const requested=u.pathname==='/'?'/index.html':u.pathname;let file;try{file=path.resolve(ROOT,'.'+decodeURIComponent(requested))}catch{return json(res,400,{error:'Bad path'})}
  if(!file.startsWith(ROOT+path.sep))return res.writeHead(403).end('Forbidden');
  fs.stat(file,(e,st)=>{if(e||!st.isFile())return res.writeHead(404).end('Not found');res.writeHead(200,{'content-type':mime[path.extname(file).toLowerCase()]||'application/octet-stream','cache-control':path.extname(file)==='.html'?'no-cache':'public, max-age=3600','x-content-type-options':'nosniff'});fs.createReadStream(file).pipe(res)})
