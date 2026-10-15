@@ -5,7 +5,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function avatar(name){return esc((name||'?').trim().slice(0,1).toUpperCase())}
 function avatarContent(name,data){return data?'<img alt="Аватар" loading="lazy" src="'+esc(data)+'">':avatar(name)}
 function giftDecor(user){return (user?.equippedGifts||[]).slice(0,3).map(g=>'<span class="profile-gift" title="'+esc(g.name)+' · '+esc(g.rarity)+'"><span class="gift-layer-back">✦</span><span class="gift-layer-main">'+esc(g.emoji)+'</span><span class="gift-layer-spark">✧</span></span>').join('')}
-function adminBadge(user){return user?.admin?'<span class="admin-badge">✦ '+esc(user.roleLabel||'Admin')+'</span>':''}
+function adminBadge(user){return user?.admin||user?.roleLabel?'<span class="admin-badge">✦ '+esc(user.roleLabel||(user.admin?'Admin':''))+'</span>':''}
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600)}
 function send(m){if(ws&&ws.readyState===1)ws.send(JSON.stringify(m))}
 function isDM(){return activeId!==globalKey&&activeId!=='cookie-bot'&&!String(activeId||'').startsWith('channel:')}function isChannel(){return String(activeId||'').startsWith('channel:')}function activeChannelId(){return isChannel()?activeId.slice(8):null}
