@@ -87,6 +87,7 @@ function connect(){
  ws.onclose=()=>{$('connection').textContent='нет связи';if(myId){toast('Связь потеряна — переподключаемся…');clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{if(myId&&(!ws||ws.readyState===3))connect()},1200)}};
 }
 function handle(m){
+ if(m.t==='messages-deleted'){const ids=new Set(Array.isArray(m.ids)?m.ids:[]);for(const [key,list] of messagesByChat)messagesByChat.set(key,list.filter(item=>!ids.has(item.id)));if(activeId)renderMessages();renderList();return}
  if(m.t==='banned'){clearTimeout(reconnectTimer);if(ws){ws.onclose=null;try{ws.close()}catch{}}myId=null;$('bootLoader')?.classList.add('hidden');$('app').classList.add('hidden');$('login').classList.remove('hidden');$('loginError').textContent=m.reason||'Аккаунт или устройство заблокировано';return}
  if(m.t==='upload-ticket'){const pending=pendingUploadTickets.get(m.requestId);if(pending){pendingUploadTickets.delete(m.requestId);pending.resolve(m.token)}return}
  if(m.t==='auth-required'){ws?.close();$('bootLoader')?.classList.add('hidden');$('login').classList.remove('hidden');$('app').classList.add('hidden');return}
