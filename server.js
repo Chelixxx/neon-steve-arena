@@ -15,15 +15,22 @@ const server=http.createServer((req,res)=>{
  let u;try{u=new URL(req.url,'http://localhost')}catch{res.writeHead(400);return res.end('Bad request')}
  if(u.pathname==='/health'){res.writeHead(200,{'content-type':'application/json'});return res.end(JSON.stringify({ok:true,app:'Pulse Messenger',online:clients.size}))}
  if(req.method==='POST'&&u.pathname==='/upload'){
-  const ext=path.extname(clean(decodeURIComponent(u.searchParams.get('name')||'file'))).toLowerCase().slice(0,8),allowed=['.png','.jpg','.jpeg','.webp','.gif','.mp4','.webm','.mp3','.ogg','.wav','.pdf','.txt','.zip'];
-  if(!allowed.includes(ext)){res.writeHead(415);return res.end('Unsupported file type')}
-  const id=crypto.randomBytes(12).toString('hex')+ext,file=path.join(UPLOADS,id);let size=0,failed=false;
-  const out=fs.createWriteStream(file,{flags:'wx'});req.on('data',chunk=>{size+=chunk.length;if(size>MAX_UPLOAD&&!failed){failed=true;req.destroy();out.destroy();fs.unlink(file,()=>{})}});req.pipe(out);
-  out.on('finish',()=>{if(!failed){res.writeHead(201,{'content-type':'application/json','access-control-allow-origin':'*'});res.end(JSON.stringify({url:'/uploads/'+id,name:clean(decodeURIComponent(u.searchParams.get('name')||'file')),size,mime:req.headers['content-type']||mime[ext]||'application/octet-stream'}))}});
-  out.on('error',()=>{if(!res.headersSent){res.writeHead(500);res.end('Upload failed')}});
-  req.on('close',()=>{if(size>MAX_UPLOAD)fs.unlink(file,()=>{})});return
+  const rawName=String(u.searchParams.get('name')||'file').split(/[\\/]/).pop().slice(0,180);
+  const ext=path.extname(rawName).toLowerCase();
+  const allowed=['.png','.jpg','.jpeg','.webp','.gif','.bmp','.svg','.mp4','.webm','.mov','.m4v','.avi','.mp3','.m4a','.ogg','.wav','.aac','.flac','.pdf','.txt','.md','.csv','.json','.zip','.7z','.rar','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.rtf'];
+  if(!allowed.includes(ext)){res.writeHead(415,{'content-type':'text/plain; charset=utf-8'});return res.end('Этот формат файла пока не поддерживается: '+(ext||'без расширения'))}
+  const declared=Number(req.headers['content-length']||0);
+  if(declared>MAX_UPLOAD){res.writeHead(413,{'content-type':'text/plain; charset=utf-8'});return res.end('Файл больше 25 МБ')}
+  const id=crypto.randomBytes(12).toString('hex')+ext,file=path.join(UPLOADS,id),chunks=[];let size=0,failed=false;
+  req.on('data',chunk=>{if(failed)return;size+=chunk.length;if(size>MAX_UPLOAD){failed=true;chunks.length=0;res.writeHead(413,{'content-type':'text/plain; charset=utf-8'});res.end('Файл больше 25 МБ');req.resume();return}chunks.push(chunk)});
+  req.on('error',()=>{failed=true});
+  req.on('end',()=>{if(failed)return;fs.writeFile(file,Buffer.concat(chunks),{flag:'wx'},err=>{if(err){if(!res.headersSent){res.writeHead(500,{'content-type':'text/plain; charset=utf-8'});res.end('Не удалось сохранить файл')}return}
+    if(res.writableEnded)return;
+    res.writeHead(201,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
+    res.end(JSON.stringify({url:'/uploads/'+id,name:rawName,size,mime:req.headers['content-type']||mime[ext]||'application/octet-stream'}));
+  })});return
  }
- if(req.method==='OPTIONS'&&u.pathname==='/upload'){res.writeHead(204,{'access-control-allow-origin':'*','access-control-allow-methods':'POST,OPTIONS','access-control-allow-headers':'content-type'});return res.end()}
+ if(req.method==='OPTIONS'&&u.pathname==='/upload'){res.writeHead(204,{'access-control-allow-methods':'POST,OPTIONS','access-control-allow-headers':'content-type'});return res.end()}
  const requested=u.pathname==='/'?'/index.html':u.pathname;
  let file;try{file=path.resolve(ROOT,'.'+decodeURIComponent(requested))}catch{res.writeHead(400);return res.end()}
  if(!file.startsWith(ROOT+path.sep)){res.writeHead(403);return res.end('Forbidden')}
