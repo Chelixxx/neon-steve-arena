@@ -106,6 +106,7 @@ function handle(m){
 }
 function markCurrentRead(){const list=messagesByChat.get(currentKey())||[],ids=list.filter(m=>m.from!==myId&&!m.readBy?.includes(myId)).map(m=>m.id);if(ids.length)send({t:'read',ids});unreadCounts.set(currentKey(),0)}
 function pushMessage(key,msg,rerender=true){const list=messagesByChat.get(key)||[];if(!list.some(x=>x.id===msg.id))list.push(msg);messagesByChat.set(key,list.slice(-300));if(rerender)renderMessages()}
+window.pulseInjectMessage=function(msg){if(!msg||!msg.id||!msg.to)return;const key=dmKey(msg.from===myId?msg.to:msg.from);pushMessage(key,msg,false);renderList();if(key===currentKey())renderMessages()};
 function renderTabs(){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab))}
 function renderList(){
  const q=$('search').value.trim().toLowerCase(),el=$('chatList');el.innerHTML='';
