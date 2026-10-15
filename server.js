@@ -10,6 +10,7 @@ if(!store.messageHides||typeof store.messageHides!=='object'||Array.isArray(stor
 if(!Array.isArray(store.stickerPacks))store.stickerPacks=[];
 if(!store.cookieClickers||typeof store.cookieClickers!=='object'||Array.isArray(store.cookieClickers))store.cookieClickers={};
 if(!store.pushSubscriptions||typeof store.pushSubscriptions!=='object'||Array.isArray(store.pushSubscriptions))store.pushSubscriptions={};
+if(!store.deviceBans||typeof store.deviceBans!=='object'||Array.isArray(store.deviceBans))store.deviceBans={};
 const VAPID_FILE=path.join(DATA,'pulse-vapid.json');let vapidKeys;try{vapidKeys=JSON.parse(fs.readFileSync(VAPID_FILE,'utf8'))}catch{vapidKeys=webpush.generateVAPIDKeys();fs.writeFileSync(VAPID_FILE,JSON.stringify(vapidKeys),{mode:0o600})}webpush.setVapidDetails(process.env.PULSE_VAPID_SUBJECT||'mailto:pulse-notifications@example.com',vapidKeys.publicKey,vapidKeys.privateKey);
 const pendingCookieCaptchas=new Map();
 function save(){const tmp=DB+'.tmp';fs.writeFileSync(tmp,JSON.stringify(store));fs.renameSync(tmp,DB)}
@@ -27,10 +28,14 @@ const publicChannel=(c,uid)=>({id:c.id,name:c.name,description:c.description||''
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.mp4':'video/mp4','.webm':'video/webm','.mov':'video/quicktime','.m4v':'video/mp4','.mp3':'audio/mpeg','.m4a':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.pdf':'application/pdf','.txt':'text/plain; charset=utf-8','.md':'text/markdown; charset=utf-8','.csv':'text/csv; charset=utf-8','.json':'application/json','.zip':'application/zip','.7z':'application/x-7z-compressed','.rar':'application/vnd.rar','.doc':'application/msword','.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','.xls':'application/vnd.ms-excel','.xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','.ppt':'application/vnd.ms-powerpoint','.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','.rtf':'application/rtf','.aac':'audio/aac','.flac':'audio/flac'};
 function sign(uid){const payload=Buffer.from(JSON.stringify({uid,exp:Date.now()+30*864e5})).toString('base64url');return payload+'.'+crypto.createHmac('sha256',SECRET).update(payload).digest('base64url')}
 function verifyToken(token){try{const [p,s]=String(token||'').split('.');const sig=crypto.createHmac('sha256',SECRET).update(p).digest('base64url');if(!p||!s||!crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(s)))return null;const d=JSON.parse(Buffer.from(p,'base64url').toString()),user=store.users.find(u=>u.id===d.uid);return d.exp>Date.now()&&user&&!user.bannedAt?d.uid:null}catch{return null}}
-function cookieToken(req){const v=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('pulse_session='));return v?decodeURIComponent(v.slice(14)):''}
+function cookieValue(req,name){const prefix=name+'=';const v=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(prefix));if(!v)return '';try{return decodeURIComponent(v.slice(prefix.length))}catch{return ''}}
+function cookieToken(req){return cookieValue(req,'pulse_session')}
+function deviceIdFrom(req){const id=cookieValue(req,'pulse_device');return /^[0-9a-f-]{36}$/i.test(id)?id:''}
+function deviceLabel(ua){ua=String(ua||'');const platform=/Android/i.test(ua)?'Android':/iPhone|iPad|iPod/i.test(ua)?'iPhone/iPad':/Windows/i.test(ua)?'Windows':/Macintosh|Mac OS/i.test(ua)?'macOS':/Linux/i.test(ua)?'Linux':'Неизвестное устройство';const browser=/Edg\//i.test(ua)?'Edge':/Firefox\//i.test(ua)?'Firefox':/Chrome\//i.test(ua)?'Chrome':/Safari\//i.test(ua)?'Safari':'браузер';return (platform+' · '+browser).slice(0,60)}
+function trackDevice(user,req){const id=deviceIdFrom(req);if(!id)return null;if(!Array.isArray(user.devices))user.devices=[];let d=user.devices.find(x=>x.id===id);if(!d){d={id,firstSeen:Date.now(),lastSeen:Date.now(),label:deviceLabel(req.headers['user-agent'])};user.devices.push(d);if(user.devices.length>30)user.devices=user.devices.slice(-30)}else{d.lastSeen=Date.now();d.label=deviceLabel(req.headers['user-agent'])}return d}
 function signUploadToken(uid){const payload=Buffer.from(JSON.stringify({uid,exp:Date.now()+5*60*1000,purpose:'upload',nonce:crypto.randomBytes(12).toString('hex')})).toString('base64url');return payload+'.'+crypto.createHmac('sha256',SECRET).update('upload:'+payload).digest('base64url')}
 function verifyUploadToken(token){try{const [p,s]=String(token||'').split('.');if(!p||!s)return null;const expected=crypto.createHmac('sha256',SECRET).update('upload:'+p).digest('base64url'),a=Buffer.from(expected),b=Buffer.from(s);if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return null;const d=JSON.parse(Buffer.from(p,'base64url').toString());return d.purpose==='upload'&&d.exp>Date.now()&&store.users.some(u=>u.id===d.uid)?d.uid:null}catch{return null}}
-function setCookie(res,uid){res.setHeader('set-cookie','pulse_session='+encodeURIComponent(sign(uid))+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000')}
+function setCookie(res,uid){const current=res.getHeader('set-cookie'),cookies=Array.isArray(current)?current.slice():current?[current]:[];cookies.push('pulse_session='+encodeURIComponent(sign(uid))+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000');res.setHeader('set-cookie',cookies)}
 function clearCookie(res){res.setHeader('set-cookie','pulse_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')}
 const pendingRegistrations=new Map();
 const pendingContacts=new Map();
@@ -71,6 +76,8 @@ function online(id){return (clients.get(id)?.size||0)>0}
 function markRead(uid,ids){const touched=[];for(const m of store.messages){if(ids.includes(m.id)&&m.to===uid&&m.from!==uid&&!m.readBy.includes(uid)){m.readBy.push(uid);touched.push(m)}}if(touched.length){save();for(const m of touched)sendUser(m.from,{t:'read-receipt',ids:touched.filter(x=>x.from===m.from).map(x=>x.id),reader:uid})}}
 const server=http.createServer(async(req,res)=>{
  let u;try{u=new URL(req.url,'http://localhost')}catch{return json(res,400,{error:'Bad request'})}
+ let deviceId=deviceIdFrom(req);if(!deviceId){deviceId=crypto.randomUUID();res.setHeader('set-cookie','pulse_device='+encodeURIComponent(deviceId)+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000')}
+ if(store.deviceBans[deviceId]&&(u.pathname.startsWith('/api/')||u.pathname==='/upload'||u.pathname.startsWith('/uploads/')))return json(res,403,{error:'Это устройство заблокировано'+(store.deviceBans[deviceId].reason?': '+String(store.deviceBans[deviceId].reason).slice(0,200):'')})
  if(u.pathname==='/health')return json(res,200,{ok:true,app:'Pulse Messenger',accounts:store.users.length,online:clients.size,messages:store.messages.length});
  if(req.method==='POST'&&u.pathname==='/api/register/start'){
   try{
@@ -107,7 +114,7 @@ const server=http.createServer(async(req,res)=>{
    }
    if(userByName(pending.name)||store.users.some(x=>(pending.email&&x.email===pending.email)||(pending.phone&&x.phone===pending.phone))){pendingRegistrations.delete(id);return json(res,409,{error:'Ник, почта или номер уже используются. Начни заново.'})}
    const user={id:crypto.randomUUID(),name:pending.name,salt:pending.salt,hash:pending.passwordHash,email:pending.email||undefined,phone:pending.phone||undefined,emailVerified:pending.method==='email',phoneVerified:pending.method==='phone',createdAt:Date.now()};
-   store.users.push(user);save();pendingRegistrations.delete(id);setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,email:user.email||'',phone:user.phone||''}});
+   store.users.push(user);trackDevice(user,req);save();pendingRegistrations.delete(id);setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,email:user.email||'',phone:user.phone||''}});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось подтвердить контакт'})}
  }
  if(req.method==='POST'&&['/api/register','/api/login'].includes(u.pathname)){
@@ -117,17 +124,18 @@ const server=http.createServer(async(req,res)=>{
    let user=userByName(name);
    if(u.pathname==='/api/register'){
     if(user)return json(res,409,{error:'Этот ник уже занят'});
-    const salt=crypto.randomBytes(16).toString('hex');user={id:crypto.randomUUID(),name,salt,hash:passwordHash(password,salt),createdAt:Date.now()};store.users.push(user);save();
+    const salt=crypto.randomBytes(16).toString('hex');user={id:crypto.randomUUID(),name,salt,hash:passwordHash(password,salt),createdAt:Date.now()};store.users.push(user);trackDevice(user,req);save();
    }else{
     if(!user)return json(res,401,{error:'Неверный ник или пароль'});
     const actual=Buffer.from(passwordHash(password,user.salt),'hex'),expected=Buffer.from(user.hash,'hex');
     if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))return json(res,401,{error:'Неверный ник или пароль'});
     if(user.bannedAt)return json(res,403,{error:'Аккаунт заблокирован'+(user.banReason?': '+String(user.banReason).slice(0,240):'. Если считаешь это ошибкой, обратись к администратору.')});
+    trackDevice(user,req);save();
    }
    setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name}})
   }catch(e){return json(res,e.status||400,{error:e.message||'Ошибка запроса'})}
  }
- if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);return user?json(res,200,{user:{id:user.id,name:user.name}}):json(res,401,{error:'Не авторизован'})}
+ if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);if(!user)return json(res,401,{error:'Не авторизован'});trackDevice(user,req);save();return json(res,200,{user:{id:user.id,name:user.name}})}
  if(req.method==='POST'&&u.pathname==='/api/contact/start'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});
   try{
@@ -197,7 +205,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&u.pathname==='/api/push/public-key'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});return json(res,200,{publicKey:vapidKeys.publicKey})}
  if(req.method==='POST'&&u.pathname==='/api/push/subscribe'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});try{const b=await parseBody(req),sub=b.subscription;if(!sub||typeof sub.endpoint!=='string'||!sub.endpoint.startsWith('https://')||!sub.keys?.p256dh||!sub.keys?.auth)return json(res,400,{error:'Некорректная push-подписка'});const list=store.pushSubscriptions[uid]||(store.pushSubscriptions[uid]=[]);const i=list.findIndex(x=>x.endpoint===sub.endpoint);if(i>=0)list[i]=sub;else{if(list.length>=8)list.shift();list.push(sub)}save();return json(res,200,{ok:true,subscriptions:list.length})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось включить уведомления'})}}
  if(req.method==='DELETE'&&u.pathname==='/api/push/subscribe'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});try{const b=await parseBody(req),endpoint=String(b.endpoint||'');store.pushSubscriptions[uid]=(store.pushSubscriptions[uid]||[]).filter(x=>x.endpoint!==endpoint);save();return json(res,200,{ok:true})}catch(e){return json(res,400,{error:e.message||'Не удалось отключить уведомления'})}}
- if(req.method==='GET'&&u.pathname==='/api/community'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'});const x=userById(uid),isAdmin=!!x.admin&&x.name.toLowerCase()==='chelixxx'; return json(res,200,{channels:store.channels.map(c=>publicChannel(c,uid)),posts:store.posts.slice(-100).reverse(),bots:[{id:'pulse-verify',name:'Pulse Verify',description:'Подтверждение номера SMS',configured:!!(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_VERIFY_SERVICE_SID)},{id:'pulse-news',name:'Pulse News',description:'Новости в канале и общей ленте',active:true}],adminUsers:isAdmin?store.users.map(u=>({id:u.id,name:u.name,globalChatDisabled:!!u.globalChatDisabled,admin:!!u.admin&&u.name.toLowerCase()==='chelixxx',banned:!!u.bannedAt,banReason:u.banReason||''})):[],profile:(()=>({name:x.name,email:x.email||'',phone:x.phone||'',emailVerified:!!x.emailVerified,phoneVerified:!!x.phoneVerified,bio:x.bio||'',avatar:x.avatar||'',admin:isAdmin,hideFromUnmessaged:!!x.hideFromUnmessaged}))()}); }
+ if(req.method==='GET'&&u.pathname==='/api/community'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'});const x=userById(uid),isAdmin=!!x.admin&&x.name.toLowerCase()==='chelixxx'; return json(res,200,{channels:store.channels.map(c=>publicChannel(c,uid)),posts:store.posts.slice(-100).reverse(),bots:[{id:'pulse-verify',name:'Pulse Verify',description:'Подтверждение номера SMS',configured:!!(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_VERIFY_SERVICE_SID)},{id:'pulse-news',name:'Pulse News',description:'Новости в канале и общей ленте',active:true}],adminUsers:isAdmin?store.users.map(u=>({id:u.id,name:u.name,globalChatDisabled:!!u.globalChatDisabled,admin:!!u.admin&&u.name.toLowerCase()==='chelixxx',banned:!!u.bannedAt,banReason:u.banReason||'',devices:(u.devices||[]).map(d=>({id:d.id,label:d.label||'Устройство',lastSeen:d.lastSeen||0,banned:!!store.deviceBans[d.id],banReason:store.deviceBans[d.id]?.reason||''}))})):[],profile:(()=>({name:x.name,email:x.email||'',phone:x.phone||'',emailVerified:!!x.emailVerified,phoneVerified:!!x.phoneVerified,bio:x.bio||'',avatar:x.avatar||'',admin:isAdmin,hideFromUnmessaged:!!x.hideFromUnmessaged}))()}); }
  if(req.method==='POST'&&u.pathname==='/api/admin/ban'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});
   const admin=userById(uid);if(!admin?.admin||admin.name.toLowerCase()!=='chelixxx')return json(res,403,{error:'Блокировать аккаунты может только администратор @Chelixxx'});
@@ -212,6 +220,50 @@ const server=http.createServer(async(req,res)=>{
    broadcastPresence();
    return json(res,200,{ok:true,userId:target.id,banned:!!target.bannedAt,reason:target.banReason||''});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось изменить блокировку'})}
+ }
+ if(req.method==='POST'&&u.pathname==='/api/admin/device-ban'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});
+  const admin=userById(uid);if(!admin?.admin||admin.name.toLowerCase()!=='chelixxx')return json(res,403,{error:'Только @Chelixxx может блокировать устройства'});
+  try{
+   const b=await parseBody(req),deviceId=String(b.deviceId||''),banned=!!b.banned,reason=String(b.reason||'').trim().slice(0,240);
+   const owners=store.users.filter(u=>(u.devices||[]).some(d=>d.id===deviceId));
+   if(!/^[0-9a-f-]{36}$/i.test(deviceId)||!owners.length)return json(res,404,{error:'Устройство не найдено'});
+   if(owners.some(u=>u.admin&&u.name.toLowerCase()==='chelixxx'))return json(res,400,{error:'Нельзя блокировать устройство администратора'});
+   if(banned)store.deviceBans[deviceId]={at:Date.now(),by:uid,reason:reason||'Причина не указана'};
+   else delete store.deviceBans[deviceId];
+   save();
+   if(banned){for(const owner of owners){const sockets=clients.get(owner.id);if(sockets)for(const ws of [...sockets])if(ws.deviceId===deviceId){try{send(ws,{t:'banned',reason:'Устройство заблокировано: '+store.deviceBans[deviceId].reason});ws.close(1008,'Device banned')}catch{}}}}
+   broadcastPresence();
+   return json(res,200,{ok:true,deviceId,banned:!!store.deviceBans[deviceId],reason:store.deviceBans[deviceId]?.reason||''});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось изменить блокировку устройства'})}
+ }
+ if(req.method==='POST'&&u.pathname==='/api/admin/delete-user'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});
+  const admin=userById(uid);if(!admin?.admin||admin.name.toLowerCase()!=='chelixxx')return json(res,403,{error:'Удалять аккаунты может только @Chelixxx'});
+  try{
+   const b=await parseBody(req),target=userById(String(b.userId||''));
+   if(!target)return json(res,404,{error:'Пользователь не найден'});
+   if(target.id===uid||(target.admin&&target.name.toLowerCase()==='chelixxx'))return json(res,400,{error:'Нельзя удалить аккаунт администратора'});
+   const targetId=target.id,channelIds=new Set(store.channels.filter(c=>c.owner===targetId&&c.id!=='pulse-news').map(c=>c.id));
+   const removedMessages=store.messages.filter(m=>m.from===targetId||m.to===targetId||(m.channelId&&channelIds.has(m.channelId)));
+   const candidateFiles=[...new Set(removedMessages.map(m=>m.attachment?.url).filter(x=>typeof x==='string'&&x.startsWith('/uploads/')))];
+   const removedIds=new Set(removedMessages.map(m=>m.id));
+   store.messages=store.messages.filter(m=>!removedIds.has(m.id));
+   for(const [owner,hidden] of Object.entries(store.messageHides))if(Array.isArray(hidden))store.messageHides[owner]=hidden.filter(id=>!removedIds.has(id));
+   store.posts=store.posts.filter(p=>p.authorId!==targetId&&p.author!==target.name&&p.author!=='@'+target.name);
+   store.comments=store.comments.filter(c=>c.authorId!==targetId&&!channelIds.has(c.channelId));
+   store.channels=store.channels.filter(c=>!channelIds.has(c.id));
+   for(const c of store.channels)if(Array.isArray(c.members))c.members=c.members.filter(id=>id!==targetId);
+   store.users=store.users.filter(u=>u.id!==targetId);
+   delete store.pushSubscriptions[targetId];delete store.cookieClickers[targetId];
+   store.giftTransactions=store.giftTransactions.filter(t=>t.userId!==targetId&&t.adminId!==targetId);
+   delete store.messageHides[targetId];
+   save();
+   const sockets=clients.get(targetId);if(sockets)for(const ws of [...sockets]){try{send(ws,{t:'banned',reason:'Аккаунт удалён администратором'});ws.close(1008,'Account deleted')}catch{}}
+   for(const url of candidateFiles){const stillUsed=store.messages.some(m=>m.attachment?.url===url);if(!stillUsed){const file=path.join(UPLOADS,path.basename(url));try{fs.unlinkSync(file)}catch{}}}
+   broadcastPresence();
+   return json(res,200,{ok:true,deletedUser:target.name,removedMessages:removedMessages.length});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось удалить аккаунт'})}
  }
  if(req.method==='POST'&&u.pathname==='/api/admin/global-chat'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});const admin=userById(uid);if(!admin?.admin||admin.name.toLowerCase()!=='chelixxx')return json(res,403,{error:'Только администратор @Chelixxx может управлять общим чатом'});try{const b=await parseBody(req),target=userById(String(b.userId||''));if(!target)return json(res,404,{error:'Пользователь не найден'});if(target.id===uid||(target.admin&&target.name.toLowerCase()==='chelixxx'))return json(res,400,{error:'Нельзя отключить общий чат администратору'});if(typeof b.disabled!=='boolean')return json(res,400,{error:'Не указано состояние доступа'});target.globalChatDisabled=b.disabled;save();broadcastPresence();return json(res,200,{ok:true,userId:target.id,disabled:target.globalChatDisabled})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось изменить доступ'})}}
  if(req.method==='POST'&&u.pathname==='/api/profile'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'}); try{const b=await parseBody(req,1500000),user=userById(uid),name=cleanName(b.name||user.name),bio=String(b.bio||'').slice(0,240),avatar=String(b.avatar||''); if(name.length<3)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'}); if(store.users.some(x=>x.id!==uid&&x.name.toLowerCase()===name.toLowerCase()))return json(res,409,{error:'Этот ник уже занят'}); if(avatar&&(!avatar.startsWith('data:image/')||avatar.length>1100000))return json(res,400,{error:'Аватар должен быть изображением до 800 КБ'}); user.name=name;user.bio=bio;if(avatar)user.avatar=avatar;if(typeof b.hideFromUnmessaged==='boolean')user.hideFromUnmessaged=!!b.hideFromUnmessaged;if(user.admin&&user.name.toLowerCase()==='chelixxx')user.hideFromUnmessaged=false;save();broadcastPresence();return json(res,200,{profile:{name:user.name,bio:user.bio,avatar:user.avatar||'',hideFromUnmessaged:!!user.hideFromUnmessaged}})}catch(e){return json(res,e.status||400,{error:e.message||'Ошибка профиля'})} }
@@ -301,8 +353,9 @@ const server=http.createServer(async(req,res)=>{
 });
 const wss=new WebSocketServer({server,path:'/ws',perMessageDeflate:false,maxPayload:2*1024*1024});
 wss.on('connection',(ws,req)=>{
+ const wsDeviceId=deviceIdFrom(req),wsDeviceBan=wsDeviceId&&store.deviceBans[wsDeviceId];if(wsDeviceBan){send(ws,{t:'banned',reason:'Устройство заблокировано'+(wsDeviceBan.reason?': '+wsDeviceBan.reason:'')});ws.close(1008,'Device banned');return}
  const uid=verifyToken(cookieToken(req)),user=uid&&userById(uid);if(!user){send(ws,{t:'auth-required'});ws.close(1008,'Login required');return}
- ws.uid=uid;let set=clients.get(uid);if(!set){set=new Set();clients.set(uid,set)}set.add(ws);
+ ws.uid=uid;ws.deviceId=wsDeviceId;let set=clients.get(uid);if(!set){set=new Set();clients.set(uid,set)}set.add(ws);
  send(ws,{t:'welcome',id:uid,user:{id:uid,name:user.name},users:onlineUsers(uid),history:chatHistory(uid,null),unread:unreadFor(uid)});
  broadcastPresence();
  ws.on('message',raw=>{
