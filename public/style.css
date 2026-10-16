@@ -80,3 +80,6 @@ body[data-theme="light"] .settings-list label{color:#292d42}
 .sticker-creator input[type=file],.admin-avatar-panel input[type=file]{font-size:11px;padding:9px}
 
 .admin-avatar-preview{display:flex;justify-content:center;align-items:center;min-height:0;margin:8px 0}.admin-avatar-preview:empty{display:none}.admin-avatar-preview img{width:92px;height:92px;border-radius:50%;object-fit:cover;border:2px solid #a99bff;box-shadow:0 0 22px #8b6cff55;background:#171a29}
+
+/* File upload progress */
+.upload-progress{display:block;width:min(220px,42vw);height:4px;overflow:hidden;border-radius:999px;background:var(--line);margin-top:5px}.upload-progress-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--cyan));transition:width .12s linear;box-shadow:0 0 10px #8c70ff66}.compose-foot #uploadStatus{display:block;max-width:100%;overflow-wrap:anywhere;font-size:11px;color:var(--muted);margin-top:3px}
