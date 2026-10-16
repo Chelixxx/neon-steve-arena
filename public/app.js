@@ -171,26 +171,26 @@ async function unzipStickerImages(file){
  return items
 }
 async function importStickerFiles(files){
- const valid=files.filter(f=>/\\.(zip|wastickers)$/i.test(f.name)||/^image\\/(png|jpeg|webp|gif)$/.test(f.type)||/\\.(webp|png|jpe?g|gif)$/i.test(f.name));
+ const valid=files.filter(f=>/\.(zip|wastickers)$/i.test(f.name)||/^image\/(png|jpeg|webp|gif)$/.test(f.type)||/\.(webp|png|jpe?g|gif)$/i.test(f.name));
  if(!valid.length){toast('Выбери ZIP/.wastickers или изображения PNG/JPG/WEBP/GIF');return}
  const importBtn=$('importStickerFiles');importBtn.disabled=true;$('stickerCreator').classList.remove('hidden');
  try{
   let added=0;
   for(const f of valid){
    if(stickerDraft.length>=40)break;
-   if(/\\.(zip|wastickers)$/i.test(f.name)){
+   if(/\.(zip|wastickers)$/i.test(f.name)){
     if(f.size>25*1024*1024)throw new Error('Архив должен быть меньше 25 МБ');
     $('stickerImportStatus').textContent='Распаковываем '+f.name+' на сервере…';
     const r=await fetch('/api/import-sticker-archive',{method:'POST',headers:{'content-type':'application/octet-stream'},credentials:'same-origin',body:f});
     const d=await r.json();if(!r.ok)throw new Error(d.error||'Сервер не смог распаковать архив');
-    if(!$('stickerPackName').value.trim())$('stickerPackName').value=f.name.replace(/\\.(zip|wastickers)$/i,'').slice(0,40)||'Импортированный набор';
+    if(!$('stickerPackName').value.trim())$('stickerPackName').value=f.name.replace(/\.(zip|wastickers)$/i,'').slice(0,40)||'Импортированный набор';
     for(const item of d.stickers||[]){if(stickerDraft.length>=40)break;stickerDraft.push(item);added++}
     renderStickerDraft();
    }else{
-    if(!/^image\\/(png|jpeg|webp|gif)$/.test(f.type)&&! /\\.(webp|png|jpe?g|gif)$/i.test(f.name))continue;
+    if(!/^image\/(png|jpeg|webp|gif)$/.test(f.type)&&! /\.(webp|png|jpe?g|gif)$/i.test(f.name))continue;
     if(f.size>5*1024*1024)continue;
     $('stickerImportStatus').textContent='Загружаем '+f.name+'…';
-    const image=await uploadStickerImage(f);stickerDraft.push({emoji:'✨',label:f.name.replace(/\\.[^.]+$/,'').slice(0,80),image});added++;renderStickerDraft();
+    const image=await uploadStickerImage(f);stickerDraft.push({emoji:'✨',label:f.name.replace(/\.[^.]+$/,'').slice(0,80),image});added++;renderStickerDraft();
     if(!$('stickerPackName').value.trim())$('stickerPackName').value='Импортированный набор';
    }
   }
