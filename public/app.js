@@ -175,7 +175,7 @@ async function importStickerFiles(files){
  if(!valid.length){toast('Выбери ZIP/.wastickers или изображения PNG/JPG/WEBP/GIF');return}
  const importBtn=$('importStickerFiles');importBtn.disabled=true;$('stickerCreator').classList.remove('hidden');
  try{
-  let added=0;
+  let added=0,failed=0;
   for(const f of valid){
    if(stickerDraft.length>=40)break;
    if(/\.(zip|wastickers)$/i.test(f.name)){
@@ -190,12 +190,12 @@ async function importStickerFiles(files){
     if(!/^image\/(png|jpeg|webp|gif)$/.test(f.type)&&! /\.(webp|png|jpe?g|gif)$/i.test(f.name))continue;
     if(f.size>5*1024*1024)continue;
     $('stickerImportStatus').textContent='Загружаем '+f.name+'…';
-    const image=await uploadStickerImage(f);stickerDraft.push({emoji:'✨',label:f.name.replace(/\.[^.]+$/,'').slice(0,80),image});added++;renderStickerDraft();
-    if(!$('stickerPackName').value.trim())$('stickerPackName').value='Импортированный набор';
+    try{const image=await uploadStickerImage(f);stickerDraft.push({emoji:'✨',label:f.name.replace(/\.[^.]+$/,'').slice(0,80),image});added++;renderStickerDraft();if(!$('stickerPackName').value.trim())$('stickerPackName').value='Импортированный набор'}
+    catch(uploadError){console.warn('Pulse sticker skipped:',f.name,uploadError);failed++;$('stickerImportStatus').textContent='Пропущен '+f.name+' — '+(uploadError.message||'ошибка загрузки')+'; продолжаем…';}
    }
   }
   if(!added)throw new Error('Не удалось найти подходящие стикеры в выбранном файле');
-  $('stickerImportStatus').textContent='Готово: добавлено '+added+' стикеров. Теперь нажми «Сохранить набор».';
+  $('stickerImportStatus').textContent='Готово: добавлено '+added+' стикеров'+(failed?' · пропущено '+failed:'')+'. Теперь нажми «Сохранить набор».');
   toast('Импортировано стикеров: '+added+' ✨');
  }catch(e){$('stickerImportStatus').textContent='Ошибка: '+(e.message||'не удалось импортировать');toast(e.message||'Не удалось импортировать набор')}
  finally{importBtn.disabled=false}
