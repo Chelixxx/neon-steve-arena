@@ -141,7 +141,7 @@ const server=http.createServer(async(req,res)=>{
    setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name}})
   }catch(e){return json(res,e.status||400,{error:e.message||'Ошибка запроса'})}
  }
- if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);if(!user)return json(res,401,{error:'Не авторизован'});trackDevice(user,req);save();return json(res,200,{user:{id:user.id,name:user.name}})}
+ if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);if(!user)return json(res,401,{error:'Не авторизован'});return json(res,200,{user:{id:user.id,name:user.name}})}
  if(req.method==='POST'&&u.pathname==='/api/contact/start'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});
   try{
@@ -329,6 +329,7 @@ const server=http.createServer(async(req,res)=>{
    if(!gift)return json(res,404,{error:'Подарок не найден'});
    if(!Number.isSafeInteger(buyer.pulses)||buyer.pulses<gift.price)return json(res,400,{error:'Не хватает Пульсов'});
    if(!Array.isArray(target.ownedGifts))target.ownedGifts=[];
+   if(target.ownedGifts.includes(gift.id))return json(res,409,{error:'У получателя уже есть этот подарок'});
    buyer.pulses-=gift.price;target.ownedGifts.push(gift.id);
    const at=Date.now(),giftPurchase={giftId:gift.id,name:gift.name,emoji:gift.emoji,rarity:gift.rarity,price:gift.price,buyerId:uid,buyerName:buyer.name,recipientId:target.id,recipientName:target.name};
    store.giftTransactions.push({id:crypto.randomUUID(),type:'gift-send',userId:uid,targetId:target.id,giverName:buyer.name,giftId:gift.id,amount:-gift.price,at});
