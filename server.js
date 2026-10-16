@@ -350,12 +350,17 @@ const server=http.createServer(async(req,res)=>{
   const uid=verifyToken(cookieToken(req))||verifyUploadToken(ticket);if(!uid)return json(res,401,{error:'Сессия загрузки истекла. Повтори отправку файла'});
   const sender=userById(uid),uploadLimit=sender?.admin?MAX_ADMIN_UPLOAD:MAX_UPLOAD;
   const rawName=String(u.searchParams.get('name')||'file').split(/[\\/]/).pop().slice(0,180),requestedExt=path.extname(rawName).toLowerCase();
-  const ext=/^\.[a-z0-9]{1,20}$/.test(requestedExt)?requestedExt:'.bin';
+  const ext=/^\\.[a-z0-9]{1,20}$/.test(requestedExt)?requestedExt:'.bin';
   const declared=Number(req.headers['content-length']||0);if(declared>uploadLimit)return json(res,413,{error:'Лимит файла: '+(uploadLimit/1024/1024)+' МБ'});
-  const id=crypto.randomBytes(16).toString('hex')+ext,file=path.join(UPLOADS,id),chunks=[];let size=0,failed=false;
-  req.on('data',c=>{size+=c.length;if(size>uploadLimit){failed=true;chunks.length=0;if(!res.headersSent)json(res,413,{error:'Лимит файла: '+(uploadLimit/1024/1024)+' МБ'});req.resume()}else if(!failed)chunks.push(c)});
-  req.on('end',()=>{if(failed)return;fs.writeFile(file,Buffer.concat(chunks),{flag:'wx'},err=>{if(err)return json(res,500,{error:'Не удалось сохранить файл'});json(res,201,{url:'/uploads/'+id,name:rawName,size,mime:mime[ext]||'application/octet-stream'})})});
-  req.on('error',()=>{failed=true});return
+  const id=crypto.randomBytes(16).toString('hex')+ext,file=path.join(UPLOADS,id),out=fs.createWriteStream(file,{flags:'wx'});let size=0,failed=false;
+  const cleanup=()=>fs.unlink(file,()=>{});
+  const fail=(status,message)=>{if(failed||res.writableEnded)return;failed=true;req.unpipe(out);out.destroy();cleanup();if(!res.headersSent)json(res,status,{error:message});else res.destroy()};
+  req.on('data',chunk=>{if(failed)return;size+=chunk.length;if(size>uploadLimit){fail(413,'Лимит файла: '+(uploadLimit/1024/1024)+' МБ');req.resume()}});
+  req.on('aborted',()=>{if(!failed){failed=true;out.destroy();cleanup()}});
+  req.on('error',()=>fail(400,'Загрузка прервана. Проверь соединение и повтори отправку'));
+  out.on('error',err=>{console.error('Pulse upload write failed:',err.message);fail(500,'Не удалось сохранить файл на сервере')});
+  out.on('finish',()=>{if(failed||res.writableEnded)return;json(res,201,{url:'/uploads/'+id,name:rawName,size,mime:mime[ext]||'application/octet-stream'})});
+  req.pipe(out);return
  }
  if(u.pathname.startsWith('/uploads/')){if(!verifyToken(cookieToken(req)))return json(res,401,{error:'Войди в аккаунт, чтобы открыть файл'});const id=path.basename(u.pathname),file=path.join(UPLOADS,id);return fs.stat(file,(e,st)=>{if(e||!st.isFile())return res.writeHead(404).end('Not found');const ext=path.extname(file).toLowerCase(),inline=['.png','.jpg','.jpeg','.webp','.gif','.bmp','.mp4','.webm','.mov','.m4v','.mp3','.m4a','.ogg','.wav','.pdf','.ttf','.otf','.woff','.woff2'].includes(ext);res.writeHead(200,{'content-type':mime[ext]||'application/octet-stream','content-length':st.size,'cache-control':'private, max-age=86400','x-content-type-options':'nosniff','content-disposition':(inline?'inline':'attachment')+'; filename="'+id.replace(/["\\]/g,'')+'"'});fs.createReadStream(file).pipe(res)})}
  const requested=u.pathname==='/'?'/index.html':u.pathname;let file;try{file=path.resolve(ROOT,'.'+decodeURIComponent(requested))}catch{return json(res,400,{error:'Bad path'})}
