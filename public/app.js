@@ -171,22 +171,35 @@ async function unzipStickerImages(file){
  return items
 }
 async function importStickerFiles(files){
- const valid=files.filter(f=>/\.(zip|wastickers)$/i.test(f.name)||/^image\/(png|jpeg|webp|gif)$/.test(f.type)||/\.(webp|png|jpe?g|gif)$/i.test(f.name));
- if(!valid.length){toast('Выбери ZIP или .wastickers стикерпак или изображения PNG/JPG/WEBP/GIF');return}
+ const valid=files.filter(f=>/\\.(zip|wastickers)$/i.test(f.name)||/^image\\/(png|jpeg|webp|gif)$/.test(f.type)||/\\.(webp|png|jpe?g|gif)$/i.test(f.name));
+ if(!valid.length){toast('Выбери ZIP/.wastickers или изображения PNG/JPG/WEBP/GIF');return}
  const importBtn=$('importStickerFiles');importBtn.disabled=true;$('stickerCreator').classList.remove('hidden');
  try{
-  let images=[];for(const f of valid){if(/\.(zip|wastickers)$/i.test(f.name)){if(f.size>25*1024*1024)throw new Error('Архив должен быть меньше 25 МБ');images.push(...await unzipStickerImages(f))}else images.push(f)}
-  images=images.filter(f=>/^image\/(png|jpeg|webp|gif)$/.test(f.type)||/\.(webp|png|jpe?g|gif)$/i.test(f.name)).slice(0,40-stickerDraft.length);
-  if(!images.length)throw new Error('В архиве не нашлось подходящих статичных стикеров');
-  if(!$('stickerPackName').value.trim())$('stickerPackName').value=valid[0].name.replace(/\.(zip|wastickers)$/i,'').slice(0,40)||'Импортированный набор';
-  for(let i=0;i<images.length;i++){const f=images[i];if(f.size>5*1024*1024)continue;$('stickerImportStatus').textContent='Импортируем '+(i+1)+' из '+images.length+' · '+f.name;const image=await uploadStickerImage(f);stickerDraft.push({emoji:'✨',label:f.name.replace(/\.[^.]+$/,'').slice(0,80),image});renderStickerDraft()}
-  if(!stickerDraft.length)throw new Error('Не удалось импортировать изображения');
-  $('stickerImportStatus').textContent='Импортировано стикеров: '+stickerDraft.length+'. Нажми «Сохранить набор».';
-  toast('Стикеры импортированы ✨')
- }catch(e){$('stickerImportStatus').textContent=e.message||'Ошибка импорта';toast(e.message||'Не удалось импортировать набор')}
+  let added=0;
+  for(const f of valid){
+   if(stickerDraft.length>=40)break;
+   if(/\\.(zip|wastickers)$/i.test(f.name)){
+    if(f.size>25*1024*1024)throw new Error('Архив должен быть меньше 25 МБ');
+    $('stickerImportStatus').textContent='Распаковываем '+f.name+' на сервере…';
+    const r=await fetch('/api/import-sticker-archive',{method:'POST',headers:{'content-type':'application/octet-stream'},credentials:'same-origin',body:f});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Сервер не смог распаковать архив');
+    if(!$('stickerPackName').value.trim())$('stickerPackName').value=f.name.replace(/\\.(zip|wastickers)$/i,'').slice(0,40)||'Импортированный набор';
+    for(const item of d.stickers||[]){if(stickerDraft.length>=40)break;stickerDraft.push(item);added++}
+    renderStickerDraft();
+   }else{
+    if(!/^image\\/(png|jpeg|webp|gif)$/.test(f.type)&&! /\\.(webp|png|jpe?g|gif)$/i.test(f.name))continue;
+    if(f.size>5*1024*1024)continue;
+    $('stickerImportStatus').textContent='Загружаем '+f.name+'…';
+    const image=await uploadStickerImage(f);stickerDraft.push({emoji:'✨',label:f.name.replace(/\\.[^.]+$/,'').slice(0,80),image});added++;renderStickerDraft();
+    if(!$('stickerPackName').value.trim())$('stickerPackName').value='Импортированный набор';
+   }
+  }
+  if(!added)throw new Error('Не удалось найти подходящие стикеры в выбранном файле');
+  $('stickerImportStatus').textContent='Готово: добавлено '+added+' стикеров. Теперь нажми «Сохранить набор».';
+  toast('Импортировано стикеров: '+added+' ✨');
+ }catch(e){$('stickerImportStatus').textContent='Ошибка: '+(e.message||'не удалось импортировать');toast(e.message||'Не удалось импортировать набор')}
  finally{importBtn.disabled=false}
 }
-
 async function saveStickerPack(){const name=$('stickerPackName').value.trim();if(!name){toast('Дай набору название');return}if(!stickerDraft.length){toast('Добавь хотя бы один стикер');return}const btn=$('saveStickerPack');btn.disabled=true;try{const r=await fetch('/api/sticker-packs',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({name,stickers:stickerDraft.slice(0,40)})}),d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось сохранить набор');await loadSharedStickerPacks();$('stickerCreator').classList.add('hidden');renderStickerPicker();$('stickerPackSelect').value=d.pack.id;renderStickerPicker();toast('Набор опубликован для всех в Pulse 🌐')}catch(e){toast(e.message||'Не удалось опубликовать набор')}finally{btn.disabled=false}}
 function renderMessages(){const el=$('messages');if(activeId==='cookie-bot'){renderCookieBot();return}const list=messagesByChat.get(currentKey())||[];el.innerHTML='';if(!list.length){el.innerHTML='<div class="day-label">Начало переписки · отправь первое сообщение ✨</div>';return}let day='';for(const m of list){const d=new Date(m.at||Date.now()).toLocaleDateString();if(d!==day){day=d;const label=document.createElement('div');label.className='day-label';label.textContent=d;el.append(label)}const mine=m.from===myId,node=document.createElement('div');node.className='message'+(mine?' mine':'')+(m.deletedForEveryone?' deleted':'');const receipt=mine&&m.to?'<span class="receipt '+((m.readBy||[]).includes(m.to)?'read':'')+'">'+(((m.readBy||[]).includes(m.to))?'✓✓':((m.deliveredTo||[]).includes(m.to)?'✓✓':'✓'))+'</span>':'';const sender=users.find(u=>u.id===m.from);const quote=m.replyTo?'<div class="message-quote"><b>↩ '+esc(m.replyTo.name||'Ответ')+'</b><span>'+esc(m.replyTo.deleted?'Сообщение удалено':m.replyTo.text||'Вложение')+'</span></div>':'';const forwarded=m.forwardedFrom?'<div class="forwarded-label">↪ Переслано от '+esc(m.forwardedFrom.name||'пользователя')+'</div>':'';const body=stickerMessageHTML(m,quote,forwarded);node.innerHTML=(!mine&&currentKey()===globalKey?'<div class="msg-name">'+esc(m.name)+adminBadge(sender)+giftDecor(sender)+'</div>':'')+body+'<div class="msg-time">'+new Date(m.at||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+(m.editedAt?' · изменено':'')+receipt+'</div><div class="message-actions"><button type="button" data-msg-action="reply" data-msg-id="'+esc(m.id)+'">↩ Ответить</button><button type="button" data-msg-action="copy" data-msg-id="'+esc(m.id)+'">⧉ Копировать</button><button type="button" data-msg-action="forward" data-msg-id="'+esc(m.id)+'">➦ Переслать</button><button type="button" data-msg-action="delete-self" data-msg-id="'+esc(m.id)+'">Удалить у себя</button>'+(mine&&!m.deletedForEveryone?'<button type="button" data-msg-action="edit" data-msg-id="'+esc(m.id)+'">✎ Изменить</button><button type="button" data-msg-action="delete-all" data-msg-id="'+esc(m.id)+'">Удалить у всех</button>':'')+'</div>';el.append(node)}el.scrollTop=el.scrollHeight}
 async function handleMessageAction(action,id){const list=messagesByChat.get(currentKey())||[],m=list.find(x=>x.id===id);if(!m)return;if(action==='reply'){setReply(m);$('messageInput').focus();return}if(action==='edit'){if(m.from!==myId||m.deletedForEveryone)return;const value=prompt('Изменить сообщение:',m.text||'');if(value===null)return;if(!value.trim()&&!m.attachment){toast('Сообщение не может быть пустым');return}send({t:'edit-message',id:m.id,text:value});return}if(action==='copy'){const text=m.deletedForEveryone?'':(m.text||m.attachment?.name||'');try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);else{const t=document.createElement('textarea');t.value=text;document.body.append(t);t.select();document.execCommand('copy');t.remove()}toast('Скопировано ✓')}catch{toast('Не удалось скопировать')}return}if(action==='forward'){const nick=prompt('Кому переслать? Введи точный ник пользователя:');if(!nick)return;const target=users.find(u=>u.name.toLowerCase()===nick.trim().toLowerCase()&&u.id!==myId);if(!target){toast('Пользователь не найден');return}if(m.deletedForEveryone||(!m.text&&!m.attachment)){toast('Это сообщение нельзя переслать');return}send({t:'message',text:m.text||'',to:target.id,attachment:m.attachment||null,forwardedFrom:m.id});toast('Сообщение переслано ➦');return}if(action==='delete-self'||action==='delete-all'){const all=action==='delete-all';if(!confirm(all?'Удалить это сообщение и вложение у всех?':'Убрать это сообщение только у себя?'))return;try{await waitForSocket();send({t:'delete-message',id:m.id,scope:all?'everyone':'self',requestId:crypto.randomUUID()})}catch(e){toast(e.message||'Не удалось удалить сообщение')}}}
