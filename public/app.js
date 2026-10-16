@@ -171,14 +171,14 @@ async function unzipStickerImages(file){
  return items
 }
 async function importStickerFiles(files){
- const valid=files.filter(f=>/\.zip$/i.test(f.name)||/^image\/(png|jpeg|webp|gif)$/.test(f.type)||/\.(webp|png|jpe?g|gif)$/i.test(f.name));
- if(!valid.length){toast('Выбери ZIP стикерпак или изображения PNG/JPG/WEBP/GIF');return}
+ const valid=files.filter(f=>/\.(zip|wastickers)$/i.test(f.name)||/^image\/(png|jpeg|webp|gif)$/.test(f.type)||/\.(webp|png|jpe?g|gif)$/i.test(f.name));
+ if(!valid.length){toast('Выбери ZIP или .wastickers стикерпак или изображения PNG/JPG/WEBP/GIF');return}
  const importBtn=$('importStickerFiles');importBtn.disabled=true;$('stickerCreator').classList.remove('hidden');
  try{
-  let images=[];for(const f of valid){if(/\.zip$/i.test(f.name)){if(f.size>25*1024*1024)throw new Error('ZIP-архив должен быть меньше 25 МБ');images.push(...await unzipStickerImages(f))}else images.push(f)}
+  let images=[];for(const f of valid){if(/\.(zip|wastickers)$/i.test(f.name)){if(f.size>25*1024*1024)throw new Error('Архив должен быть меньше 25 МБ');images.push(...await unzipStickerImages(f))}else images.push(f)}
   images=images.filter(f=>/^image\/(png|jpeg|webp|gif)$/.test(f.type)||/\.(webp|png|jpe?g|gif)$/i.test(f.name)).slice(0,40-stickerDraft.length);
   if(!images.length)throw new Error('В архиве не нашлось подходящих статичных стикеров');
-  if(!$('stickerPackName').value.trim())$('stickerPackName').value=valid[0].name.replace(/\.zip$/i,'').slice(0,40)||'Импортированный набор';
+  if(!$('stickerPackName').value.trim())$('stickerPackName').value=valid[0].name.replace(/\.(zip|wastickers)$/i,'').slice(0,40)||'Импортированный набор';
   for(let i=0;i<images.length;i++){const f=images[i];if(f.size>5*1024*1024)continue;$('stickerImportStatus').textContent='Импортируем '+(i+1)+' из '+images.length+' · '+f.name;const image=await uploadStickerImage(f);stickerDraft.push({emoji:'✨',label:f.name.replace(/\.[^.]+$/,'').slice(0,80),image});renderStickerDraft()}
   if(!stickerDraft.length)throw new Error('Не удалось импортировать изображения');
   $('stickerImportStatus').textContent='Импортировано стикеров: '+stickerDraft.length+'. Нажми «Сохранить набор».';
