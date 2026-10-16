@@ -373,6 +373,27 @@ wss.on('connection',(ws,req)=>{
  ws.on('message',raw=>{
   let m;try{m=JSON.parse(raw)}catch{return}if(!m||typeof m.t!=='string')return;if(m.t==='ping'){send(ws,{t:'pong',at:Date.now()});return}
   if(m.t==='upload-ticket'){const requestId=String(m.requestId||'').slice(0,80);if(requestId)send(ws,{t:'upload-ticket',requestId,token:signUploadToken(uid)});return}
+  if(m.t==='message'&&typeof m.text==='string'&&/^\/gift(?:\s|$)/i.test(m.text.trim())){
+   const raw=m.text.trim(),targetId=typeof m.to==='string'?m.to:'',target=targetId&&userById(targetId),query=raw.replace(/^\/gift\s*/i,'').trim().normalize('NFKC').toLocaleLowerCase('ru-RU');
+   if(!target||target.id===uid){send(ws,{t:'error',message:'Команда /gift работает только в личном чате с другим пользователем'});return}
+   if(!query){send(ws,{t:'error',message:'Использование: /gift <имя подарка>. Например: /gift Роза 1'});return}
+   const exact=GIFT_CATALOG.filter(g=>g.name.normalize('NFKC').toLocaleLowerCase('ru-RU')===query),matches=exact.length?exact:GIFT_CATALOG.filter(g=>g.name.normalize('NFKC').toLocaleLowerCase('ru-RU').includes(query));
+   if(matches.length!==1){send(ws,{t:'error',message:matches.length?'Нашлось несколько подарков: '+matches.slice(0,6).map(g=>g.name).join(', ')+'. Напиши точное название.':'Подарок не найден. Проверь название в каталоге подарков.'});return}
+   const gift=matches[0];
+   if(target.hideFromUnmessaged&&!isRootAdmin(user)&&!store.messages.some(x=>x.from===target.id&&x.to===uid)){send(ws,{t:'error',message:'Этот профиль скрыт. Пользователь должен первым написать тебе'});return}
+   if(!Number.isSafeInteger(user.pulses)||user.pulses<gift.price){send(ws,{t:'error',message:'Не хватает Пульсов. Подарок «'+gift.name+'» стоит '+gift.price.toLocaleString('ru-RU')+' ⚡'});return}
+   if(!Array.isArray(target.ownedGifts))target.ownedGifts=[];
+   if(target.ownedGifts.includes(gift.id)){send(ws,{t:'error',message:'У получателя уже есть этот подарок'});return}
+   user.pulses-=gift.price;target.ownedGifts.push(gift.id);
+   const at=Date.now(),giftPurchase={giftId:gift.id,name:gift.name,emoji:gift.emoji,rarity:gift.rarity,price:gift.price,buyerId:uid,buyerName:user.name,recipientId:target.id,recipientName:target.name};
+   store.giftTransactions.push({id:crypto.randomUUID(),type:'gift-send',userId:uid,targetId:target.id,giverName:user.name,giftId:gift.id,amount:-gift.price,at});
+   const msg={id:crypto.randomUUID(),from:uid,name:user.name,to:target.id,channelId:null,text:'',kind:'gift',giftPurchase,at,readBy:[],deliveredTo:online(target.id)?[target.id]:[]};
+   store.messages.push(msg);if(store.messages.length>20000)store.messages=store.messages.slice(-20000);
+   save();sendUser(uid,{t:'message',message:msg});sendUser(target.id,{t:'message',message:msg});sendUser(uid,{t:'pulses-updated',pulses:user.pulses});sendUser(target.id,{t:'gift-inventory-updated'});
+   sendUser(uid,{t:'reward-notice',title:'🎁 Подарок отправлен',body:'Ты отправил(а) '+gift.emoji+' '+gift.name+' пользователю '+target.name+' за '+gift.price.toLocaleString('ru-RU')+' ⚡'});
+   notifyUser(target.id,'🎁 Тебе подарок в Pulse!',user.name+' отправил(а) тебе '+gift.emoji+' '+gift.name+' стоимостью '+gift.price.toLocaleString('ru-RU')+' ⚡',{giftId:gift.id,from:user.name});
+   broadcastPresence();return
+  }
   if(m.t==='message'&&typeof m.text==='string'&&/^\/(play|celya)\b/i.test(m.text.trim())){
    const raw=m.text.trim(),targetId=typeof m.to==='string'?m.to:'',target=targetId&&userById(targetId);
    if(!target||target.id===uid){send(ws,{t:'error',message:'Команды /play и /celya работают в личном чате с другим пользователем'});return}
