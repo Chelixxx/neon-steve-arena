@@ -362,14 +362,15 @@ const server=http.createServer(async(req,res)=>{
  fs.stat(file,(e,st)=>{if(e||!st.isFile())return res.writeHead(404).end('Not found');res.writeHead(200,{'content-type':mime[path.extname(file).toLowerCase()]||'application/octet-stream','cache-control':path.extname(file)==='.html'?'no-cache':'public, max-age=3600','x-content-type-options':'nosniff'});fs.createReadStream(file).pipe(res)})
 });
 const wss=new WebSocketServer({server,path:'/ws',perMessageDeflate:false,maxPayload:2*1024*1024});
+const wsHeartbeat=setInterval(()=>{for(const socket of wss.clients){if(socket.isAlive===false){socket.terminate();continue}socket.isAlive=false;try{socket.ping()}catch{socket.terminate()}}},25000);wsHeartbeat.unref?.();
 wss.on('connection',(ws,req)=>{
  const wsDeviceId=deviceIdFrom(req),wsDeviceBan=wsDeviceId&&store.deviceBans[wsDeviceId];if(wsDeviceBan){send(ws,{t:'banned',reason:'Устройство заблокировано'+(wsDeviceBan.reason?': '+wsDeviceBan.reason:'')});ws.close(1008,'Device banned');return}
  const uid=verifyToken(cookieToken(req)),user=uid&&userById(uid);if(!user){send(ws,{t:'auth-required'});ws.close(1008,'Login required');return}
- ws.uid=uid;ws.deviceId=wsDeviceId;let set=clients.get(uid);if(!set){set=new Set();clients.set(uid,set)}set.add(ws);
+ ws.uid=uid;ws.deviceId=wsDeviceId;ws.isAlive=true;ws.on('pong',()=>{ws.isAlive=true});let set=clients.get(uid);if(!set){set=new Set();clients.set(uid,set)}set.add(ws);
  send(ws,{t:'welcome',id:uid,user:{id:uid,name:user.name},users:onlineUsers(uid),history:chatHistory(uid,null),unread:unreadFor(uid)});
  broadcastPresence();
  ws.on('message',raw=>{
-  let m;try{m=JSON.parse(raw)}catch{return}if(!m||typeof m.t!=='string')return;
+  let m;try{m=JSON.parse(raw)}catch{return}if(!m||typeof m.t!=='string')return;if(m.t==='ping'){send(ws,{t:'pong',at:Date.now()});return}
   if(m.t==='upload-ticket'){const requestId=String(m.requestId||'').slice(0,80);if(requestId)send(ws,{t:'upload-ticket',requestId,token:signUploadToken(uid)});return}
   if(m.t==='message'&&typeof m.text==='string'&&/^\/(play|celya)\b/i.test(m.text.trim())){
    const raw=m.text.trim(),targetId=typeof m.to==='string'?m.to:'',target=targetId&&userById(targetId);
