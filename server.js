@@ -1,5 +1,5 @@
 'use strict';
-const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),{WebSocketServer}=require('ws'),webpush=require('web-push');
+const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),zlib=require('zlib'),{WebSocketServer}=require('ws'),webpush=require('web-push');
 const PORT=process.env.PORT||8080,ROOT=path.join(__dirname,'public'),DATA=process.env.DATA_DIR||'/data',UPLOADS=path.join(DATA,'uploads'),DB=path.join(DATA,'pulse-store.json'),SECRET_FILE=path.join(DATA,'.pulse-secret'),MAX_UPLOAD=25*1024*1024,MAX_ADMIN_UPLOAD=100*1024*1024,FILE_TTL=3*24*60*60*1000;
 fs.mkdirSync(UPLOADS,{recursive:true});
 function cleanupOldUploads(){const cutoff=Date.now()-FILE_TTL;fs.readdir(UPLOADS,(err,files)=>{if(err)return;for(const name of files){if(!/^[a-f0-9]{32}(?:\.[a-z0-9]{1,20})?$/i.test(name))continue;const file=path.join(UPLOADS,name);fs.stat(file,(e,st)=>{if(!e&&st.isFile()&&st.mtimeMs<cutoff)fs.unlink(file,()=>{})})}})}
@@ -281,6 +281,34 @@ const server=http.createServer(async(req,res)=>{
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});
   const adminUser=userById(uid);if(!adminUser||!adminUser.admin||adminUser.name.toLowerCase()!=='chelixxx')return json(res,403,{error:'Эта функция доступна только администратору @Chelixxx'});
   try{const b=await parseBody(req,1500000),targetName=cleanName(b.username||''),avatar=String(b.avatar||'');if(targetName.length<3)return json(res,400,{error:'Укажи ник пользователя'});if(!/^data:image\/(png|jpeg|webp|gif);base64,/.test(avatar)||avatar.length>1100000)return json(res,400,{error:'Загрузи PNG/JPEG/WEBP/GIF до 800 КБ'});const target=store.users.find(x=>x.name.toLowerCase()===targetName.toLowerCase());if(!target)return json(res,404,{error:'Пользователь не найден'});target.avatar=avatar;save();broadcastPresence();return json(res,200,{ok:true,username:target.name,avatar:target.avatar})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось изменить аватар'})}
+ }
+ if(req.method==='POST'&&u.pathname==='/api/import-sticker-archive'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});
+  try{
+   const chunks=[];let size=0;
+   for await(const chunk of req){size+=chunk.length;if(size>25*1024*1024)throw Object.assign(new Error('Архив должен быть меньше 25 МБ'),{status:413});chunks.push(chunk)}
+   const buf=Buffer.concat(chunks);if(buf.length<22)throw new Error('Файл пустой или это не ZIP-архив');
+   const eocdSig=Buffer.from([0x50,0x4b,0x05,0x06]);let eocd=-1;
+   for(let i=buf.length-22;i>=Math.max(0,buf.length-65558);i--){if(buf.subarray(i,i+4).equals(eocdSig)){eocd=i;break}}
+   if(eocd<0)throw new Error('Не удалось прочитать архив стикеров');
+   const count=buf.readUInt16LE(eocd+10);let p=buf.readUInt32LE(eocd+16);const stickers=[];
+   for(let i=0;i<count&&stickers.length<40&&p+46<=buf.length;i++){
+    if(buf.readUInt32LE(p)!==0x02014b50)break;
+    const method=buf.readUInt16LE(p+10),compressed=buf.readUInt32LE(p+20),uncompressed=buf.readUInt32LE(p+24),nameLen=buf.readUInt16LE(p+28),extraLen=buf.readUInt16LE(p+30),commentLen=buf.readUInt16LE(p+32),local=buf.readUInt32LE(p+42);
+    const name=buf.subarray(p+46,p+46+nameLen).toString('utf8');p+=46+nameLen+extraLen+commentLen;
+    if(name.endsWith('/')||name.includes('__MACOSX/')||name.split('/').pop().startsWith('.'))continue;
+    const base=name.split('/').pop(),ext=path.extname(base).toLowerCase();if(!['.webp','.png','.jpg','.jpeg','.gif'].includes(ext)||uncompressed>5*1024*1024)continue;
+    if(local+30>buf.length||buf.readUInt32LE(local)!==0x04034b50)continue;
+    const start=local+30+buf.readUInt16LE(local+26)+buf.readUInt16LE(local+28),end=start+compressed;if(end>buf.length)continue;
+    const packed=buf.subarray(start,end);let raw;
+    if(method===0)raw=Buffer.from(packed);else if(method===8)raw=zlib.inflateRawSync(packed);else continue;
+    if(raw.length>5*1024*1024||raw.length!==uncompressed)continue;
+    const id=crypto.randomBytes(16).toString('hex')+ext,file=path.join(UPLOADS,id);await fs.promises.writeFile(file,raw,{flag:'wx'});
+    stickers.push({image:'/uploads/'+id,label:path.basename(base,ext).slice(0,80),emoji:'✨'});
+   }
+   if(!stickers.length)throw new Error('В архиве не найдены статичные WEBP/PNG/JPG/GIF стикеры');
+   return json(res,200,{stickers,count:stickers.length});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось распаковать стикерпак'})}
  }
  if(req.method==='GET'&&u.pathname==='/api/sticker-packs'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в Pulse'});
