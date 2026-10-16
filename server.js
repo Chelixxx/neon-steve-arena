@@ -378,7 +378,7 @@ const server=http.createServer(async(req,res)=>{
   const uid=verifyToken(cookieToken(req))||verifyUploadToken(ticket);if(!uid)return json(res,401,{error:'Сессия загрузки истекла. Повтори отправку файла'});
   const sender=userById(uid),uploadLimit=sender?.admin?MAX_ADMIN_UPLOAD:MAX_UPLOAD;
   const rawName=String(u.searchParams.get('name')||'file').split(/[\\/]/).pop().slice(0,180),requestedExt=path.extname(rawName).toLowerCase();
-  const ext=/^\\.[a-z0-9]{1,20}$/.test(requestedExt)?requestedExt:'.bin';
+  const ext=/^\.[a-z0-9]{1,20}$/.test(requestedExt)?requestedExt:'.bin';
   const declared=Number(req.headers['content-length']||0);if(declared>uploadLimit)return json(res,413,{error:'Лимит файла: '+(uploadLimit/1024/1024)+' МБ'});
   const id=crypto.randomBytes(16).toString('hex')+ext,file=path.join(UPLOADS,id),out=fs.createWriteStream(file,{flags:'wx'});let size=0,failed=false;
   const cleanup=()=>fs.unlink(file,()=>{});
