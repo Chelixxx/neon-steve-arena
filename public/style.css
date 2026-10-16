@@ -83,3 +83,23 @@ body[data-theme="light"] .settings-list label{color:#292d42}
 
 /* File upload progress */
 .upload-progress{display:block;width:min(220px,42vw);height:4px;overflow:hidden;border-radius:999px;background:var(--line);margin-top:5px}.upload-progress-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--cyan));transition:width .12s linear;box-shadow:0 0 10px #8c70ff66}.compose-foot #uploadStatus{display:block;max-width:100%;overflow-wrap:anywhere;font-size:11px;color:var(--muted);margin-top:3px}
+
+
+/* Expanded personal appearance controls */
+body[data-theme="mint"]{--bg:#071a15;--panel:#0d2820;--panel2:#14392d;--line:#285747;--text:#edfff5;--muted:#92c7ad;--accent:#57d99a;--cyan:#8af0c2;--pink:#8fd8ff}
+body[data-theme="mint"] .sidebar,body[data-theme="mint"] .composer{background:#092019}
+body[data-theme="mint"] .main{background:radial-gradient(ellipse at 60% 0%,#164331 0%,#071a15 55%)}
+body[data-theme="midnight"]{--bg:#070912;--panel:#0d1020;--panel2:#151a2e;--line:#262d4a;--text:#f0f3ff;--muted:#8994b8;--accent:#6e91ff;--cyan:#9baeff;--pink:#bd8cff}
+body[data-theme="midnight"] .sidebar,body[data-theme="midnight"] .composer{background:#090c18}
+body[data-theme="midnight"] .main{background:radial-gradient(ellipse at 60% 0%,#20264a 0%,#070912 58%)}
+.customize-settings{display:grid;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.customize-settings h3{margin:0;font-size:14px}
+.customize-settings input[type="color"]{height:42px;padding:4px!important;cursor:pointer}
+body[data-text-size="small"] .bubble,body[data-text-size="small"] .message .msg-name{font-size:11px}
+body[data-text-size="normal"] .bubble{font-size:13px}
+body[data-text-size="large"] .bubble{font-size:16px;line-height:1.6}
+body[data-text-size="large"] .chat-item .chat-preview b,body[data-text-size="large"] .chat-item .chat-preview small{font-size:13px}
+body[data-bubble-style="classic"] .bubble{border-radius:8px!important;box-shadow:none!important;backdrop-filter:none!important}
+body[data-bubble-style="glass"] .bubble{background:color-mix(in srgb,var(--panel2) 68%,transparent)!important;border-color:color-mix(in srgb,var(--accent) 35%,transparent);backdrop-filter:blur(12px);box-shadow:0 8px 28px #0002}
+body[data-bubble-style="glass"] .mine .bubble{background:color-mix(in srgb,var(--accent) 42%,transparent)!important}
+body.reduce-motion *,body.reduce-motion *::before,body.reduce-motion *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
