@@ -195,7 +195,7 @@ async function importStickerFiles(files){
    }
   }
   if(!added)throw new Error('Не удалось найти подходящие стикеры в выбранном файле');
-  $('stickerImportStatus').textContent='Готово: добавлено '+added+' стикеров'+(failed?' · пропущено '+failed:'')+'. Теперь нажми «Сохранить набор».');
+  $('stickerImportStatus').textContent='Готово: добавлено '+added+' стикеров'+(failed?' · пропущено '+failed:'')+'. Теперь нажми «Сохранить набор». ';
   toast('Импортировано стикеров: '+added+' ✨');
  }catch(e){$('stickerImportStatus').textContent='Ошибка: '+(e.message||'не удалось импортировать');toast(e.message||'Не удалось импортировать набор')}
  finally{importBtn.disabled=false}
