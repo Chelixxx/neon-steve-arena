@@ -79,7 +79,7 @@ async function logout(){
  if(localStream)localStream.getTracks().forEach(t=>t.stop());location.reload()
 }
 function connect(){
- if(manualDisconnect||!myId&&$('login').classList.contains('hidden')===false&&(!$('nickname').value.trim()||!$('password').value))return;
+ if(manualDisconnect)return;
  if(ws&&(ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING))return;
  $('loginError').textContent='Подключаемся…';if(!myId)$('bootLoader')?.classList.remove('hidden');
  const proto=location.protocol==='https:'?'wss:':'ws:';ws=new WebSocket(proto+'//'+location.host+'/ws');
