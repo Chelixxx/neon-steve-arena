@@ -25,7 +25,7 @@ function applyTheme(theme){const allowed=['dark','light','ocean','rose'];if(!all
 function labelFor(id){if(id===globalKey)return 'Общий чат';if(String(id).startsWith('channel:'))return channels.find(c=>c.id===id.slice(8))?.name||'Канал';return localNick(id)||users.find(u=>u.id===id)?.name||'Пользователь'}
 function showFormatToolbar(){const input=$('messageInput'),bar=$('formatToolbar');if(!input||!bar)return;if(input.selectionStart===input.selectionEnd||document.activeElement!==input){bar.classList.add('hidden');return}const r=input.getBoundingClientRect();bar.style.position='fixed';bar.style.left=Math.max(8,Math.min(r.left,window.innerWidth-220))+'px';bar.style.top=Math.max(8,r.top-42)+'px';bar.classList.remove('hidden')}
 function init(){
- $('loginForm').onsubmit=e=>{e.preventDefault();authenticate()};
+ $('loginForm').onsubmit=e=>{e.preventDefault();authenticate()};try{const last=localStorage.getItem('pulseLastAccount');if(last&&!$('nickname').value)$('nickname').value=last}catch{}
  $('authSwitch').onclick=()=>{authMode=authMode==='login'?'register':'login';$('registrationFields').classList.toggle('hidden',authMode!=='register');$('authTitle').textContent=authMode==='login'?'Связь без границ.':'Создай свой Pulse.';$('authSubtitle').textContent=authMode==='login'?'Войди, чтобы открыть свои чаты и сообщения.':'Создай аккаунт по нику и паролю. Email и телефон можно добавить в настройках.';$('authSubmit').innerHTML=authMode==='login'?'Войти в Pulse <span>↗</span>':'Создать аккаунт <span>↗</span>';$('authSwitch').textContent=authMode==='login'?'Нет аккаунта? Создать':'Уже есть аккаунт? Войти';$('openRecovery').classList.toggle('hidden',authMode!=='login');$('password').autocomplete=authMode==='login'?'current-password':'new-password';$('loginError').textContent=''};
  $('logoutBtn').onclick=logout;
  $('newChat').onclick=()=>{tab='people';renderTabs();$('search').focus();renderList()};
@@ -66,12 +66,12 @@ async function authenticate(){
  try{
   const endpoint=authMode==='login'?'/api/login':'/api/register',body={name,password};
   const r=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Не удалось выполнить запрос');
-  myName=data.user.name;connect();
+  myName=data.user.name;try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();
  }catch(e){$('loginError').textContent=e.message||'Ошибка соединения'}
  finally{$('authSubmit').disabled=false}
 }
 async function checkSession(){
- try{const r=await fetch('/api/me',{credentials:'same-origin'});if(!r.ok)return;const d=await r.json();myName=d.user.name;connect()}catch{}
+ try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;const d=await r.json();myName=d.user.name;try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect()}catch{}
 }
 async function logout(){
  if(!confirm('Выйти из аккаунта на этом устройстве?'))return;
