@@ -28,7 +28,22 @@ function applyTheme(theme){const allowed=['dark','light','ocean','rose','mint','
 function applyCustomization(){const accent=localStorage.getItem('pulseAccent')||'#8c70ff',size=localStorage.getItem('pulseTextSize')||'normal',bubble=localStorage.getItem('pulseBubbleStyle')||'soft',animations=localStorage.getItem('pulseAnimations')!=='0';document.documentElement.style.setProperty('--accent',accent);document.body.dataset.textSize=size;document.body.dataset.bubbleStyle=bubble;document.body.classList.toggle('reduce-motion',!animations);if($('settingAccent'))$('settingAccent').value=accent;if($('settingTextSize'))$('settingTextSize').value=size;if($('settingBubbleStyle'))$('settingBubbleStyle').value=bubble;if($('settingAnimations'))$('settingAnimations').checked=animations;if($('settingCompact'))$('settingCompact').checked=localStorage.getItem('pulseCompact')==='1';document.body.classList.toggle('compact-mode',localStorage.getItem('pulseCompact')==='1')}
 function labelFor(id){if(id===globalKey)return 'Общий чат';if(String(id).startsWith('channel:'))return channels.find(c=>c.id===id.slice(8))?.name||'Канал';return localNick(id)||users.find(u=>u.id===id)?.name||'Пользователь'}
 function showFormatToolbar(){const input=$('messageInput'),bar=$('formatToolbar');if(!input||!bar)return;if(input.selectionStart===input.selectionEnd||document.activeElement!==input){bar.classList.add('hidden');return}const r=input.getBoundingClientRect();bar.style.position='fixed';bar.style.left=Math.max(8,Math.min(r.left,window.innerWidth-220))+'px';bar.style.top=Math.max(8,r.top-42)+'px';bar.classList.remove('hidden')}
+function initBackNavigation(){
+ try{history.pushState({pulseBackGuard:true},'',location.href)}catch{}
+ window.addEventListener('popstate',()=>{
+  const viewer=document.getElementById('mediaViewer');
+  if(viewer){closeMediaViewer()}
+  else{
+   const modals=[...document.querySelectorAll('.modal:not(.hidden)')];
+   if(modals.length){modals[modals.length-1].classList.add('hidden')}
+   else if($('app')?.classList.contains('chat-open')){$('app').classList.remove('chat-open');activeId=null;showEmpty()}
+   else if($('profileModal')&&!$('profileModal').classList.contains('hidden')){$('profileModal').classList.add('hidden')}
+  }
+  try{history.pushState({pulseBackGuard:true},'',location.href)}catch{}
+ });
+}
 function init(){
+ initBackNavigation();
  $('loginForm').onsubmit=e=>{e.preventDefault();authenticate()};try{const last=localStorage.getItem('pulseLastAccount');if(last&&!$('nickname').value)$('nickname').value=last}catch{}
  $('authSwitch').onclick=()=>{authMode=authMode==='login'?'register':'login';$('registrationFields').classList.toggle('hidden',authMode!=='register');$('authTitle').textContent=authMode==='login'?'Связь без границ.':'Создай свой Pulse.';$('authSubtitle').textContent=authMode==='login'?'Войди, чтобы открыть свои чаты и сообщения.':'Создай аккаунт по нику и паролю. Email и телефон можно добавить в настройках.';$('authSubmit').innerHTML=authMode==='login'?'Войти в Pulse <span>↗</span>':'Создать аккаунт <span>↗</span>';$('authSwitch').textContent=authMode==='login'?'Нет аккаунта? Создать':'Уже есть аккаунт? Войти';$('openRecovery').classList.toggle('hidden',authMode!=='login');$('password').autocomplete=authMode==='login'?'current-password':'new-password';$('loginError').textContent=''};
  $('logoutBtn').onclick=logout;
