@@ -210,20 +210,26 @@ async function handleMessageAction(action,id){const list=messagesByChat.get(curr
 function submitMessage(){const input=$('messageInput'),text=input.value.trim();if(!text)return;send({t:'message',text,to:isDM()?activeId:null,channelId:isChannel()?activeChannelId():null,replyTo:replyingTo?.id||null});input.value='';input.style.height='auto';setReply(null);input.focus()}
 
 async function waitForSocket(timeout=10000){const started=Date.now();while(Date.now()-started<timeout){if(ws&&ws.readyState===1)return;await new Promise(resolve=>setTimeout(resolve,200))}throw new Error('Нет соединения с чатом. Подожди пару секунд и повтори отправку')}async function getUploadTicket(){if(!ws||ws.readyState!==1)await waitForSocket();const requestId=crypto.randomUUID();return await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pendingUploadTickets.delete(requestId);reject(new Error('Не удалось подтвердить сессию. Повтори попытку'))},8000);pendingUploadTickets.set(requestId,{resolve:token=>{clearTimeout(timer);resolve(token)},reject:error=>{clearTimeout(timer);reject(error)}});send({t:'upload-ticket',requestId})})}
-function setUploadProgress(percent,label){const wrap=$('uploadProgress'),fill=$('uploadProgressFill');if(wrap)wrap.classList.remove('hidden');if(fill)fill.style.width=Math.max(0,Math.min(100,Number(percent)||0))+'%';if($('uploadStatus'))$('uploadStatus').textContent=label||''}
-function uploadBinaryWithProgress(file,token){return new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('POST','/upload?name='+encodeURIComponent(file.name||'file'));xhr.withCredentials=true;xhr.timeout=180000;xhr.setRequestHeader('content-type',file.type||'application/octet-stream');xhr.setRequestHeader('authorization','Bearer '+token);xhr.upload.onprogress=e=>{if(e.lengthComputable){const pct=Math.round(e.loaded/e.total*100);setUploadProgress(pct,'Загрузка файла · '+pct+'%')}};xhr.onload=()=>{let data;try{data=JSON.parse(xhr.responseText||'{}')}catch{reject(new Error('Сервер вернул некорректный ответ'));return}if(xhr.status<200||xhr.status>=300){const error=new Error(data.error||'Ошибка загрузки · HTTP '+xhr.status);error.status=xhr.status;reject(error);return}resolve(data)};xhr.onerror=()=>reject(new Error('Сетевая ошибка. Проверь интернет и повтори отправку'));xhr.ontimeout=()=>reject(new Error('Загрузка заняла слишком много времени. Попробуй ещё раз'));xhr.onabort=()=>reject(new Error('Загрузка отменена'));setUploadProgress(0,'Подготовка загрузки…');xhr.send(file)})}
-async function uploadLargeFileToGofile(file){
- const form=new FormData();form.append('file',file,file.name||'file');
- setUploadProgress(0,'Файл больше 100 МБ · загружаем во внешнее хранилище…');
- const response=await fetch('https://upload.gofile.io/uploadfile',{method:'POST',body:form});
- const data=await response.json().catch(()=>({}));
- if(!response.ok||data.status!=='ok'||!data.data?.downloadPage)throw new Error(data.data?.message||data.message||'Внешнее хранилище не приняло файл. Попробуй позже');
- return {url:data.data.downloadPage,name:file.name||data.data.name||'file',size:file.size,mime:file.type||data.data.mimetype||'application/octet-stream',external:true};
+function setUploadProgress(percent,label){const wrap=$('uploadProgress'),fill=$('uploadProgressFill'),value=Math.max(0,Math.min(100,Math.round(Number(percent)||0)));if(wrap){wrap.classList.remove('hidden');wrap.setAttribute('aria-valuenow',String(value));wrap.setAttribute('aria-label','Загрузка файлов: '+value+'%')}if(fill){fill.style.width=value+'%';fill.textContent=value+'%';fill.setAttribute('aria-hidden','true')}if($('uploadStatus'))$('uploadStatus').textContent=(label?label+' · ':'')+value+'%'}
+function uploadBinaryWithProgress(file,token,onProgress){return new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('POST','/upload?name='+encodeURIComponent(file.name||'file'));xhr.withCredentials=true;xhr.timeout=180000;xhr.setRequestHeader('content-type',file.type||'application/octet-stream');xhr.setRequestHeader('authorization','Bearer '+token);xhr.upload.onprogress=e=>{if(e.lengthComputable){const pct=Math.round(e.loaded/e.total*100);if(onProgress)onProgress(pct);else setUploadProgress(pct,'Загрузка '+(file.name||'файла'))}};xhr.onload=()=>{let data;try{data=JSON.parse(xhr.responseText||'{}')}catch{reject(new Error('Сервер вернул некорректный ответ'));return}if(xhr.status<200||xhr.status>=300){const error=new Error(data.error||'Ошибка загрузки · HTTP '+xhr.status);error.status=xhr.status;reject(error);return}resolve(data)};xhr.onerror=()=>reject(new Error('Сетевая ошибка. Проверь интернет и повтори отправку'));xhr.ontimeout=()=>reject(new Error('Загрузка заняла слишком много времени. Попробуй ещё раз'));xhr.onabort=()=>reject(new Error('Загрузка отменена'));setUploadProgress(0,'Подготовка загрузки · '+(file.name||'файл'));xhr.send(file)})}
+function uploadLargeFileToGofile(file,onProgress){
+ return new Promise((resolve,reject)=>{
+  const form=new FormData();form.append('file',file,file.name||'file');
+  const xhr=new XMLHttpRequest();xhr.open('POST','https://upload.gofile.io/uploadfile');xhr.timeout=0;
+  xhr.upload.onprogress=e=>{if(e.lengthComputable&&onProgress)onProgress(Math.round(e.loaded/e.total*100))};
+  xhr.onload=()=>{let data;try{data=JSON.parse(xhr.responseText||'{}')}catch{reject(new Error('Внешнее хранилище вернуло некорректный ответ'));return}
+   if(xhr.status<200||xhr.status>=300||data.status!=='ok'||!data.data?.downloadPage){reject(new Error(data.data?.message||data.message||'Внешнее хранилище не приняло файл. Попробуй позже'));return}
+   resolve({url:data.data.downloadPage,name:file.name||data.data.name||'file',size:file.size,mime:file.type||data.data.mimetype||'application/octet-stream',external:true})
+  };
+  xhr.onerror=()=>reject(new Error('Сетевая ошибка при загрузке во внешнее хранилище'));
+  xhr.onabort=()=>reject(new Error('Загрузка во внешнее хранилище отменена'));
+  setUploadProgress(0,'Внешнее хранилище · '+(file.name||'файл'));xhr.send(form)
+ })
 }
 async function uploadOneFile(file,index,total){
  const maxBytes=100*1024*1024;
  if(file.size>maxBytes){
-  const a=await uploadLargeFileToGofile(file);
+  const a=await uploadLargeFileToGofile(file,pct=>setUploadProgress(pct,'Внешнее хранилище · '+file.name));
   if(!ws||ws.readyState!==1)throw new Error('Соединение чата потеряно');
   send({t:'message',text:'',to:isDM()?activeId:null,channelId:isChannel()?activeChannelId():null,replyTo:replyingTo?.id||null,attachment:a});
   return;
@@ -231,7 +237,7 @@ async function uploadOneFile(file,index,total){
  let a;
  for(let attempt=0;attempt<2;attempt++){
   const uploadToken=await getUploadTicket();
-  try{a=await uploadBinaryWithProgress(file,uploadToken);break}
+  try{a=await uploadBinaryWithProgress(file,uploadToken,pct=>setUploadProgress(pct,'Файл '+(index+1)+' из '+total+' · '+file.name));break}
   catch(e){if(e.status===401&&attempt===0){setUploadProgress(0,'Обновляем сессию загрузки…');continue}throw e}
  }
  if(!a)throw new Error('Не удалось получить файл от сервера');
@@ -250,7 +256,7 @@ async function uploadFile(fileList){
   for(let i=0;i<files.length;i++){
    const file=files[i];
    try{
-    setUploadProgress(0,'Файл '+(i+1)+' из '+files.length+' · '+file.name);
+    setUploadProgress(Math.round(i/files.length*100),'Подготовка файла '+(i+1)+' из '+files.length+' · '+file.name);
     await uploadOneFile(file,i,files.length);sent++;
    }catch(e){failed.push(file.name+': '+(e.message||'ошибка'));toast('Не удалось отправить '+file.name+': '+(e.message||'ошибка'))}
   }
