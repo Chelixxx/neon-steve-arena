@@ -125,7 +125,7 @@ function renderList(){
  if(tab==='channels'){const list=channels.filter(c=>c.name.toLowerCase().includes(q)||String(c.description).toLowerCase().includes(q));if(!list.length)el.innerHTML='<div class="muted" style="padding:16px">Пока нет каналов. Создай первый через «＋ Канал / группа».</div>';list.forEach(c=>el.append(makeListItem({id:'channel:'+c.id,name:(c.type==='group'?'👥 ':'📣 ')+c.name,subtitle:c.description||(c.type==='group'?'Группа':'Канал')})));return}
  if(tab==='news'){el.innerHTML='<div class="news-create-wrap" style="padding:10px 12px"><button type="button" class="primary" data-open-news-composer style="width:100%;padding:12px;border-radius:12px">✍ Создать новость</button></div>';if(!newsPosts.length)el.insertAdjacentHTML('beforeend','<div class="muted" style="padding:16px">Пока новостей нет.</div>');newsPosts.filter(p=>(p.title+' '+p.body).toLowerCase().includes(q)).forEach(p=>{const n=document.createElement('div');n.className='news-item';const reactions=p.reactions||{},buttons=['❤️','😂','🔥','👍','👏','😮'].map(em=>{const ids=reactions[em]||[];return '<button class="post-reaction '+(ids.includes(myId)?'active':'')+'" data-post-react="'+esc(p.id)+'" data-post-emoji="'+em+'">'+em+' <small>'+ids.length+'</small></button>'}).join('');n.innerHTML='<b>'+esc(p.title)+'</b><p>'+esc(p.body)+'</p><small>'+esc(p.author||'Pulse News')+' · '+new Date(p.at).toLocaleString()+'</small>'+(p.link?'<p><a target="_blank" rel="noopener" href="'+esc(p.link)+'">Открыть ссылку ↗</a></p>':'')+'<div class="post-reactions">'+buttons+'</div>';el.append(n)});return}
  if(tab==='chats'){
-  const favs=readFavorites();const self=users.find(u=>u.id===myId),all=[{id:'favorites',name:'⭐ Избранное',subtitle:favs.length?(favs.at(-1).text||favs.at(-1).attachment?.name||'Вложения сохранены'):'Личный чат · только у тебя',group:true},...(self?.globalChatDisabled?[]:[{id:globalKey,name:'Общий чат',subtitle:'Общение со всеми пользователями',group:true},{id:'cookie-bot',name:'🍪 Печенька',subtitle:'Кликай: 30 кликов = 1 Пульс',group:true})];if(self?.globalChatDisabled)el.innerHTML='<div class="muted" style="padding:16px">🔒 Доступ к общему чату отключён администратором.</div>';
+  const favs=readFavorites();const self=users.find(u=>u.id===myId),all=[{id:'favorites',name:'⭐ Избранное',subtitle:favs.length?(favs.at(-1).text||favs.at(-1).attachment?.name||'Вложения сохранены'):'Личный чат · только у тебя',group:true},...(self?.globalChatDisabled?[]:[{id:globalKey,name:'Общий чат',subtitle:'Общение со всеми пользователями',group:true},{id:'cookie-bot',name:'🍪 Печенька',subtitle:'Кликай: 30 кликов = 1 Пульс',group:true}])];if(self?.globalChatDisabled)el.innerHTML='<div class="muted" style="padding:16px">🔒 Доступ к общему чату отключён администратором.</div>';
   users.filter(u=>u.id!==myId).forEach(u=>{const has=messagesByChat.has(dmKey(u.id));if(has||u.name.toLowerCase().includes(q))all.push({id:u.id,name:u.name,subtitle:has?lastText(messagesByChat.get(dmKey(u.id)).at(-1)):'Начать переписку'})});
   all.filter(x=>x.name.toLowerCase().includes(q)||String(x.subtitle).toLowerCase().includes(q)).forEach(x=>el.append(makeListItem(x)));
  }else{
@@ -242,7 +242,7 @@ async function uploadOneFile(file,index,total){
  if(!a)throw new Error('Не удалось получить файл от сервера');
  return {...a,mime:file.type||a.mime};
 }
-async async function uploadFile(fileList){
+async function uploadFile(fileList){
  const files=[...(fileList||[])];
  if(!files.length)return;
  if(files.length>20){toast('За один раз можно отправить максимум 20 файлов');return}
