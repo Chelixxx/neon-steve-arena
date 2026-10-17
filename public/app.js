@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const $=id=>document.getElementById(id);let ws=null,myId=null,myName='',activeId=null,tab='chats',users=[],messagesByChat=new Map(),unreadCounts=new Map(),typingTimer=null,authMode='login',toastTimer=null,reconnectTimer=null,registrationId=null,smsStep=false,mediaRecorder=null,recordChunks=[],localStream=null,pc=null,callPeer=null,callType='audio',callInitiator=false,micMuted=false,cameraOff=false,pendingCandidates=[],pendingUploadTickets=new Map(),replyingTo=null,callId=null,callStartedAt=0,cookieStats={clicks:0,pulses:0},cookieCaptcha=null,reconnectDelay=1000,reconnectNoticeShown=false,manualDisconnect=false;
+const $=id=>document.getElementById(id);let ws=null,myId=null,myName='',activeId=null,tab='chats',users=[],messagesByChat=new Map(),unreadCounts=new Map(),typingTimer=null,authMode='login',toastTimer=null,reconnectTimer=null,registrationId=null,smsStep=false,mediaRecorder=null,recordChunks=[],localStream=null,pc=null,callPeer=null,callType='audio',callInitiator=false,micMuted=false,cameraOff=false,pendingCandidates=[],pendingUploadTickets=new Map(),uploadInProgress=false,replyingTo=null,callId=null,callStartedAt=0,cookieStats={clicks:0,pulses:0},cookieCaptcha=null,reconnectDelay=1000,reconnectNoticeShown=false,manualDisconnect=false;
 const globalKey='global',dmKey=id=>'dm:'+id,channelKey=id=>'channel:'+id;let channels=[],newsPosts=[],profileAvatarData='',channelComments=[],publicProfileId=null;
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function avatar(name){return esc((name||'?').trim().slice(0,1).toUpperCase())}
@@ -55,7 +55,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('mediaViewer')){e
  $('addStickerDraft').onclick=addStickerDraft;
  $('saveStickerPack').onclick=saveStickerPack;
  $('stickerDraftGrid').addEventListener('click',e=>{const b=e.target.closest('[data-remove-draft]');if(b){stickerDraft.splice(Number(b.dataset.removeDraft),1);renderStickerDraft()}});
- $('fileInput').onchange=async()=>{const files=[...($('fileInput').files||[])];if(files.length)await uploadFile(files);$('fileInput').value=''};
+ $('fileInput').onchange=()=>{const input=$('fileInput'),files=[...(input.files||[])];input.value='';if(files.length)void uploadFile(files)};
  $('record').onclick=toggleRecord;
  $('voiceCall').onclick=()=>startCall('audio');
  $('videoCall').onclick=()=>startCall('video');
@@ -245,8 +245,10 @@ async function uploadOneFile(file,index,total){
  return {...a,mime:file.type||a.mime};
 }
 async function uploadFile(fileList){
- const files=[...(fileList||[])];
+ if(uploadInProgress)return;
+ const seen=new Set(),files=[...(fileList||[])].filter(file=>{const key=[file.name,file.size,file.lastModified,file.type].join('|');if(seen.has(key))return false;seen.add(key);return true});
  if(!files.length)return;
+ uploadInProgress=true;
  if(files.length>20){toast('За один раз можно отправить максимум 20 файлов');return}
  $('attach').disabled=true;$('fileInput').disabled=true;
  let sent=0,failed=[];
@@ -274,6 +276,7 @@ async function uploadFile(fileList){
   if(sent===files.length)toast(imagesCount(uploaded)+'');else toast('Отправлено '+sent+' из '+files.length+'. Не удалось: '+failed.length);
   setReply(null);
  }finally{
+  uploadInProgress=false;
   $('attach').disabled=false;$('fileInput').disabled=false;
   setTimeout(()=>{if($('uploadProgress'))$('uploadProgress').classList.add('hidden');if($('uploadProgressFill'))$('uploadProgressFill').style.width='0%';if($('uploadStatus'))$('uploadStatus').textContent=''},6000)
  }
