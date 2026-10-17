@@ -416,5 +416,7 @@ document.addEventListener('click',e=>{
  if(action==='create'){e.preventDefault();e.stopImmediatePropagation();if(tab==='news')showModal('newsModal');else if(tab==='channels')showModal('channelModal');else{tab='people';renderTabs();renderList();const search=document.getElementById('search');if(search)search.focus()}return}
 },true);
 
+document.addEventListener('click',e=>{if(e.target.closest('#launchClassicStrike')){const modal=$('classicStrikeModal'),frame=$('classicStrikeFrame');if(modal&&frame){showModal('classicStrikeModal');if(frame.src==='about:blank'||!frame.src.endsWith('/classic-strike/'))frame.src='/classic-strike/';}}if(e.target.closest('#closeClassicStrike')){const frame=$('classicStrikeFrame');if(frame)frame.src='about:blank';hideModal('classicStrikeModal');}});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('classicStrikeModal')&&!$('classicStrikeModal').classList.contains('hidden')){const frame=$('classicStrikeFrame');if(frame)frame.src='about:blank';hideModal('classicStrikeModal');}});
 window.addEventListener('DOMContentLoaded',init);
 })();
