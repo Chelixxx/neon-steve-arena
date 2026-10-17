@@ -389,3 +389,17 @@ body.news-announcement-open{overflow:hidden}
 @keyframes newsFadeIn{from{opacity:0}to{opacity:1}}
 @media(max-width:700px){.news-announcement{padding:12px}.news-announcement-card{width:94vw;min-width:0;max-height:78vh;padding:25px 20px 20px;border-radius:20px}.news-announcement-card h2{font-size:24px}.news-announcement-body{font-size:14px;line-height:1.6}}
 @media(prefers-reduced-motion:reduce){.news-announcement{animation:none}.news-announcement-read{transform:none!important}}
+
+
+/* Telegram-style reactions on every Pulse message */
+.message-reactions-row{display:flex;align-items:center;flex-wrap:wrap;gap:5px;min-height:22px;padding:1px 2px 2px;position:relative}
+.message-reaction-chip,.message-reaction-picker,.message-reaction-options button{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:27px;padding:3px 8px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--line));border-radius:999px;background:color-mix(in srgb,var(--panel2) 88%,transparent);color:var(--text);font-size:12px;line-height:1;cursor:pointer;transition:transform .13s ease,background .13s ease,border-color .13s ease}
+.message-reaction-chip span{font-size:10px;color:var(--muted);font-weight:800}
+.message-reaction-chip.active{background:color-mix(in srgb,var(--accent) 22%,var(--panel2));border-color:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent)}
+.message-reaction-chip:active,.message-reaction-picker:active,.message-reaction-options button:active{transform:scale(.94)}
+.message-reaction-add{position:relative;display:inline-flex}
+.message-reaction-picker{width:29px;padding:0;font-size:15px;color:var(--muted);border-style:dashed;background:transparent}
+.message-reaction-options{position:absolute;z-index:25;left:0;bottom:calc(100% + 7px);display:flex;gap:4px;padding:6px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 12px 32px #0005}
+.message-reaction-options button{min-width:31px;width:31px;height:31px;padding:0;font-size:17px;background:var(--panel2)}
+.message-reaction-options button:hover,.message-reaction-picker:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel2))}
+@media(max-width:600px){.message-reactions-row{gap:4px}.message-reaction-chip{min-height:25px;padding:3px 7px}.message-reaction-options{gap:2px;padding:5px}.message-reaction-options button{min-width:29px;width:29px;height:29px}}
