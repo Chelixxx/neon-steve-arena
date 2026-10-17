@@ -52,7 +52,7 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLower
  $('addStickerDraft').onclick=addStickerDraft;
  $('saveStickerPack').onclick=saveStickerPack;
  $('stickerDraftGrid').addEventListener('click',e=>{const b=e.target.closest('[data-remove-draft]');if(b){stickerDraft.splice(Number(b.dataset.removeDraft),1);renderStickerDraft()}});
- $('fileInput').onchange=async()=>{const file=$('fileInput').files?.[0];if(file)await uploadFile(file);$('fileInput').value=''};
+ $('fileInput').onchange=async()=>{const files=[...($('fileInput').files||[])];if(files.length)await uploadFile(files);$('fileInput').value=''};
  $('record').onclick=toggleRecord;
  $('voiceCall').onclick=()=>startCall('audio');
  $('videoCall').onclick=()=>startCall('video');
@@ -212,13 +212,56 @@ function submitMessage(){const input=$('messageInput'),text=input.value.trim();i
 async function waitForSocket(timeout=10000){const started=Date.now();while(Date.now()-started<timeout){if(ws&&ws.readyState===1)return;await new Promise(resolve=>setTimeout(resolve,200))}throw new Error('Нет соединения с чатом. Подожди пару секунд и повтори отправку')}async function getUploadTicket(){if(!ws||ws.readyState!==1)await waitForSocket();const requestId=crypto.randomUUID();return await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pendingUploadTickets.delete(requestId);reject(new Error('Не удалось подтвердить сессию. Повтори попытку'))},8000);pendingUploadTickets.set(requestId,{resolve:token=>{clearTimeout(timer);resolve(token)},reject:error=>{clearTimeout(timer);reject(error)}});send({t:'upload-ticket',requestId})})}
 function setUploadProgress(percent,label){const wrap=$('uploadProgress'),fill=$('uploadProgressFill');if(wrap)wrap.classList.remove('hidden');if(fill)fill.style.width=Math.max(0,Math.min(100,Number(percent)||0))+'%';if($('uploadStatus'))$('uploadStatus').textContent=label||''}
 function uploadBinaryWithProgress(file,token){return new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('POST','/upload?name='+encodeURIComponent(file.name||'file'));xhr.withCredentials=true;xhr.timeout=180000;xhr.setRequestHeader('content-type',file.type||'application/octet-stream');xhr.setRequestHeader('authorization','Bearer '+token);xhr.upload.onprogress=e=>{if(e.lengthComputable){const pct=Math.round(e.loaded/e.total*100);setUploadProgress(pct,'Загрузка файла · '+pct+'%')}};xhr.onload=()=>{let data;try{data=JSON.parse(xhr.responseText||'{}')}catch{reject(new Error('Сервер вернул некорректный ответ'));return}if(xhr.status<200||xhr.status>=300){const error=new Error(data.error||'Ошибка загрузки · HTTP '+xhr.status);error.status=xhr.status;reject(error);return}resolve(data)};xhr.onerror=()=>reject(new Error('Сетевая ошибка. Проверь интернет и повтори отправку'));xhr.ontimeout=()=>reject(new Error('Загрузка заняла слишком много времени. Попробуй ещё раз'));xhr.onabort=()=>reject(new Error('Загрузка отменена'));setUploadProgress(0,'Подготовка загрузки…');xhr.send(file)})}
-async function uploadFile(file){
- if(!file)return;const self=users.find(u=>u.id===myId),maxBytes=(self?.admin?100:25)*1024*1024;if(file.size>maxBytes){toast('Максимальный размер файла — '+(self?.admin?100:25)+' МБ');return}
- $('attach').disabled=true;setUploadProgress(0,'Подготовка · '+file.name);
- try{let a;for(let attempt=0;attempt<2;attempt++){const uploadToken=await getUploadTicket();try{a=await uploadBinaryWithProgress(file,uploadToken);break}catch(e){if(e.status===401&&attempt===0){setUploadProgress(0,'Обновляем сессию загрузки…');continue}throw e}}
- if(!a)throw new Error('Не удалось получить файл от сервера');if(!ws||ws.readyState!==1)throw new Error('Соединение чата потеряно');setUploadProgress(100,'Загрузка завершена · отправляем в чат…');send({t:'message',text:'',to:isDM()?activeId:null,channelId:isChannel()?activeChannelId():null,replyTo:replyingTo?.id||null,attachment:{...a,mime:file.type||a.mime}});setReply(null);setUploadProgress(100,'Файл отправлен ✓');toast('Файл отправлен')}
- catch(e){toast('Не удалось отправить файл: '+(e.message||'ошибка сети'));setUploadProgress(0,'Ошибка отправки')}
- finally{$('attach').disabled=false;setTimeout(()=>{if($('uploadProgress'))$('uploadProgress').classList.add('hidden');if($('uploadProgressFill'))$('uploadProgressFill').style.width='0%';if($('uploadStatus'))$('uploadStatus').textContent=''},4500)}
+async function uploadLargeFileToGofile(file){
+ const form=new FormData();form.append('file',file,file.name||'file');
+ setUploadProgress(0,'Файл больше 100 МБ · загружаем во внешнее хранилище…');
+ const response=await fetch('https://upload.gofile.io/uploadfile',{method:'POST',body:form});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||data.status!=='ok'||!data.data?.downloadPage)throw new Error(data.data?.message||data.message||'Внешнее хранилище не приняло файл. Попробуй позже');
+ return {url:data.data.downloadPage,name:file.name||data.data.name||'file',size:file.size,mime:file.type||data.data.mimetype||'application/octet-stream',external:true};
+}
+async function uploadOneFile(file,index,total){
+ const maxBytes=100*1024*1024;
+ if(file.size>maxBytes){
+  const a=await uploadLargeFileToGofile(file);
+  if(!ws||ws.readyState!==1)throw new Error('Соединение чата потеряно');
+  send({t:'message',text:'',to:isDM()?activeId:null,channelId:isChannel()?activeChannelId():null,replyTo:replyingTo?.id||null,attachment:a});
+  return;
+ }
+ let a;
+ for(let attempt=0;attempt<2;attempt++){
+  const uploadToken=await getUploadTicket();
+  try{a=await uploadBinaryWithProgress(file,uploadToken);break}
+  catch(e){if(e.status===401&&attempt===0){setUploadProgress(0,'Обновляем сессию загрузки…');continue}throw e}
+ }
+ if(!a)throw new Error('Не удалось получить файл от сервера');
+ if(!ws||ws.readyState!==1)throw new Error('Соединение чата потеряно');
+ send({t:'message',text:'',to:isDM()?activeId:null,channelId:isChannel()?activeChannelId():null,replyTo:replyingTo?.id||null,attachment:{...a,mime:file.type||a.mime}});
+}
+async function uploadFile(fileList){
+ const files=[...(fileList||[])];
+ if(!files.length)return;
+ if(files.length>20){toast('За один раз можно отправить максимум 20 файлов');return}
+ const maxBytes=100*1024*1024;
+ const normal=files.filter(f=>f.size<=maxBytes),large=files.filter(f=>f.size>maxBytes);
+ $('attach').disabled=true;$('fileInput').disabled=true;
+ let sent=0,failed=[];
+ try{
+  for(let i=0;i<files.length;i++){
+   const file=files[i];
+   try{
+    setUploadProgress(0,'Файл '+(i+1)+' из '+files.length+' · '+file.name);
+    await uploadOneFile(file,i,files.length);sent++;
+   }catch(e){failed.push(file.name+': '+(e.message||'ошибка'));toast('Не удалось отправить '+file.name+': '+(e.message||'ошибка'))}
+  }
+  setUploadProgress(100,'Готово: '+sent+' из '+files.length+' файлов отправлено');
+  if(sent===files.length)toast('Отправлено файлов: '+sent+' ✓');
+  else toast('Отправлено '+sent+' из '+files.length+'. Не удалось: '+failed.length);
+  setReply(null);
+ }finally{
+  $('attach').disabled=false;$('fileInput').disabled=false;
+  setTimeout(()=>{if($('uploadProgress'))$('uploadProgress').classList.add('hidden');if($('uploadProgressFill'))$('uploadProgressFill').style.width='0%';if($('uploadStatus'))$('uploadStatus').textContent=''},6000)
+ }
 }
 async function toggleRecord(){if(mediaRecorder&&mediaRecorder.state==='recording'){mediaRecorder.stop();$('record').textContent='🎙';$('record').style.color='';return}if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast('Запись голоса не поддерживается этим браузером');return}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});recordChunks=[];mediaRecorder=new MediaRecorder(stream);mediaRecorder.ondataavailable=e=>{if(e.data.size)recordChunks.push(e.data)};mediaRecorder.onstop=async()=>{const blob=new Blob(recordChunks,{type:mediaRecorder.mimeType||'audio/webm'}),ext=blob.type.includes('ogg')?'.ogg':blob.type.includes('mp4')?'.mp4':'.webm',file=new File([blob],'voice-message'+ext,{type:blob.type});stream.getTracks().forEach(t=>t.stop());await uploadFile(file)};mediaRecorder.start();$('record').textContent='■';$('record').style.color='#ff6685';toast('Запись идёт — нажми ■, чтобы отправить')}catch(e){toast('Разреши доступ к микрофону в браузере')}} 
 async function startCall(type){if(!isDM()){toast('Для звонка выбери человека во вкладке «Люди»');return}const target=users.find(u=>u.id===activeId);if(!target){toast('Этот человек сейчас не в сети');return}callPeer=target.id;callType=type;callId=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));callStartedAt=0;callInitiator=true;micMuted=false;cameraOff=false;$('callName').textContent=target.name;$('callAvatar').textContent=avatar(target.name);$('callState').textContent='Запрашиваем доступ к '+(type==='video'?'камере и микрофону':'микрофону')+'…';$('callOverlay').classList.remove('hidden');try{localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:type==='video'});$('localVideo').srcObject=localStream;$('localVideo').classList.toggle('hidden',type!=='video');pc=createPeer();for(const track of localStream.getTracks())pc.addTrack(track,localStream);const offer=await pc.createOffer();await pc.setLocalDescription(offer);send({t:'call-offer',to:callPeer,offer:offer,type,callId});$('callState').textContent='Звоним…'}catch(e){toast('Не удалось начать звонок: '+e.message);closeCallUI('Не удалось начать звонок')}}
