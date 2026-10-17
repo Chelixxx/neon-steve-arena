@@ -1,8 +1,7 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
 const games={
- 'voxel-builder':{title:'Voxel Builder',src:'/arcade/voxel-builder.html',credit:'Автор: Pulse Arcade · оригинальная игра',attribution:'Создано для Pulse Arcade: <a href="https://github.com/Chelixxx/neon-steve-arena" target="_blank" rel="noopener noreferrer">исходники Pulse</a>. Спокойная voxel-песочница, не связанная с Mojang или Microsoft.'},
- 'neon-maze':{title:'Neon Maze',src:'/arcade/maze.html',credit:'Автор: Pulse Arcade · оригинальная игра',attribution:'Создано для Pulse Arcade: <a href="https://github.com/Chelixxx/neon-steve-arena" target="_blank" rel="noopener noreferrer">исходники Pulse</a>. Собирай кристаллы и найди выход.'}
+ 'voxel-builder':{title:'Voxel Builder',src:'/arcade/voxel-builder.html',credit:'Автор: Pulse Arcade · оригинальная игра',attribution:'Создано для Pulse Arcade: <a href="https://github.com/Chelixxx/neon-steve-arena" target="_blank" rel="noopener noreferrer">исходники Pulse</a>. Спокойная voxel-песочница, не связанная с Mojang или Microsoft.'}
 };
 function open(){ $('arcadeModal').classList.remove('hidden') }
 function stop(){ $('arcadeFrame').src='about:blank';$('arcadePlayer').classList.add('hidden');$('arcadeCatalog').classList.remove('hidden') }
