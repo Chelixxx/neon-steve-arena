@@ -242,7 +242,7 @@ async function uploadOneFile(file,index,total){
  if(!a)throw new Error('Не удалось получить файл от сервера');
  return {...a,mime:file.type||a.mime};
 }
-async function uploadFile(fileList){
+async async function uploadFile(fileList){
  const files=[...(fileList||[])];
  if(!files.length)return;
  if(files.length>20){toast('За один раз можно отправить максимум 20 файлов');return}
