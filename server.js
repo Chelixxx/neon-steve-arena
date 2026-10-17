@@ -451,10 +451,34 @@ wss.on('connection',(ws,req)=>{
    if(channelId){const ch=store.channels.find(c=>c.id===channelId);if(ch.type==='channel'&&ch.owner!=='system'&&ch.owner!==uid){send(ws,{t:'error',message:'Публиковать в этом канале может только владелец'});return}if(ch.type==='group'&&!ch.members.includes(uid)){send(ws,{t:'error',message:'Сначала нужно вступить в группу'});return}}
    const a=m.attachment&&typeof m.attachment.url==='string'&&/^\/uploads\/[a-f0-9]+\.[a-z0-9]+$/i.test(m.attachment.url)?{url:m.attachment.url,name:String(m.attachment.name||'file').slice(0,180),mime:String(m.attachment.mime||'').slice(0,120),size:Math.min(Number(m.attachment.size)||0,MAX_UPLOAD)}:null;
    if(!text.trim()&&!a&&!kind)return;
-   const replyOriginal=typeof m.replyTo==='string'?store.messages.find(x=>x.id===m.replyTo):null;const sameReplyChat=replyOriginal&&((channelId&&replyOriginal.channelId===channelId)||(!channelId&&!to&&!replyOriginal.to&&!replyOriginal.channelId)||(!channelId&&to&&((replyOriginal.from===uid&&replyOriginal.to===to)||(replyOriginal.from===to&&replyOriginal.to===uid))));const replyTo=sameReplyChat?{id:replyOriginal.id,name:String(replyOriginal.name||'Пользователь').slice(0,40),text:String(replyOriginal.text||'').slice(0,240),deleted:!!replyOriginal.deletedForEveryone}:null;const forwardedOriginal=typeof m.forwardedFrom==='string'?store.messages.find(x=>x.id===m.forwardedFrom):null;const forwardedFrom=forwardedOriginal?{name:String(forwardedOriginal.name||'Пользователь').slice(0,40)}:null;const msg={id:crypto.randomUUID(),from:uid,name:user.name,to,channelId,text,attachment:a,replyTo,forwardedFrom,kind,poll:pollData,background:backgroundData,at:Date.now(),readBy:[],deliveredTo:[]};
+   const replyOriginal=typeof m.replyTo==='string'?store.messages.find(x=>x.id===m.replyTo):null;const sameReplyChat=replyOriginal&&((channelId&&replyOriginal.channelId===channelId)||(!channelId&&!to&&!replyOriginal.to&&!replyOriginal.channelId)||(!channelId&&to&&((replyOriginal.from===uid&&replyOriginal.to===to)||(replyOriginal.from===to&&replyOriginal.to===uid))));const replyTo=sameReplyChat?{id:replyOriginal.id,name:String(replyOriginal.name||'Пользователь').slice(0,40),text:String(replyOriginal.text||'').slice(0,240),deleted:!!replyOriginal.deletedForEveryone}:null;const forwardedOriginal=typeof m.forwardedFrom==='string'?store.messages.find(x=>x.id===m.forwardedFrom):null;const forwardedFrom=forwardedOriginal?{name:String(forwardedOriginal.name||'Пользователь').slice(0,40)}:null;const msg={id:crypto.randomUUID(),from:uid,name:user.name,to,channelId,text,attachment:a,replyTo,forwardedFrom,kind,poll:pollData,background:backgroundData,reactions:{},at:Date.now(),readBy:[],deliveredTo:[]};
    store.messages.push(msg);if(store.messages.length>20000)store.messages=store.messages.slice(-20000);
    if(to){if(online(to))msg.deliveredTo.push(to);save();sendUser(uid,{t:'message',message:msg});sendUser(to,{t:'message',message:msg});void sendPush(to,{title:'Новое сообщение от '+user.name,body:text.trim().slice(0,140)||(a?'📎 Вложение':'Новое сообщение'),url:'/'});if(online(to))sendUser(uid,{t:'delivery-receipt',ids:[msg.id],reader:to})}
    else{save();if(channelId)broadcast({t:'message',message:msg});else broadcastGlobal({t:'message',message:msg})}if(to)broadcastPresence();return
+  }
+  if(m.t==='message-reaction'){
+   const id=typeof m.id==='string'?m.id:'',emoji=String(m.emoji||'');
+   const allowedEmojis=['👍','❤️','😂','😮','😢','🔥','🎉','👎'];
+   const target=store.messages.find(x=>x.id===id);
+   if(!target){send(ws,{t:'error',message:'Сообщение не найдено'});return}
+   if(!allowedEmojis.includes(emoji)){send(ws,{t:'error',message:'Эта реакция не поддерживается'});return}
+   if(target.deletedForEveryone){send(ws,{t:'error',message:'На удалённое сообщение нельзя поставить реакцию'});return}
+   const isDirectParticipant=!!target.to&&(target.from===uid||target.to===uid);
+   const ch=target.channelId?store.channels.find(c=>c.id===target.channelId):null;
+   const canChannel=!!(target.channelId&&ch&&(ch.type==='group'?Array.isArray(ch.members)&&ch.members.includes(uid):(ch.owner==='system'||ch.owner===uid||(ch.members||[]).includes(uid))));
+   const canGlobal=!target.to&&!target.channelId&&!userById(uid)?.globalChatDisabled;
+   if(!(isDirectParticipant||canChannel||canGlobal)){send(ws,{t:'error',message:'У тебя нет доступа к этому сообщению'});return}
+   if(!target.reactions||typeof target.reactions!=='object'||Array.isArray(target.reactions))target.reactions={};
+   if(!Array.isArray(target.reactions[emoji]))target.reactions[emoji]=[];
+   const voters=target.reactions[emoji],index=voters.indexOf(uid);
+   if(index>=0)voters.splice(index,1);else voters.push(uid);
+   if(!voters.length)delete target.reactions[emoji];
+   save();
+   const update={t:'message-updated',message:target};
+   if(target.to){sendUser(target.from,update);sendUser(target.to,update)}
+   else if(target.channelId)broadcast(update);
+   else broadcastGlobal(update);
+   return
   }
   if(m.t==='poll-vote'){const target=store.messages.find(x=>x.id===String(m.id||'')&&x.kind==='poll'&&x.poll);if(!target){send(ws,{t:'error',message:'Опрос не найден'});return}const isDirectParticipant=!!target.to&&(target.from===uid||target.to===uid),ch=target.channelId?store.channels.find(c=>c.id===target.channelId):null,allowed=target.to?isDirectParticipant:(target.channelId?(ch&&(ch.type==='group'?ch.members.includes(uid):ch.owner==='system'||ch.owner===uid||(ch.members||[]).includes(uid))):true);if(!allowed){send(ws,{t:'error',message:'Нет доступа к этому опросу'});return}const option=target.poll.options.find(x=>x.id===String(m.optionId||''));if(!option){send(ws,{t:'error',message:'Вариант не найден'});return}for(const o of target.poll.options)o.votes=(o.votes||[]).filter(id=>id!==uid);option.votes.push(uid);target.poll.totalVotes=target.poll.options.reduce((n,o)=>n+o.votes.length,0);save();if(target.to){sendUser(target.from,{t:'message-updated',message:target});sendUser(target.to,{t:'message-updated',message:target})}else broadcast({t:'message-updated',message:target});return}
  if(m.t==='edit-message'){const id=typeof m.id==='string'?m.id:'';const target=store.messages.find(x=>x.id===id);if(!target||target.from!==uid){send(ws,{t:'error',message:'Можно изменять только свои сообщения'});return}if(target.deletedForEveryone){send(ws,{t:'error',message:'Удалённое сообщение нельзя изменить'});return}const text=String(m.text||'').slice(0,4000);if(!text.trim()&&!target.attachment){send(ws,{t:'error',message:'Сообщение не может быть пустым'});return}target.text=text;target.editedAt=Date.now();save();const update={t:'message-updated',message:target};if(target.to){sendUser(target.from,update);sendUser(target.to,update)}else broadcast(update);return}
