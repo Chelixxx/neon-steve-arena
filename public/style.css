@@ -434,9 +434,9 @@ body.media-viewer-open{overflow:hidden}
 
 /* Video-circle shape options */
 .message.circle-video .media-open-video{clip-path:circle(50% at 50% 50%)}
-.message.circle-video.shape-square .media-open-video,.message.circle-video.shape-square .media-open-video .attachment{border-radius:0;clip-path:none}
-.message.circle-video.shape-triangle .media-open-video,.message.circle-video.shape-triangle .media-open-video .attachment{clip-path:polygon(50% 0%,0% 100%,100% 100%);border-radius:0}
-.message.circle-video.shape-pentagon .media-open-video,.message.circle-video.shape-pentagon .media-open-video .attachment{clip-path:polygon(50% 0%,100% 38%,81% 100%,19% 100%,0% 38%);border-radius:0}
-.message.circle-video.shape-hexagon .media-open-video,.message.circle-video.shape-hexagon .media-open-video .attachment{clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);border-radius:0}
-.message.circle-video.shape-star .media-open-video,.message.circle-video.shape-star .media-open-video .attachment{clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 95%,50% 72%,21% 95%,32% 57%,2% 35%,39% 35%);border-radius:0}
-.message.circle-video.shape-diamond .media-open-video,.message.circle-video.shape-diamond .media-open-video .attachment{clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0}
+.message.circle-video.shape-square .media-open-video,.message.circle-video.shape-square .media-open-video .attachment{border-radius:0!important;clip-path:none!important}
+.message.circle-video.shape-triangle .media-open-video,.message.circle-video.shape-triangle .media-open-video .attachment{clip-path:polygon(50% 0%,0% 100%,100% 100%)!important;border-radius:0!important}
+.message.circle-video.shape-pentagon .media-open-video,.message.circle-video.shape-pentagon .media-open-video .attachment{clip-path:polygon(50% 0%,100% 38%,81% 100%,19% 100%,0% 38%)!important;border-radius:0!important}
+.message.circle-video.shape-hexagon .media-open-video,.message.circle-video.shape-hexagon .media-open-video .attachment{clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%)!important;border-radius:0!important}
+.message.circle-video.shape-star .media-open-video,.message.circle-video.shape-star .media-open-video .attachment{clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 95%,50% 72%,21% 95%,32% 57%,2% 35%,39% 35%)!important;border-radius:0!important}
+.message.circle-video.shape-diamond .media-open-video,.message.circle-video.shape-diamond .media-open-video .attachment{clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%)!important;border-radius:0!important}
