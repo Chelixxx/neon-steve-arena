@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#090b12"><title>Pulse Shooter</title><link rel="stylesheet" href="/shooter.css?v=1"></head>
+<body><main id="game"><canvas id="view"></canvas>
+<div class="topbar"><a class="back" href="/">← Pulse</a><div class="brand">PULSE <span>SHOOTER</span></div><div id="net" class="net">● Подключение…</div></div>
+<div class="crosshair"><i></i><b></b></div>
+<section class="hud"><div class="hp"><small>ЗДОРОВЬЕ</small><strong id="hp">100</strong><div class="bar"><i id="hpbar"></i></div></div><div class="weapon-info"><small id="weaponName">AKR · TREASURE HUNTER</small><strong><span id="ammo">30</span><em> / </em><span id="reserve">90</span></strong><div id="reloadText"></div></div></section>
+<div id="startCard" class="start-card"><div class="logo">P</div><h1>Pulse Shooter</h1><p>3D-полигон · вид от первого лица · онлайн-арена</p><div class="model-loaders"><label>AKR — ZIP с моделью<input id="akrFile" type="file" accept=".zip,application/zip"></label><label>AWM — ZIP с моделью<input id="awmFile" type="file" accept=".zip,application/zip"></label></div><small>Выбери архивы оружия, чтобы загрузить модели и текстуры. Можно начать без них.</small><button id="startBtn">Войти на арену</button><small>ПК: WASD, мышь, ЛКМ, R, 1/2, V — осмотр. Телефон: левый стик, свайп справа и кнопки.</small></div>
+<div class="controls"><div id="stick" class="stick"><div id="stickKnob"></div></div><div class="right-controls"><button id="inspect">ОСМОТР</button><button id="reload">↻</button><button id="switch">AKR / AWM</button><button id="fire">ОГОНЬ</button></div></div>
+<div id="notice" class="notice"></div><div id="players" class="players">В комнате: <b id="playerCount">1</b></div></main>
+<script type="module" src="/shooter.js?v=1"></script></body></html>
