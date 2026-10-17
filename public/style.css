@@ -491,3 +491,23 @@ body.media-viewer-open{overflow:hidden}
 .miniapp-runner-body{flex:1;min-height:0;overflow:auto}.miniapp-runner-body iframe{display:block;width:100%;height:100%;min-height:450px;border:0;background:#fff}
 .miniapp-source-view{padding:16px;height:100%;overflow:auto}.miniapp-source-note{font-size:12px;color:var(--muted);margin-bottom:12px}.miniapp-source-view pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;font:12px/1.6 ui-monospace,monospace}
 @media(max-width:560px){.miniapp-form-grid{grid-template-columns:1fr}.miniapps-heading{align-items:flex-start}.miniapp-entry{padding:10px}.miniapp-entry-icon{width:38px;height:38px;flex-basis:38px;font-size:22px}}
+
+
+/* MiniApp visual customizer */
+.miniapp-visual-settings{display:grid;gap:12px;padding:14px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:15px;background:color-mix(in srgb,var(--accent) 5%,var(--panel))}
+.miniapp-visual-settings h4{margin:0;font-size:13px}
+.miniapp-form input[type=file]{font-size:11px;padding:8px;max-width:100%;border-style:dashed}
+.miniapp-form input[type=color]{height:42px;padding:4px;cursor:pointer}
+.miniapp-asset-list{display:flex;flex-wrap:wrap;gap:6px;overflow-wrap:anywhere;font-size:11px}
+.miniapp-asset-list a{color:var(--accent);overflow-wrap:anywhere}
+.miniapp-entry-icon img{width:100%;height:100%;object-fit:cover;border-radius:12px}
+.miniapp-bot-mini-avatar{width:20px;height:20px;object-fit:cover;border-radius:50%;vertical-align:middle}
+.miniapp-chat-icon:has(.miniapp-chat-bot-image){overflow:hidden}
+.miniapp-chat-bot-image{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.miniapp-runner{background:var(--miniapp-background,var(--panel));border-color:color-mix(in srgb,var(--miniapp-accent,var(--accent)) 35%,var(--line))}
+.miniapp-runner>header{background:color-mix(in srgb,var(--miniapp-background,var(--panel)) 88%,transparent)}
+.miniapp-runner-title{display:flex;align-items:center;gap:10px;min-width:0}
+.miniapp-runner-title>img{width:42px;height:42px;object-fit:cover;border-radius:12px}
+.miniapp-runner-title>span{min-width:0}.miniapp-runner-title>span b{overflow-wrap:anywhere}
+.miniapp-runner-title small{max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avatar-image{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
