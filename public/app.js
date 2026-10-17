@@ -144,7 +144,7 @@ function handle(m){
  if(m.t==='call-offer'){incomingCall(m);return}
  if(m.t==='call-answer'){answerCall(m);return}
  if(m.t==='ice'){if(m.candidate){if(pc&&pc.remoteDescription)pc.addIceCandidate(new RTCIceCandidate(m.candidate)).catch(()=>{});else pendingCandidates.push(m.candidate)}return}
- if(m.t==='call-end'||m.t==='call-reject'){if(m.from===callPeer||!m.from)closeCallUI(m.reason||'Звонок завершён');return}
+ if(m.t==='call-network-lost'){if(m.from===callPeer&&callPeer)$('callState').textContent='Собеседник переподключается…';return}if(m.t==='call-end'||m.t==='call-reject'){if((m.from===callPeer||!m.from)&&(!m.callId||m.callId===callId))closeCallUI(m.reason||'Звонок завершён');return}
  if(m.t==='call-waiting'){if(m.callId===callId)$('callState').textContent=m.message||'Ожидаем подключения пользователя…';return}
  if(m.t==='call-error'){toast(m.message||'Не удалось позвонить');closeCallUI(m.message);return}
 }
