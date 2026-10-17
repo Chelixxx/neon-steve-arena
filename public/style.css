@@ -431,3 +431,12 @@ body.media-viewer-open{overflow:hidden}
 .compose-row>#circleRecord{font-size:17px;border:1px solid #ff668566;border-radius:10px}
 .compose-row>.send-btn{flex:0 0 38px;width:38px;min-width:38px;height:38px;padding:0}
 @media(max-width:420px){.compose-row{gap:3px;padding:6px}.compose-row>.icon-btn{flex-basis:30px;width:30px;min-width:30px;font-size:16px}.compose-row>.send-btn{flex-basis:34px;width:34px;min-width:34px}.compose-row>#messageInput{font-size:12px}}
+
+/* Video-circle shape options */
+.message.circle-video .media-open-video{clip-path:circle(50% at 50% 50%)}
+.message.circle-video.shape-square .media-open-video,.message.circle-video.shape-square .media-open-video .attachment{border-radius:0;clip-path:none}
+.message.circle-video.shape-triangle .media-open-video,.message.circle-video.shape-triangle .media-open-video .attachment{clip-path:polygon(50% 0%,0% 100%,100% 100%);border-radius:0}
+.message.circle-video.shape-pentagon .media-open-video,.message.circle-video.shape-pentagon .media-open-video .attachment{clip-path:polygon(50% 0%,100% 38%,81% 100%,19% 100%,0% 38%);border-radius:0}
+.message.circle-video.shape-hexagon .media-open-video,.message.circle-video.shape-hexagon .media-open-video .attachment{clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);border-radius:0}
+.message.circle-video.shape-star .media-open-video,.message.circle-video.shape-star .media-open-video .attachment{clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 95%,50% 72%,21% 95%,32% 57%,2% 35%,39% 35%);border-radius:0}
+.message.circle-video.shape-diamond .media-open-video,.message.circle-video.shape-diamond .media-open-video .attachment{clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0}
