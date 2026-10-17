@@ -499,7 +499,7 @@ wss.on('connection',(ws,req)=>{
  if(target&&!targetOnline&&['call-answer','ice','call-end','call-reject'].includes(m.t)&&cid){if(!Array.isArray(store.pendingCallSignals))store.pendingCallSignals=[];store.pendingCallSignals=store.pendingCallSignals.filter(x=>x.expiresAt>Date.now()&&!(x.to===to&&x.signal?.callId===cid&&m.t!=='ice'));if(m.t==='ice'&&store.pendingCallSignals.filter(x=>x.to===to&&x.signal?.callId===cid&&x.signal?.t==='ice').length>=40)store.pendingCallSignals.shift();store.pendingCallSignals.push({to,signal:{...m,from:uid,fromName:user.name},expiresAt:Date.now()+60000});if(store.pendingCallSignals.length>300)store.pendingCallSignals=store.pendingCallSignals.slice(-300);save();send(ws,{t:'call-waiting',to,callId:cid,message:'Связь собеседника временно прервалась. Сигнал сохранён на 60 секунд…'});return}
  send(ws,{t:'call-error',message:!target?'Пользователь не найден':m.t==='call-offer'?'Не удалось создать звонок: нет SDP-предложения. Обнови Pulse у обоих и попробуй снова.':'Собеседник отключился от звонка'});return}
  });
- ws.on('close',()=>{const s=clients.get(uid);s?.delete(ws);if(s&&!s.size){clients.delete(uid);broadcastPresence();for(const set2 of clients.values())for(const q of set2)send(q,{t:'call-end',from:uid,reason:'offline'})}});
+ ws.on('close',()=>{const s=clients.get(uid);s?.delete(ws);if(s&&!s.size){clients.delete(uid);broadcastPresence();for(const [peerId,set2] of clients){if(peerId===uid)continue;for(const q of set2)send(q,{t:'call-network-lost',from:uid,message:'Собеседник переподключается…'})}}});
  ws.on('error',()=>{});
 });
 server.listen(PORT,'0.0.0.0',()=>console.log('Pulse Messenger listening on '+PORT+'; persistent data at '+DATA));
