@@ -145,6 +145,7 @@ function handle(m){
  if(m.t==='call-answer'){answerCall(m);return}
  if(m.t==='ice'){if(m.candidate){if(pc&&pc.remoteDescription)pc.addIceCandidate(new RTCIceCandidate(m.candidate)).catch(()=>{});else pendingCandidates.push(m.candidate)}return}
  if(m.t==='call-end'||m.t==='call-reject'){if(m.from===callPeer||!m.from)closeCallUI(m.reason||'Звонок завершён');return}
+ if(m.t==='call-waiting'){if(m.callId===callId)$('callState').textContent=m.message||'Ожидаем подключения пользователя…';return}
  if(m.t==='call-error'){toast(m.message||'Не удалось позвонить');closeCallUI(m.message);return}
 }
 async function processCallActionFromUrl(){const url=new URL(location.href),action=url.searchParams.get('callAction'),id=url.searchParams.get('callId');if(!['ring','accept'].includes(action)||!id)return;url.searchParams.delete('callAction');url.searchParams.delete('callId');history.replaceState(null,'',url.pathname+url.search+url.hash);try{const r=await fetch('/api/calls/pending?callId='+encodeURIComponent(id),{credentials:'same-origin',cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Вызов уже недоступен');await incomingCall(d.call);if(action==='accept')setTimeout(()=>{if(callPeer===d.call.from&&!pc)void toggleMute()},180)}catch(e){toast(e.message||'Не удалось открыть вызов')}}
