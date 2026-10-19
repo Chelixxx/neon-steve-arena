@@ -2,7 +2,30 @@
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),zlib=require('zlib'),{WebSocketServer}=require('ws'),webpush=require('web-push');
 const PORT=process.env.PORT||8080,ROOT=path.join(__dirname,'public'),DATA=process.env.DATA_DIR||'/data',UPLOADS=path.join(DATA,'uploads'),DB=path.join(DATA,'pulse-store.json'),SECRET_FILE=path.join(DATA,'.pulse-secret'),MAX_UPLOAD=100*1024*1024,MAX_ADMIN_UPLOAD=100*1024*1024,FILE_TTL=3*24*60*60*1000;
 fs.mkdirSync(UPLOADS,{recursive:true});
-function cleanupOldUploads(){const cutoff=Date.now()-FILE_TTL;fs.readdir(UPLOADS,(err,files)=>{if(err)return;for(const name of files){if(!/^[a-f0-9]{32}(?:\.[a-z0-9]{1,20})?$/i.test(name))continue;const file=path.join(UPLOADS,name);fs.stat(file,(e,st)=>{if(!e&&st.isFile()&&st.mtimeMs<cutoff){const url='/uploads/'+name;const referenced=typeof store!=='undefined'&&((Array.isArray(store.marketListings)&&store.marketListings.some(x=>Array.isArray(x.images)&&x.images.includes(url)))||(Array.isArray(store.miniApps)&&store.miniApps.some(x=>[x.coverUrl,x.botImageUrl,x.backgroundImage,...(Array.isArray(x.assetUrls)?x.assetUrls:[])].includes(url))));if(!referenced)fs.unlink(file,()=>{})}})}})}
+function collectUploadReferences(value,refs=new Set()){
+ if(typeof value==='string'){
+  const re=/\\/uploads\\/([a-f0-9]{32}(?:\\.[a-z0-9]{1,20})?)/ig;let match;
+  while((match=re.exec(value))!==null)refs.add(match[1]);
+  return refs;
+ }
+ if(Array.isArray(value)){for(const item of value)collectUploadReferences(item,refs);return refs}
+ if(value&&typeof value==='object'){for(const item of Object.values(value))collectUploadReferences(item,refs)}
+ return refs;
+}
+function cleanupOldUploads(){
+ const cutoff=Date.now()-FILE_TTL;
+ const referenced=collectUploadReferences(typeof store==='undefined'?null:store);
+ fs.readdir(UPLOADS,(err,files)=>{
+  if(err)return;
+  for(const name of files){
+   if(!/^[a-f0-9]{32}(?:\\.[a-z0-9]{1,20})?$/i.test(name))continue;
+   const file=path.join(UPLOADS,name);
+   fs.stat(file,(e,st)=>{
+    if(!e&&st.isFile()&&st.mtimeMs<cutoff&&!referenced.has(name))fs.unlink(file,()=>{});
+   });
+  }
+ });
+}
 cleanupOldUploads();setInterval(cleanupOldUploads,60*60*1000).unref?.();
 if(!fs.existsSync(SECRET_FILE))fs.writeFileSync(SECRET_FILE,crypto.randomBytes(48),{mode:0o600,flag:'wx'});
 const SECRET=fs.readFileSync(SECRET_FILE);
