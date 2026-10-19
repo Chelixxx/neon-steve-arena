@@ -676,3 +676,6 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
  body[data-interface="telegram"] .compose-foot{display:none}
  body[data-interface="telegram"] .chat-item-actions{opacity:1}
 }
+/* Public usernames */
+.profile-username{display:inline-block;color:var(--muted,#8c98a8);font-size:.88rem;margin-top:3px;letter-spacing:.2px}
+#profileUsername{text-transform:lowercase}
