@@ -306,19 +306,28 @@ public class MainActivity extends Activity {
             String[][] aliases = {
                 {"purple", getPackageName() + ".VoltraPurple"},
                 {"cyan", getPackageName() + ".VoltraCyan"},
-                {"rose", getPackageName() + ".VoltraRose"}
+                {"rose", getPackageName() + ".VoltraRose"},
+                {"cherry", getPackageName() + ".VoltraCherry"},
+                {"forest", getPackageName() + ".VoltraForest"},
+                {"winter", getPackageName() + ".VoltraWinter"},
+                {"nether", getPackageName() + ".VoltraNether"},
+                {"ocean", getPackageName() + ".VoltraOcean"},
+                {"desert", getPackageName() + ".VoltraDesert"},
+                {"end", getPackageName() + ".VoltraEnd"},
+                {"mountains", getPackageName() + ".VoltraMountains"},
+                {"swamp", getPackageName() + ".VoltraSwamp"}
             };
-            String selected = getPackageName() + ".VoltraPurple";
-            if (name != null) for (String[] pair : aliases) if (pair[0].equalsIgnoreCase(name)) selected = pair[1];
-            final String chosen = selected;
+            String chosen = aliases[0][1];
+            if (name != null) for (String[] pair : aliases) if (pair[0].equalsIgnoreCase(name)) chosen = pair[1];
+            final String selected = chosen;
             runOnUiThread(() -> {
                 try {
                     for (String[] pair : aliases) {
                         getPackageManager().setComponentEnabledSetting(new ComponentName(MainActivity.this, pair[1]),
-                            pair[1].equals(chosen) ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                            pair[1].equals(selected) ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                             PackageManager.DONT_KILL_APP);
                     }
-                    toast("Иконка VOLTRA изменена. Если не обновилась, перезапусти лаунчер.");
+                    toast("Иконка VOLTRA изменена. Иногда лаунчеру нужно несколько секунд.");
                 } catch (Exception e) { toast("Не удалось сменить иконку"); }
             });
         }
