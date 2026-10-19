@@ -38,10 +38,12 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER = 41;
     private static final int BT_ENABLE = 42;
     private static final int BT_PERMISSION = 43;
+    private static final int MEDIA_PERMISSION = 44;
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
+    private android.webkit.PermissionRequest pendingMediaRequest;
     private BluetoothSocket connectedSocket;
     private BluetoothServerSocket serverSocket;
     private OutputStreamWriter bluetoothWriter;
@@ -106,6 +108,32 @@ public class MainActivity extends Activity {
                 fileCallback = callback;
                 try { startActivityForResult(params.createIntent(), FILE_CHOOSER); return true; }
                 catch (ActivityNotFoundException e) { fileCallback = null; return false; }
+            }
+
+            @Override public void onPermissionRequest(android.webkit.PermissionRequest request) {
+                runOnUiThread(() -> {
+                    Uri origin = request.getOrigin();
+                    if (origin == null || !"https".equals(origin.getScheme()) ||
+                        !"neon-steve-arena-server-production.up.railway.app".equals(origin.getHost())) {
+                        request.deny();
+                        return;
+                    }
+                    java.util.ArrayList<String> needed = new java.util.ArrayList<>();
+                    for (String resource : request.getResources()) {
+                        if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource) &&
+                            checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+                            needed.add(Manifest.permission.RECORD_AUDIO);
+                        if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource) &&
+                            checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
+                            needed.add(Manifest.permission.CAMERA);
+                    }
+                    if (needed.isEmpty()) grantMediaRequest(request);
+                    else {
+                        if (pendingMediaRequest != null) pendingMediaRequest.deny();
+                        pendingMediaRequest = request;
+                        requestPermissions(needed.toArray(new String[0]), MEDIA_PERMISSION);
+                    }
+                });
             }
         });
 
@@ -306,12 +334,34 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void grantMediaRequest(android.webkit.PermissionRequest request) {
+        java.util.ArrayList<String> allowed = new java.util.ArrayList<>();
+        for (String resource : request.getResources()) {
+            if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource) &&
+                checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+                allowed.add(resource);
+            if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource) &&
+                checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+                allowed.add(resource);
+        }
+        if (allowed.isEmpty()) request.deny();
+        else request.grant(allowed.toArray(new String[0]));
+    }
+
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == BT_PERMISSION) {
             boolean ok = true;
             for (int result : grantResults) if (result != PackageManager.PERMISSION_GRANTED) ok = false;
             if (!ok) toast("Для Bluetooth-чата нужно разрешение Bluetooth");
+        } else if (requestCode == MEDIA_PERMISSION) {
+            if (pendingMediaRequest != null) {
+                android.webkit.PermissionRequest request = pendingMediaRequest;
+                pendingMediaRequest = null;
+                if (request.getOrigin() != null && "neon-steve-arena-server-production.up.railway.app".equals(request.getOrigin().getHost()))
+                    grantMediaRequest(request);
+                else request.deny();
+            }
         }
     }
 
