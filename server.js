@@ -14,7 +14,7 @@ function collectUploadReferences(value,refs=new Set()){
 }
 function cleanupOldUploads(){
  const cutoff=Date.now()-FILE_TTL;
- const referenced=collectUploadReferences(typeof store==='undefined'?null:store);
+ const referenced=collectUploadReferences(typeof store==='  const re=/\/uploads\/([a-f0-9]{32}(?:\.[a-z0-9]{1,20})?)/ig;let match;'?null:store);
  fs.readdir(UPLOADS,(err,files)=>{
   if(err)return;
   for(const name of files){
