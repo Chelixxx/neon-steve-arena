@@ -535,3 +535,23 @@ body.media-viewer-open{overflow:hidden}
 
 /* Pinned messages, messenger-style */
 .pinned-message-bar{display:flex;align-items:center;gap:10px;margin:0 18px 8px;padding:10px 13px;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-left:3px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 9%,var(--panel));cursor:pointer;min-height:54px}.pinned-message-bar:hover{background:color-mix(in srgb,var(--accent) 15%,var(--panel))}.pinned-bar-icon{font-size:21px}.pinned-bar-copy{display:grid;gap:3px;min-width:0;flex:1}.pinned-bar-copy strong{font-size:12px;color:var(--accent)}.pinned-bar-copy small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pinned-bar-arrow{font-size:19px;color:var(--muted)}.pinned-message-label{font-size:11px;font-weight:750;color:var(--accent);margin:0 0 5px 2px}.message.pinned-flash .bubble{outline:2px solid var(--accent);outline-offset:3px;animation:pinnedPulse 1.1s ease}@keyframes pinnedPulse{0%,100%{outline-color:transparent}35%{outline-color:var(--accent)}}
+
+
+/* VOLTRA expanded local customization */
+body[data-ui-font="rounded"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif}
+body[data-ui-font="mono"]{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+body[data-ui-font="serif"]{font-family:Georgia,"Times New Roman",serif}
+body[data-density="compact"] .chat-item{padding-top:6px;padding-bottom:6px}
+body[data-density="spacious"] .chat-item{padding-top:17px;padding-bottom:17px}
+body[data-density="compact"] .chat-item .chat-preview small{font-size:9px}
+body[data-density="spacious"] .chat-item .chat-preview small{font-size:12px}
+body[data-chat-bg-custom="1"] .main{background:var(--custom-chat-bg)!important}
+.bubble{border-radius:var(--bubble-radius,16px) var(--bubble-radius,16px) var(--bubble-radius,16px) 5px}
+.mine .bubble{border-radius:var(--bubble-radius,16px) 5px var(--bubble-radius,16px) var(--bubble-radius,16px)}
+.app-icon-customizer{border:1px solid var(--line);background:#11131f88;border-radius:14px;padding:12px;display:grid;gap:8px}
+.app-icon-customizer h4{margin:0 0 4px}
+.app-icon-preview{width:76px;height:76px;display:grid;place-items:center;border-radius:22px;background:linear-gradient(140deg,#8c70ff,#56e5e8);color:#10111a;font-weight:900;font-size:30px;overflow:hidden;box-shadow:0 6px 22px #0005}
+.app-icon-preview img{width:100%;height:100%;object-fit:cover}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap}
+.attach-choice-card{display:grid;gap:10px}
+.attach-choice-card .primary,.attach-choice-card .secondary{width:100%;padding:13px;border-radius:12px}
