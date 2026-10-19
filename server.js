@@ -14,8 +14,8 @@ function collectUploadReferences(value,refs=new Set()){
 }
 function cleanupOldUploads(){
  const cutoff=Date.now()-FILE_TTL;
- const referenced=collectUploadReferences(typeof store==='undefined'?null:store);
  fs.readdir(UPLOADS,(err,files)=>{
+  const referenced=collectUploadReferences(store);
   if(err)return;
   for(const name of files){
    if(!/^[a-f0-9]{32}(?:\.[a-z0-9]{1,20})?$/i.test(name))continue;
