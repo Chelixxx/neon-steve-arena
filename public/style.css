@@ -525,3 +525,6 @@ body.media-viewer-open{overflow:hidden}
 
 /* Keep browser scroll anchoring from fighting chat's explicit scroll restoration. */
 .messages{overflow-anchor:none;}
+
+/* WhatsApp-style inline message formatting */
+.message .bubble strong{font-weight:850}.message .bubble em{font-style:italic}.message .bubble s{text-decoration-thickness:1.5px}.message .bubble .msg-code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.94em;padding:2px 5px;border-radius:5px;background:#0003;border:1px solid #ffffff18;overflow-wrap:anywhere}.message .bubble .msg-spoiler{display:inline-block;border-radius:4px;background:currentColor;color:transparent;text-shadow:0 0 7px var(--text);cursor:pointer;user-select:none;padding:0 3px;transition:filter .15s,background .15s}.message .bubble .msg-spoiler.revealed{background:color-mix(in srgb,var(--accent) 20%,transparent);color:inherit;text-shadow:none;user-select:text}
