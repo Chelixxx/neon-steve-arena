@@ -545,7 +545,7 @@ body[data-density="compact"] .chat-item{padding-top:6px;padding-bottom:6px}
 body[data-density="spacious"] .chat-item{padding-top:17px;padding-bottom:17px}
 body[data-density="compact"] .chat-item .chat-preview small{font-size:9px}
 body[data-density="spacious"] .chat-item .chat-preview small{font-size:12px}
-body[data-chat-bg-custom="1"] .main{background:var(--custom-chat-bg)!important}
+body.custom-chat-background .main{background:var(--custom-chat-bg)!important}
 .bubble{border-radius:var(--bubble-radius,16px) var(--bubble-radius,16px) var(--bubble-radius,16px) 5px}
 .mine .bubble{border-radius:var(--bubble-radius,16px) 5px var(--bubble-radius,16px) var(--bubble-radius,16px)}
 .app-icon-customizer{border:1px solid var(--line);background:#11131f88;border-radius:14px;padding:12px;display:grid;gap:8px}
@@ -555,3 +555,19 @@ body[data-chat-bg-custom="1"] .main{background:var(--custom-chat-bg)!important}
 .row-actions{display:flex;gap:8px;flex-wrap:wrap}
 .attach-choice-card{display:grid;gap:10px}
 .attach-choice-card .primary,.attach-choice-card .secondary{width:100%;padding:13px;border-radius:12px}
+
+
+/* Visual MiniApp / bot block constructor */
+.mini-block-builder{border:1px solid #34304f;border-radius:14px;padding:13px;margin:12px 0;background:linear-gradient(145deg,#151426,#10121e)}
+.mini-block-builder h4{margin:0 0 6px}
+.mini-block-palette{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0}
+.mini-block-palette button{border:1px solid #393452;border-radius:10px;padding:10px;background:#1a1b2d;color:var(--text);font-size:12px;cursor:grab}
+.mini-block-palette button.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.mini-block-drop{border:1px dashed #8b73ff88;border-radius:11px;padding:15px;text-align:center;color:var(--muted);font-size:12px;background:#8b73ff0b}
+.mini-block-drop.drag-over{background:#8b73ff22;border-color:#b8aaff;color:#fff}
+.mini-block-editor{display:grid;gap:8px;margin-top:12px}
+.mini-block-editor label{display:grid;gap:5px;font-size:12px;color:var(--text)}
+.mini-block-editor input,.mini-block-editor textarea{width:100%;min-width:0}
+.mini-block-editor .primary{width:100%}
+.app-icon-customizer input[type=file]{font-size:11px;padding:8px}
+@media(max-width:520px){.mini-block-palette{grid-template-columns:1fr 1fr}.mini-block-palette button{padding:9px 5px;font-size:11px}}
