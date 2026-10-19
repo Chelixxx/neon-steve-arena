@@ -4,7 +4,7 @@ const PORT=process.env.PORT||8080,ROOT=path.join(__dirname,'public'),DATA=proces
 fs.mkdirSync(UPLOADS,{recursive:true});
 function collectUploadReferences(value,refs=new Set()){
  if(typeof value==='string'){
-  const re=/\\/uploads\\/([a-f0-9]{32}(?:\\.[a-z0-9]{1,20})?)/ig;let match;
+  const re=/\/uploads\/([a-f0-9]{32}(?:\.[a-z0-9]{1,20})?)/ig;let match;
   while((match=re.exec(value))!==null)refs.add(match[1]);
   return refs;
  }
