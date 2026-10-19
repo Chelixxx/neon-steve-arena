@@ -14,7 +14,7 @@ function collectUploadReferences(value,refs=new Set()){
 }
 function cleanupOldUploads(){
  const cutoff=Date.now()-FILE_TTL;
- const referenced=collectUploadReferences(typeof store==='  const re=/\/uploads\/([a-f0-9]{32}(?:\.[a-z0-9]{1,20})?)/ig;let match;'?null:store);
+ const referenced=collectUploadReferences(typeof store==='undefined'?null:store);
  fs.readdir(UPLOADS,(err,files)=>{
   if(err)return;
   for(const name of files){
@@ -439,18 +439,10 @@ if(req.method==='GET'&&u.pathname==='/api/miniapps'){const uid=verifyToken(cooki
   out.on('finish',()=>{if(failed||res.writableEnded)return;json(res,201,{url:'/uploads/'+id,name:rawName,size,mime:mime[ext]||'application/octet-stream'})});
   req.pipe(out);return
  }
-  fs.stat(file,(e,st)=>{
-   if(!e&&st.isDirectory())file=path.join(file,'index.html');
-   fs.stat(file,(e2,st2)=>{
-    if(e2||!st2.isFile())return res.writeHead(404).end('Not found');
-    const ext=path.extname(file).toLowerCase(),etag='W/\\"'+st2.size.toString(16)+'-'+Math.trunc(st2.mtimeMs).toString(16)+'\\"',headers={'content-type':mime[ext]||'application/octet-stream','cache-control':ext==='.html'?'no-cache':'public, max-age=3600, must-revalidate','etag':etag,'last-modified':st2.mtime.toUTCString(),'x-content-type-options':'nosniff'};
-    if(req.headers['if-none-match']===etag){res.writeHead(304,headers);return res.end()}
-    res.writeHead(200,headers);fs.createReadStream(file).pipe(res);
-   });
-  });
+ if(u.pathname.startsWith('/uploads/')){if(!verifyToken(cookieToken(req)))return json(res,401,{error:'Войди в аккаунт, чтобы открыть файл'});const id=path.basename(u.pathname),file=path.join(UPLOADS,id);return fs.stat(file,(e,st)=>{if(e||!st.isFile())return res.writeHead(404).end('Not found');const ext=path.extname(file).toLowerCase(),inline=['.png','.jpg','.jpeg','.webp','.gif','.bmp','.mp4','.webm','.mov','.m4v','.mp3','.m4a','.ogg','.wav','.pdf','.ttf','.otf','.woff','.woff2'].includes(ext);res.writeHead(200,{'content-type':mime[ext]||'application/octet-stream','content-length':st.size,'cache-control':'private, max-age=86400','x-content-type-options':'nosniff','content-disposition':(inline?'inline':'attachment')+'; filename="'+id.replace(/["\\]/g,'')+'"'});fs.createReadStream(file).pipe(res)})}
  const requested=u.pathname==='/'?'/index.html':u.pathname;let file;try{file=path.resolve(ROOT,'.'+decodeURIComponent(requested))}catch{return json(res,400,{error:'Bad path'})}
  if(!file.startsWith(ROOT+path.sep))return res.writeHead(403).end('Forbidden');
- fs.stat(file,(e,st)=>{if(e||!st.isFile())return res.writeHead(404).end('Not found');const ext=path.extname(file).toLowerCase(),etag='W/\"'+st.size.toString(16)+'-'+Math.trunc(st.mtimeMs).toString(16)+'\"',headers={'content-type':mime[ext]||'application/octet-stream','cache-control':ext==='.html'?'no-cache':'public, max-age=3600, must-revalidate','etag':etag,'last-modified':st.mtime.toUTCString(),'x-content-type-options':'nosniff'};if(req.headers['if-none-match']===etag){res.writeHead(304,headers);return res.end()}res.writeHead(200,headers);fs.createReadStream(file).pipe(res)})
+ fs.stat(file,(e,st)=>{if(!e&&st.isDirectory())file=path.join(file,'index.html');fs.stat(file,(e2,st2)=>{if(e2||!st2.isFile())return res.writeHead(404).end('Not found');const ext=path.extname(file).toLowerCase(),etag='W/\"'+st2.size.toString(16)+'-'+Math.trunc(st2.mtimeMs).toString(16)+'\"',headers={'content-type':mime[ext]||'application/octet-stream','cache-control':ext==='.html'?'no-cache':'public, max-age=3600, must-revalidate','etag':etag,'last-modified':st2.mtime.toUTCString(),'x-content-type-options':'nosniff'};if(req.headers['if-none-match']===etag){res.writeHead(304,headers);return res.end()}res.writeHead(200,headers);fs.createReadStream(file).pipe(res)})})
 });
 const wss=new WebSocketServer({server,path:'/ws',perMessageDeflate:false,maxPayload:2*1024*1024});
 const wsHeartbeat=setInterval(()=>{for(const socket of wss.clients){if(socket.isAlive===false){socket.terminate();continue}socket.isAlive=false;try{socket.ping()}catch{socket.terminate()}}},25000);wsHeartbeat.unref?.();
