@@ -18,7 +18,7 @@ function cleanupOldUploads(){
  fs.readdir(UPLOADS,(err,files)=>{
   if(err)return;
   for(const name of files){
-   if(!/^[a-f0-9]{32}(?:\\.[a-z0-9]{1,20})?$/i.test(name))continue;
+   if(!/^[a-f0-9]{32}(?:\.[a-z0-9]{1,20})?$/i.test(name))continue;
    const file=path.join(UPLOADS,name);
    fs.stat(file,(e,st)=>{
     if(!e&&st.isFile()&&st.mtimeMs<cutoff&&!referenced.has(name))fs.unlink(file,()=>{});
