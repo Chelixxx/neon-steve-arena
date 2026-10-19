@@ -287,7 +287,7 @@ async function uploadFile(fileList){
  if(!files.length)return;
  if(files.length>20){toast('За один раз можно отправить максимум 20 файлов');return}
  uploadInProgress=true;
- $('attach').disabled=true;$('fileInput').disabled=true;
+ $('attach').disabled=true;$('fileInput').disabled=true;$('galleryInput').disabled=true;
  let sent=0,failed=[];
  try{
   const uploaded=[];
@@ -314,7 +314,7 @@ async function uploadFile(fileList){
   setReply(null);
  }finally{
   uploadInProgress=false;
-  $('attach').disabled=false;$('fileInput').disabled=false;
+  $('attach').disabled=false;$('fileInput').disabled=false;$('galleryInput').disabled=false;
   setTimeout(()=>{if($('uploadProgress'))$('uploadProgress').classList.add('hidden');if($('uploadProgressFill'))$('uploadProgressFill').style.width='0%';if($('uploadStatus'))$('uploadStatus').textContent=''},6000)
  }
 }
