@@ -342,7 +342,7 @@ async function toggleCircleRecord(){
    uploadInProgress=true;$('attach').disabled=true;$('fileInput').disabled=true;
    try{setUploadProgress(1,'Загружаем видеокружок…');const attachment=await uploadOneFile(file,0,1);send({t:'message',text:'',to:isDM()?activeId:null,channelId:isChannel()?activeChannelId():null,replyTo:replyingTo?.id||null,kind:'circle-video',circleShape:localStorage.getItem('pulseCircleShape')||'circle',attachment});setReply(null);toast('Видеокружок отправлен 🎥')}
    catch(e){toast('Не удалось отправить кружок: '+(e.message||'ошибка'))}
-   finally{uploadInProgress=false;$('attach').disabled=false;$('fileInput').disabled=false}
+   finally{uploadInProgress=false;$('attach').disabled=false;$('fileInput').disabled=false;$('galleryInput').disabled=false}
   };
   recorder.start();$('circleRecord').textContent='■';$('circleRecord').style.color='#ff6685';toast('Запись кружка идёт · нажми ■, чтобы отправить');
  }catch(e){if(stream)stream.getTracks().forEach(t=>t.stop());toast('Разреши доступ к камере и микрофону')}
