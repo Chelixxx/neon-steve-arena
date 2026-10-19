@@ -91,6 +91,7 @@ function markRead(uid,ids){const touched=[];for(const m of store.messages){if(id
 const miniImageVisionLimits=new Map();
 const server=http.createServer(async(req,res)=>{
  let u;try{u=new URL(req.url,'http://localhost')}catch{return json(res,400,{error:'Bad request'})}
+ if(u.pathname==='/app/download'||u.pathname==='/app/download/')u.pathname='/app/download.html';
  let deviceId=deviceIdFrom(req);if(!deviceId){deviceId=crypto.randomUUID();req.headers.cookie=(req.headers.cookie?req.headers.cookie+'; ':'')+'pulse_device='+encodeURIComponent(deviceId);res.setHeader('set-cookie','pulse_device='+encodeURIComponent(deviceId)+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000')}
  if(store.deviceBans[deviceId]&&(u.pathname.startsWith('/api/')||u.pathname==='/upload'||u.pathname.startsWith('/uploads/')))return json(res,403,{error:'Это устройство заблокировано'+(store.deviceBans[deviceId].reason?': '+String(store.deviceBans[deviceId].reason).slice(0,200):'')})
  if(u.pathname==='/health')return json(res,200,{ok:true,app:'VOLTRA',accounts:store.users.length,online:clients.size,messages:store.messages.length});
