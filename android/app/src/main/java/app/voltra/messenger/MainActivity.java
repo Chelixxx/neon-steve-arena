@@ -143,10 +143,8 @@ public class MainActivity extends Activity {
     }
 
     private String onlineToolbarScript() {
-        return "(function(){if(!window.VOLTRA_NATIVE||document.getElementById('voltra-native-tools'))return;" +
-            "var s=document.createElement('style');s.textContent='#voltra-native-tools{position:fixed;z-index:2147483000;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));font:600 13px system-ui}#voltra-native-tools button{border:1px solid #ffffff2b;border-radius:14px;padding:11px 14px;background:linear-gradient(120deg,#9278ff,#56e5e8);color:#101020;font-weight:800;box-shadow:0 8px 28px #0005}';document.head.appendChild(s);" +
-            "var b=document.createElement('div');b.id='voltra-native-tools';b.innerHTML='<button type=\"button\">ϟ Offline / APK</button>';b.firstChild.onclick=function(){window.VOLTRA_NATIVE.openOfflinePanel()};document.body.appendChild(b);" +
-            "})();";
+        // No injected Offline / APK shortcut: the app opens directly into the online messenger.
+        return "(function(){})();";
     }
 
     private boolean hasBluetoothPermission() {
