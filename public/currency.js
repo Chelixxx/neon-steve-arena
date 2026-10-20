@@ -3,7 +3,7 @@ const viewer=document.getElementById('voltCoinViewer'),coin=document.getElementB
 if(!viewer||!coin||!scene||!sparks||!close)return;
 let rx=-12,ry=-22,drag=false,lastX=0,lastY=0,pointerId=null;
 const paint=()=>{coin.style.transform='rotateX('+rx+'deg) rotateY('+ry+'deg)';};
-function open(){viewer.classList.remove('hidden');document.body.classList.add('volt-viewer-open');rx=-12;ry=-22;paint();close.focus({preventScroll:true});}
+function open(){const tier=document.querySelector('.volt-coin')?.dataset.tier||'bronze';const big=document.getElementById('voltCoinLarge');if(big)big.dataset.tier=tier;viewer.classList.remove('hidden');document.body.classList.add('volt-viewer-open');rx=-12;ry=-22;paint();close.focus({preventScroll:true});}
 function shut(){viewer.classList.add('hidden');document.body.classList.remove('volt-viewer-open');drag=false;pointerId=null;}
 document.addEventListener('click',e=>{const target=e.target.closest('.volt-coin');if(target){e.preventDefault();e.stopPropagation();open();}});
 close.addEventListener('click',shut);
