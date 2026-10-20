@@ -1,5 +1,6 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),modal=$('marketModal');
+document.addEventListener('click',e=>{const b=e.target.closest('[data-quick-action="market"]');if(!b)return;e.preventDefault();if(modal)modal.classList.remove('hidden');if(typeof refresh==='function')refresh().catch(()=>{});},true);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let listings=[],balance=0,filter='all',selectedImages=[],selectedModel=null,galleryIndexes={},detailId=null,detailIndex=0;
 async function api(url,body){const r=await fetch(url,{method:body?'POST':'GET',credentials:'same-origin',headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok)throw new Error(d.error||'Ошибка запроса');return d}
