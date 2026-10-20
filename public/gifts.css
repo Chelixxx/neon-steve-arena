@@ -109,3 +109,9 @@ body.volt-viewer-open{overflow:hidden}
 .gift3d-zoom input{flex:1;accent-color:#b5a0ff}
 @keyframes gift3d-fly{0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--angle)) translateX(20px) scale(.4)}18%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--angle)) translateX(var(--distance,150px)) scale(1.2)}}
 @media(prefers-reduced-motion:reduce){.gift3d-particle{animation:none;opacity:.55}}
+
+.volt-coin-large[data-tier="bronze"] .volt-coin-face{background:radial-gradient(circle at 30% 22%,#f8dfbf,#d18c52 25%,#995525 60%,#633515 82%,#e4aa72)}
+.volt-coin-large[data-tier="silver"] .volt-coin-face{background:radial-gradient(circle at 30% 22%,#fff,#dce4ed 25%,#9aa6b6 60%,#697688 82%,#f6f8fb)}
+.volt-coin-large[data-tier="gold"] .volt-coin-face{background:radial-gradient(circle at 30% 22%,#fffbd0,#ffe45b 12%,#ffbf21 34%,#d8850a 66%,#a95b06 82%,#ffe47c)}
+.volt-coin-large[data-tier="platinum"] .volt-coin-face{background:radial-gradient(circle at 30% 22%,#fff,#c8fbff 18%,#a5c9e7 42%,#b5a9ee 65%,#687ba7 84%,#f0ffff)}
+.volt-coin-large[data-tier="platinum"] .volt-coin-face span{color:#465177;text-shadow:0 3px 0 #fff,0 7px 0 #9faee2,0 10px 15px #35416d}
