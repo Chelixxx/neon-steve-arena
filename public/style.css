@@ -754,3 +754,15 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .chat-meta b:has(.golda-aura),#myName:has(.golda-aura){display:inline-block;border:1px solid #ffd700;border-radius:8px;padding:2px 7px;background:linear-gradient(110deg,#3a2900aa,#f9d42333,#3a2900aa);box-shadow:0 0 7px #ffd70088,inset 0 0 5px #ffd70033;color:#ffe68a;text-shadow:0 0 7px #ffcc00}
 @keyframes golda-float{0%,100%{transform:translateY(2px) rotate(-8deg)}50%{transform:translateY(-5px) rotate(10deg)}}
 @media(prefers-reduced-motion:reduce){.golda-aura span{animation:none}}
+
+/* Easter egg: ДУМАЙТЕ */
+.think-egg{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;margin-left:5px;padding:2px 7px;border:1px solid #a78bfa;border-radius:7px;background:linear-gradient(120deg,#24104b,#312e81,#0f766e);box-shadow:0 0 8px #8b5cf688;color:#e9d5ff;font-size:10px;font-weight:800;letter-spacing:.15px;white-space:nowrap;animation:think-glow 2.8s ease-in-out infinite}
+.think-phrase{background:linear-gradient(90deg,#c4b5fd,#67e8f9,#f0abfc);background-clip:text;-webkit-background-clip:text;color:transparent}.think-symbol{font-size:12px;color:#67e8f9;text-shadow:0 0 7px #67e8f9}
+@keyframes think-glow{0%,100%{box-shadow:0 0 5px #8b5cf655}50%{box-shadow:0 0 12px #22d3ee99}}
+/* Easter egg: Няшка */
+.nyashka-egg{display:inline-flex;position:relative;vertical-align:middle;align-items:center;gap:1px;margin-left:5px;color:#ff72b6;font-size:14px;filter:drop-shadow(0 0 4px #ff69b488);white-space:nowrap}
+.nyashka-egg span{display:inline-block;animation:nyashka-heart 1.35s ease-in-out infinite}.nyashka-egg span:nth-child(2){animation-delay:-.45s}.nyashka-egg span:nth-child(3){animation-delay:-.9s}.nyashka-egg span:nth-child(4){font-size:10px;animation-delay:-.65s}
+.chat-meta b:has(.think-egg){border-radius:7px;padding:2px 4px;background:linear-gradient(110deg,#312e8133,#0f766e22)}
+.chat-meta b:has(.nyashka-egg),#myName:has(.nyashka-egg){border:1px solid #ff8ac9;border-radius:9px;padding:2px 7px;background:linear-gradient(120deg,#4a1236aa,#f472b633,#7c3aed33);box-shadow:0 0 8px #ff69b488;color:#ffc5e5;text-shadow:0 0 6px #ff69b4}
+@keyframes nyashka-heart{0%,100%{transform:translateY(1px) scale(.95) rotate(-6deg)}50%{transform:translateY(-4px) scale(1.12) rotate(7deg)}}
+@media(prefers-reduced-motion:reduce){.think-egg,.nyashka-egg span{animation:none}}
