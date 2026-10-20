@@ -47,3 +47,11 @@
 @media(max-width:520px){.cookie-big{width:150px;height:150px;font-size:78px}.cookie-stats small{font-size:9px}.cookie-stats b{font-size:13px}.call-summary-card{min-width:0;max-width:100%}}
 
 .push-settings{margin:18px 0;padding:14px;border:1px solid #7b70b455;border-radius:14px;background:linear-gradient(135deg,#292044,#172b39)}.push-settings h3{margin:0 0 7px;font-size:14px}.push-settings p{font-size:12px;line-height:1.5;margin:0 0 10px}.push-settings button{width:100%}.push-settings small{display:block;margin-top:9px;line-height:1.4}
+
+/* VOLTRA 3D-style currency coin */
+.volt-coin{display:inline-grid;place-items:center;vertical-align:-.16em;position:relative;width:1.18em;height:1.18em;margin-right:.12em;border-radius:50%;isolation:isolate;color:#fff8b8;font-size:.82em;line-height:1;background:linear-gradient(135deg,#fff6a0 0%,#ffcf37 24%,#d98b10 48%,#fff08a 70%,#a85c06 100%);border:1px solid #ffeaa0;box-shadow:inset 0 0 0 2px #8e5b0c,inset 0 0 0 3px #fff1a0,0 0 12px #ffc83d55;transform-style:preserve-3d;animation:volt-coin-spin 3s linear infinite;flex-shrink:0}
+.volt-coin:before{content:"";position:absolute;inset:12%;border:1px solid #fff4a8;border-radius:50%;box-shadow:inset 0 0 5px #fff8b8aa}
+.volt-coin i{position:relative;z-index:1;font-style:normal;font-weight:1000;font-size:1.05em;color:#7a4700;text-shadow:0 1px #fff4a0;transform:translateZ(2px)}
+.volt-coin:hover{animation-duration:.65s;filter:brightness(1.16)}
+@keyframes volt-coin-spin{0%{transform:rotateY(0deg) rotateZ(-5deg)}50%{transform:rotateY(180deg) rotateZ(5deg)}100%{transform:rotateY(360deg) rotateZ(-5deg)}}
+@media(prefers-reduced-motion:reduce){.volt-coin{animation:none}}
