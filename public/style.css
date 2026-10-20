@@ -725,3 +725,14 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .admin-badge.role-label-transformers{font-family:Impact,"Arial Narrow",sans-serif;letter-spacing:.6px;color:#fff!important;background:linear-gradient(120deg,#0c3578,#d21e28)!important;border:2px solid #dce7ff!important;border-radius:5px!important}
 .admin-badge.role-label-starwars{font-family:Impact,"Arial Narrow",sans-serif;letter-spacing:1px;color:#ffe34d!important;background:#080808!important;border:1px solid #ffe34d!important;border-radius:4px!important}
 .admin-badge.role-label-spiderman{font-family:Impact,"Arial Narrow",sans-serif;color:#fff!important;background:linear-gradient(120deg,#d71920 0 50%,#0756a8 50% 100%)!important;border:2px solid #fff!important;border-radius:7px!important;text-shadow:1px 1px #001}
+
+/* Compact Telegram-style long-press message menu */
+.message-actions{display:none!important}
+.message,.message .bubble,.message .msg-name,.message .msg-time{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.message img,.message video{-webkit-user-drag:none}
+.voltra-message-context{position:fixed;z-index:10000;min-width:205px;max-width:min(280px,calc(100vw - 16px));max-height:min(70vh,520px);overflow:auto;padding:6px;border:1px solid var(--line,#30334a);border-radius:15px;background:var(--panel,#171927);box-shadow:0 18px 55px #0009;display:grid;gap:2px;animation:voltraContextIn .12s ease-out}
+.voltra-context-title{padding:8px 10px 6px;color:var(--muted,#9ca3bd);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px}
+.voltra-message-context button{display:flex;align-items:center;width:100%;min-height:40px;padding:9px 11px;border:0;border-radius:9px;background:transparent;color:var(--text,#f5f5fb);font-size:13px;text-align:left}
+.voltra-message-context button:active,.voltra-message-context button:hover{background:color-mix(in srgb,var(--accent,#8c70ff) 18%,transparent)}
+.voltra-message-context button[data-msg-action="delete-self"],.voltra-message-context button[data-msg-action="delete-all"]{color:#ff737e}
+@keyframes voltraContextIn{from{opacity:0;transform:scale(.96) translateY(4px)}to{opacity:1;transform:scale(1) translateY(0)}}
