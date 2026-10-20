@@ -766,3 +766,11 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .chat-meta b:has(.nyashka-egg),#myName:has(.nyashka-egg){border:1px solid #ff8ac9;border-radius:9px;padding:2px 7px;background:linear-gradient(120deg,#4a1236aa,#f472b633,#7c3aed33);box-shadow:0 0 8px #ff69b488;color:#ffc5e5;text-shadow:0 0 6px #ff69b4}
 @keyframes nyashka-heart{0%,100%{transform:translateY(1px) scale(.95) rotate(-6deg)}50%{transform:translateY(-4px) scale(1.12) rotate(7deg)}}
 @media(prefers-reduced-motion:reduce){.think-egg,.nyashka-egg span{animation:none}}
+
+/* Easter egg: R.E.P.O. — eerie horror title */
+.repo-horror{position:relative;isolation:isolate;display:inline-flex;align-items:center;vertical-align:middle;margin-left:6px;padding:2px 6px;overflow:hidden;border:1px solid #a7ad9b;border-radius:3px;background:linear-gradient(180deg,#1a1d18,#080a08 70%);box-shadow:0 0 5px #c8d0ad66,inset 0 0 7px #91a08055;color:#d7dec9;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;font-weight:950;letter-spacing:1.1px;text-shadow:0 0 5px #c6d2ad,1px 1px 0 #555;white-space:nowrap}
+.repo-title{position:relative;z-index:1;animation:repo-flicker 4.8s steps(1,end) infinite}.repo-scan{position:absolute;z-index:2;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 3px,#d4dfc80c 4px 5px);mix-blend-mode:screen}.repo-eyes{position:absolute;z-index:0;right:2px;top:-7px;font-size:7px;color:#d7ffab;opacity:.65;letter-spacing:2px;animation:repo-watch 3.5s ease-in-out infinite}
+.chat-meta b:has(.repo-horror),#myName:has(.repo-horror){border-radius:4px;padding:2px 5px;background:linear-gradient(90deg,#171a14aa,#383e2b55);box-shadow:0 0 7px #b3c49a44;border:1px solid #6b7560}
+@keyframes repo-flicker{0%,18%,20%,54%,56%,100%{opacity:1}19%,55%{opacity:.45}72%{text-shadow:0 0 8px #d8e8b9,2px 0 #743d3d}}
+@keyframes repo-watch{0%,100%{transform:translateY(0);opacity:.3}50%{transform:translateY(5px);opacity:.9}}
+@media(prefers-reduced-motion:reduce){.repo-title,.repo-eyes{animation:none}}
