@@ -739,3 +739,7 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 
 /* Strongly disable accidental text selection inside message history only */
 #messages,#messages *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}#messages .message{touch-action:pan-y}#messages .message a,#messages .message button{user-select:none!important;-webkit-user-select:none!important}
+
+
+/* 3D GLB previews in VOLTRA Market */
+.market-model-upload{display:grid;gap:7px}.market-model-upload input[type=file]{width:100%;font-size:12px}.market-model-preview-card{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--panel2)}.market-model-preview-card model-viewer{width:100%;height:220px;border-radius:10px;background:radial-gradient(circle at 50% 35%,#8b70ff20,transparent 70%)}.market-model-preview-card button{padding:8px;border-radius:9px}.market-model-preview-card small{color:var(--muted);overflow-wrap:anywhere}.market-model-art{position:relative;overflow:hidden;display:block!important;background:radial-gradient(circle at 50% 35%,#8b70ff2b,transparent 70%),var(--panel2)!important}.market-model-art model-viewer{width:100%;height:100%;min-height:180px;background:transparent}.market-model-art>span{position:absolute;left:8px;bottom:8px;padding:4px 7px;border-radius:99px;background:#080b18c9;color:#fff;font-size:10px}.market-detail-model{width:100%;height:100%;min-height:350px;max-height:540px;background:radial-gradient(circle at 50% 35%,#8b70ff25,transparent 70%)}
