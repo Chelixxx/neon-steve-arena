@@ -181,7 +181,7 @@ const server=http.createServer(async(req,res)=>{
    const firebaseUser=verified.users&&verified.users[0];
    if(!verify.ok||!firebaseUser||!firebaseUser.phoneNumber)return json(res,401,{error:'Firebase не подтвердил номер. Повтори проверку SMS.'});
    const phone=normalizePhone(firebaseUser.phoneNumber);
-   if(!/^\\+[1-9]\\d{7,14}$/.test(phone))return json(res,400,{error:'Firebase вернул некорректный номер'});
+   if(!/^\+[1-9]\d{7,14}$/.test(phone))return json(res,400,{error:'Firebase вернул некорректный номер'});
    if(userByName(name))return json(res,409,{error:'Этот ник уже занят'});
    if(store.users.some(x=>x.phone&&normalizePhone(x.phone)===phone))return json(res,409,{error:'Этот номер уже привязан к аккаунту VOLTRA'});
    const salt=crypto.randomBytes(16).toString('hex');
