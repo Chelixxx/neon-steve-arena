@@ -136,7 +136,7 @@ async function startPhoneRegistration(){
  const name=$('nickname').value.trim(),password=$('password').value,phone=$('registerPhone').value.trim();
  if(name.length<3||name.length>24)throw new Error('Ник должен содержать от 3 до 24 символов');
  if(password.length<8)throw new Error('Пароль должен быть не короче 8 символов');
- if(!/^\\+[1-9]\\d{7,14}$/.test(phone))throw new Error('Введи номер в международном формате, например +16505550123');
+ if(!/^\+[1-9]\d{7,14}$/.test(phone))throw new Error('Введи номер в международном формате, например +16505550123');
  const {auth,authMod}=await loadFirebasePhoneAuth();
  if(!voltraRecaptcha)voltraRecaptcha=new authMod.RecaptchaVerifier(auth,'phoneRecaptcha',{size:'normal'});
  voltraPhoneConfirmation=await authMod.signInWithPhoneNumber(auth,phone,voltraRecaptcha);
