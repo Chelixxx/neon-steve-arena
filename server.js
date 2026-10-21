@@ -111,6 +111,11 @@ function broadcastGlobal(m){for(const [viewerId,set] of clients)if(!userById(vie
 function parseBody(req,limit=32000){return new Promise((resolve,reject)=>{let b='',size=0;req.on('data',c=>{size+=c.length;if(size>limit){reject(Object.assign(new Error('Слишком большой запрос'),{status:413}));req.destroy();return}b+=c.toString('utf8')});req.on('end',()=>{try{resolve(JSON.parse(b||'{}'))}catch{reject(Object.assign(new Error('Некорректный JSON'),{status:400}))}});req.on('error',reject)})}
 function json(res,status,obj){res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(obj))}
 function passwordHash(password,salt){return crypto.scryptSync(password,salt,64).toString('hex')}
+function walletSecretHash(value,salt){return crypto.scryptSync(String(value).normalize('NFKC').trim().toLocaleLowerCase('ru-RU'),salt,64).toString('hex')}
+const walletPinAttempts=new Map();
+function walletPinAllowed(uid){const x=walletPinAttempts.get(uid);if(!x||Date.now()-x.at>10*60*1000){walletPinAttempts.set(uid,{at:Date.now(),count:0});return true}return x.count<8}
+function walletPinFailure(uid){const x=walletPinAttempts.get(uid)||{at:Date.now(),count:0};x.count++;x.at=Date.now();walletPinAttempts.set(uid,x)}
+function walletPinSuccess(uid){walletPinAttempts.delete(uid)}
 function visibleTo(uid,m){return !(store.messageHides[uid]||[]).includes(m.id)}
 function directHistory(uid,other){return store.messages.filter(m=>visibleTo(uid,m)&&((m.to===other&&m.from===uid)||(m.to===uid&&m.from===other)))}
 function chatHistory(uid,to,channelId){if(channelId)return store.messages.filter(m=>visibleTo(uid,m)&&m.channelId===channelId);if(!to&&userById(uid)?.globalChatDisabled)return [];return to?directHistory(uid,to):store.messages.filter(m=>visibleTo(uid,m)&&!m.to&&!m.channelId).slice(-250)}
@@ -185,12 +190,46 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='GET'&&u.pathname==='/api/catcoin'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   const user=userById(uid);if(!user)return json(res,401,{error:'Пользователь не найден'});
-  return json(res,200,{ok:true,wallet:{vlt:user.pulses||0,cat:Number.isSafeInteger(user.catCoins)?user.catCoins:0,referenceRubles:Number.isSafeInteger(user.catCoins)?user.catCoins:0,rate:'128 VLT = 1 CAT',note:'Внутренняя валюта мессенджера; стоимость в рублях расчётная.'},history:store.catCoinTransactions.filter(x=>x.fromId===uid||x.toId===uid).slice(-50).reverse()});
+  return json(res,200,{ok:true,security:{configured:!!(user.walletPinHash&&user.walletPinSalt&&user.walletPhrase1Hash&&user.walletPhrase2Hash)},wallet:{vlt:user.pulses||0,cat:Number.isSafeInteger(user.catCoins)?user.catCoins:0,referenceRubles:Number.isSafeInteger(user.catCoins)?user.catCoins:0,rate:'128 VLT = 1 CAT',note:'Внутренняя валюта мессенджера; стоимость в рублях расчётная.'},history:store.catCoinTransactions.filter(x=>x.fromId===uid||x.toId===uid).slice(-50).reverse()});
+ }
+ if(req.method==='POST'&&u.pathname==='/api/catcoin/security/setup'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  try{
+   const b=await parseBody(req),user=userById(uid),pin=String(b.pin||''),phrase1=String(b.phrase1||'').normalize('NFKC').trim(),phrase2=String(b.phrase2||'').normalize('NFKC').trim();
+   if(!user)return json(res,401,{error:'Пользователь не найден'});
+   if(user.walletPinHash)return json(res,409,{error:'Защита кошелька уже создана. Повторная настройка запрещена.'});
+   if(!/^\\d{4}$/.test(pin))return json(res,400,{error:'PIN должен состоять ровно из 4 цифр.'});
+   if(phrase1.length<8||phrase1.length>120||phrase2.length<8||phrase2.length>120)return json(res,400,{error:'Каждая кодовая фраза должна содержать от 8 до 120 символов.'});
+   if(phrase1.toLocaleLowerCase('ru-RU')===phrase2.toLocaleLowerCase('ru-RU'))return json(res,400,{error:'Придумай две разные кодовые фразы.'});
+   user.walletPinSalt=crypto.randomBytes(16).toString('hex');user.walletPinHash=walletSecretHash(pin,user.walletPinSalt);
+   user.walletPhrase1Salt=crypto.randomBytes(16).toString('hex');user.walletPhrase1Hash=walletSecretHash(phrase1,user.walletPhrase1Salt);
+   user.walletPhrase2Salt=crypto.randomBytes(16).toString('hex');user.walletPhrase2Hash=walletSecretHash(phrase2,user.walletPhrase2Salt);
+   save();return json(res,200,{ok:true,message:'Защита кошелька создана. Сохрани обе фразы в надёжном месте.'});
+  }catch(e){return json(res,400,{error:e.message||'Не удалось настроить защиту'})}
+ }
+ if(req.method==='POST'&&u.pathname==='/api/catcoin/security/recover'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  try{
+   const b=await parseBody(req),user=userById(uid),phrase1=String(b.phrase1||'').normalize('NFKC').trim(),phrase2=String(b.phrase2||'').normalize('NFKC').trim(),pin=String(b.pin||'');
+   if(!user||!user.walletPinHash)return json(res,400,{error:'Защита кошелька ещё не настроена.'});
+   if(!walletPinAllowed(uid))return json(res,429,{error:'Слишком много попыток. Попробуй через 10 минут.'});
+   const h1=walletSecretHash(phrase1,user.walletPhrase1Salt),h2=walletSecretHash(phrase2,user.walletPhrase2Salt);
+   const ok1=crypto.timingSafeEqual(Buffer.from(h1,'hex'),Buffer.from(user.walletPhrase1Hash,'hex'));
+   const ok2=crypto.timingSafeEqual(Buffer.from(h2,'hex'),Buffer.from(user.walletPhrase2Hash,'hex'));
+   if(!ok1||!ok2){walletPinFailure(uid);return json(res,401,{error:'Кодовые фразы не совпали.'})}
+   if(!/^\\d{4}$/.test(pin))return json(res,400,{error:'Новый PIN должен состоять из 4 цифр.'});
+   user.walletPinSalt=crypto.randomBytes(16).toString('hex');user.walletPinHash=walletSecretHash(pin,user.walletPinSalt);walletPinSuccess(uid);save();
+   return json(res,200,{ok:true,message:'PIN обновлён. Кодовые фразы остались прежними.'});
+  }catch(e){return json(res,400,{error:e.message||'Не удалось восстановить PIN'})}
  }
  if(req.method==='POST'&&u.pathname==='/api/catcoin/action'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   try{
-   const b=await parseBody(req),user=userById(uid),action=String(b.action||''),amount=Number(b.amount);
+   const b=await parseBody(req),user=userById(uid),action=String(b.action||''),amount=Number(b.amount),pin=String(b.pin||'');
+   if(!user.walletPinHash)return json(res,403,{error:'Сначала создай защиту кошелька.'});
+   if(!walletPinAllowed(uid))return json(res,429,{error:'Слишком много попыток PIN. Попробуй через 10 минут.'});
+   if(!/^\\d{4}$/.test(pin)||walletSecretHash(pin,user.walletPinSalt)!==user.walletPinHash){walletPinFailure(uid);return json(res,401,{error:'Неверный PIN кошелька.'});}
+   walletPinSuccess(uid);
    if(!user)return json(res,401,{error:'Пользователь не найден'});
    if(!Number.isSafeInteger(amount)||amount<=0||amount>100000000) return json(res,400,{error:'Укажи целое положительное количество.'});
    const record=(type,fromId,toId,cat,vlt)=>({id:crypto.randomUUID(),type,fromId,toId,cat,vlt,at:Date.now()});
