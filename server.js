@@ -168,28 +168,6 @@ const server=http.createServer(async(req,res)=>{
    store.users.push(user);trackDevice(user,req);save();pendingRegistrations.delete(id);setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,username:user.username||'',email:user.email||'',phone:user.phone||''}});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось подтвердить контакт'})}
  }
- if(req.method==='POST'&&u.pathname==='/api/register/firebase-phone'){
-  try{
-   const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||''),idToken=String(b.idToken||'');
-   if(name.length<3||name.length>24)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'});
-   if(password.length<8||password.length>200)return json(res,400,{error:'Пароль должен быть не короче 8 символов'});
-   if(!idToken||idToken.length>10000)return json(res,400,{error:'Сначала подтверди номер телефона'});
-   const apiKey=process.env.FIREBASE_API_KEY;
-   if(!apiKey)return json(res,503,{error:'Firebase пока не настроен: добавь FIREBASE_API_KEY в Railway Variables.'});
-   const verify=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+encodeURIComponent(apiKey),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({idToken})});
-   const verified=await verify.json().catch(()=>({}));
-   const firebaseUser=verified.users&&verified.users[0];
-   if(!verify.ok||!firebaseUser||!firebaseUser.phoneNumber)return json(res,401,{error:'Firebase не подтвердил номер. Повтори проверку SMS.'});
-   const phone=normalizePhone(firebaseUser.phoneNumber);
-   if(!/^\+[1-9]\d{7,14}$/.test(phone))return json(res,400,{error:'Firebase вернул некорректный номер'});
-   if(userByName(name))return json(res,409,{error:'Этот ник уже занят'});
-   if(store.users.some(x=>x.phone&&normalizePhone(x.phone)===phone))return json(res,409,{error:'Этот номер уже привязан к аккаунту VOLTRA'});
-   const salt=crypto.randomBytes(16).toString('hex');
-   const user={id:crypto.randomUUID(),name,username:makeUsername(),salt,hash:passwordHash(password,salt),phone,phoneVerified:true,firebaseUid:firebaseUser.localId,createdAt:Date.now()};
-   store.users.push(user);trackDevice(user,req);save();setCookie(res,user.id);
-   return json(res,200,{user:{id:user.id,name:user.name,username:user.username||'',phone:user.phone}});
-  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось создать аккаунт'})}
- }
  if(req.method==='POST'&&['/api/register','/api/login'].includes(u.pathname)){
   try{const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||'');
    if(name.length<3||name.length>24)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'});
