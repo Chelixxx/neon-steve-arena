@@ -219,7 +219,7 @@ function makeListItem(x){
  else if(miniBot) icon=miniApp?.botImageUrl?'<img class="avatar-image" src="'+esc(miniApp.botImageUrl)+'" alt="">':esc(miniApp?.botIcon||'🤖');
  else if(x.group) icon='✦';
  else icon=avatarContent(shownName,person?.avatar);
- b.innerHTML='<div class="avatar">'+icon+'</div><div class="chat-preview"><div class="chat-meta"><b>'+(isThinkUser?'<span class="think-name">Заставляет задуматься</span>':esc(shownName))+easterEggDecor(isThinkUser?{...person,name:'',username:''}:{...person,name:shownName})+adminBadge(person)+giftDecor(person)+'</b><span class="presence-badge'+onlineClass+'"></span></div><small>'+esc(x.subtitle)+'</small></div>'+(unread?'<span class="unread-badge">'+(unread>99?'99+':unread)+'</span>':'');
+ b.innerHTML='<div class="avatar">'+icon+'</div><div class="chat-preview"><div class="chat-meta"><b>'+(isThinkUser?'<span class="think-name">Заставляет задуматься</span>':esc(shownName))+easterEggDecor(isThinkUser?{...person,name:'',username:''}:{...person,name:shownName})+(isThinkUser?vipBadge(person):adminBadge(person))+giftDecor(person)+'</b><span class="presence-badge'+onlineClass+'"></span></div><small>'+esc(x.subtitle)+'</small></div>'+(unread?'<span class="unread-badge">'+(unread>99?'99+':unread)+'</span>':'');
  b.onclick=()=>openChat(x.id);
  return b;
 }
