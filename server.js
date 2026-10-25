@@ -198,7 +198,7 @@ const server=http.createServer(async(req,res)=>{
    const b=await parseBody(req),user=userById(uid),pin=String(b.pin||''),phrase1=String(b.phrase1||'').normalize('NFKC').trim(),phrase2=String(b.phrase2||'').normalize('NFKC').trim();
    if(!user)return json(res,401,{error:'Пользователь не найден'});
    if(user.walletPinHash)return json(res,409,{error:'Защита кошелька уже создана. Повторная настройка запрещена.'});
-   if(!/^\\d{4}$/.test(pin))return json(res,400,{error:'PIN должен состоять ровно из 4 цифр.'});
+   if(!/^\d{4}$/.test(pin))return json(res,400,{error:'PIN должен состоять ровно из 4 цифр.'});
    if(phrase1.length<8||phrase1.length>120||phrase2.length<8||phrase2.length>120)return json(res,400,{error:'Каждая кодовая фраза должна содержать от 8 до 120 символов.'});
    if(phrase1.toLocaleLowerCase('ru-RU')===phrase2.toLocaleLowerCase('ru-RU'))return json(res,400,{error:'Придумай две разные кодовые фразы.'});
    user.walletPinSalt=crypto.randomBytes(16).toString('hex');user.walletPinHash=walletSecretHash(pin,user.walletPinSalt);
