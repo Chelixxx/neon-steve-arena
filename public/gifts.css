@@ -145,3 +145,6 @@ body.volt-viewer-open{overflow:hidden}
 @media(max-width:520px){.pumpkin-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pumpkin-tile{padding:5px}.pumpkin-feature{gap:9px}.pumpkin-feature>.pumpkin-svg{width:62px;height:62px;flex-basis:62px}.pumpkin-large{width:min(270px,72vw)}.pumpkin-meta span{font-size:11px;padding:7px}}
 
 .pumpkin-tile .pumpkin-svg{object-fit:contain}.gift-card [data-gift-sell]{margin-top:5px}
+
+/* Reliable tap targets for gift collection actions on desktop and mobile. */
+.gift-card button{position:relative;z-index:2;pointer-events:auto;touch-action:manipulation;cursor:pointer}.gift-card:before,.gift-card:after,.gift-art:before,.gift-art:after,.gift-layer-spark,.collectible-pattern{pointer-events:none}
