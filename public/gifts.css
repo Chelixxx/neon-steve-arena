@@ -148,3 +148,6 @@ body.volt-viewer-open{overflow:hidden}
 
 /* Reliable tap targets for gift collection actions on desktop and mobile. */
 .gift-card button{position:relative;z-index:2;pointer-events:auto;touch-action:manipulation;cursor:pointer}.gift-card:before,.gift-card:after,.gift-art:before,.gift-art:after,.gift-layer-spark,.collectible-pattern{pointer-events:none}
+
+/* Render custom pumpkin art consistently in profile badges and public gift cards. */
+.profile-gift .pumpkin-svg{display:block;width:100%;height:100%;border-radius:inherit;filter:none}.public-gift-card .pumpkin-svg{display:block;width:64px;height:64px;max-width:100%;margin:0 auto 8px;border-radius:10px;filter:drop-shadow(0 5px 8px #0005)}
