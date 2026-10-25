@@ -830,3 +830,22 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .cat-open-app{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;margin:12px 0 8px;padding:13px 18px;border:0!important;border-radius:13px;background:linear-gradient(105deg,#1687ff,#268cff,#16b8d4)!important;color:#fff!important;font-size:16px;font-weight:800;box-shadow:0 8px 25px #1687ff44;cursor:pointer;touch-action:manipulation}
 .cat-bot-hint{font-size:12px;color:#8397b4;text-align:center;margin:8px 0}
 .cat-miniapp-loading{color:#cbd5e1;text-align:center;padding:35px 12px}
+
+.cat-pin-overlay{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;background:#001707;touch-action:manipulation}
+.cat-pin-screen{width:min(100%,360px);color:#fff;display:flex;flex-direction:column;align-items:center;padding:12px 6px 24px}
+.cat-pin-top{width:100%;display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}
+.cat-pin-top>span{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#08752a,#0d5123);font-size:22px}
+.cat-pin-top button{width:38px;height:38px;border:0;border-radius:50%;background:#0b3e1b;color:#d7ffe0;font-size:25px}
+.cat-pin-title{font-size:22px;font-weight:700;text-align:center;margin:6px 0}
+.cat-pin-sub{font-size:14px;color:#b6d4bd;text-align:center;min-height:22px}
+.cat-pin-dots{display:flex;gap:16px;margin:28px 0 54px}
+.cat-pin-dots i{width:18px;height:18px;border-radius:50%;background:#164c25;border:1px solid #236c36;transition:background .12s,transform .12s}
+.cat-pin-dots i.filled{background:#fff;border-color:#fff;transform:scale(1.04)}
+.cat-pin-pad{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.cat-pin-pad button{aspect-ratio:1/1;max-width:88px;width:100%;justify-self:center;border:0;border-radius:50%;background:#086322;color:#fff;font-size:25px;font-weight:600;box-shadow:inset 0 1px 0 #ffffff12;touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent}
+.cat-pin-pad button:active{background:#138336;transform:scale(.96)}
+.cat-pin-pad button[data-pin-key="back"],.cat-pin-pad button[data-pin-key="ok"]{font-size:27px}
+.cat-pin-error{min-height:22px;margin-top:18px;color:#ffb4b4;font-size:13px;text-align:center}
+.cat-seed-confirm{display:flex!important;align-items:center;gap:10px;padding:12px;border:1px solid #66558e;border-radius:12px;background:#ffffff0b}
+.cat-seed-confirm input{width:18px!important;height:18px!important;margin:0!important;accent-color:#1687ff}
+@media(max-height:700px){.cat-pin-dots{margin:20px 0 28px}.cat-pin-pad{gap:8px}.cat-pin-pad button{max-width:72px}}
