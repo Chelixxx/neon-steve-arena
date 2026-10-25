@@ -822,3 +822,11 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .cat-miniapp-body .cookie-game [data-crypto-action="sell"]{background:linear-gradient(110deg,#b45309,#f59e0b)!important;color:#fff!important;border:0!important}
 .cat-miniapp-body .cookie-game [data-crypto-action="send"]{background:linear-gradient(110deg,#0369a1,#0ea5e9)!important;color:#fff!important;border:0!important}
 .cat-miniapp-body .cookie-game [data-crypto-action="refresh"]{background:linear-gradient(110deg,#334155,#64748b)!important;color:#fff!important;border:0!important}
+
+.cat-bot-message{display:flex;align-items:flex-start;gap:10px;margin:14px 0 12px}
+.cat-bot-avatar{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1687ff,#7c3aed);font-size:21px}
+.cat-bot-bubble{flex:1;min-width:0;padding:15px 16px;border:1px solid #344766;border-radius:5px 18px 18px 18px;background:linear-gradient(145deg,#1b2b42,#172235);color:#edf4ff;box-shadow:0 8px 24px #0002}
+.cat-bot-bubble p{margin:8px 0 0;color:#c9d6e8;line-height:1.55}
+.cat-open-app{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;margin:12px 0 8px;padding:13px 18px;border:0!important;border-radius:13px;background:linear-gradient(105deg,#1687ff,#268cff,#16b8d4)!important;color:#fff!important;font-size:16px;font-weight:800;box-shadow:0 8px 25px #1687ff44;cursor:pointer;touch-action:manipulation}
+.cat-bot-hint{font-size:12px;color:#8397b4;text-align:center;margin:8px 0}
+.cat-miniapp-loading{color:#cbd5e1;text-align:center;padding:35px 12px}
