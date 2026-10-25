@@ -217,7 +217,7 @@ const server=http.createServer(async(req,res)=>{
    const ok1=crypto.timingSafeEqual(Buffer.from(h1,'hex'),Buffer.from(user.walletPhrase1Hash,'hex'));
    const ok2=crypto.timingSafeEqual(Buffer.from(h2,'hex'),Buffer.from(user.walletPhrase2Hash,'hex'));
    if(!ok1||!ok2){walletPinFailure(uid);return json(res,401,{error:'Кодовые фразы не совпали.'})}
-   if(!/^\\d{4}$/.test(pin))return json(res,400,{error:'Новый PIN должен состоять из 4 цифр.'});
+   if(!/^\d{4}$/.test(pin))return json(res,400,{error:'Новый PIN должен состоять из 4 цифр.'});
    user.walletPinSalt=crypto.randomBytes(16).toString('hex');user.walletPinHash=walletSecretHash(pin,user.walletPinSalt);walletPinSuccess(uid);save();
    return json(res,200,{ok:true,message:'PIN обновлён. Кодовые фразы остались прежними.'});
   }catch(e){return json(res,400,{error:e.message||'Не удалось восстановить PIN'})}
@@ -228,7 +228,7 @@ const server=http.createServer(async(req,res)=>{
    const b=await parseBody(req),user=userById(uid),pin=String(b.pin||'');
    if(!user||!user.walletPinHash)return json(res,403,{error:'Сначала создай защиту кошелька.'});
    if(!walletPinAllowed(uid))return json(res,429,{error:'Слишком много попыток PIN. Попробуй через 10 минут.'});
-   if(!/^\\d{4}$/.test(pin)||walletSecretHash(pin,user.walletPinSalt)!==user.walletPinHash){walletPinFailure(uid);return json(res,401,{error:'Неверный PIN кошелька.'});}
+   if(!/^\d{4}$/.test(pin)||walletSecretHash(pin,user.walletPinSalt)!==user.walletPinHash){walletPinFailure(uid);return json(res,401,{error:'Неверный PIN кошелька.'});}
    walletPinSuccess(uid);return json(res,200,{ok:true,message:'PIN подтверждён.'});
   }catch(e){return json(res,400,{error:e.message||'Не удалось проверить PIN'})}
  }
@@ -238,7 +238,7 @@ const server=http.createServer(async(req,res)=>{
    const b=await parseBody(req),user=userById(uid),action=String(b.action||''),amount=Number(b.amount),pin=String(b.pin||'');
    if(!user.walletPinHash)return json(res,403,{error:'Сначала создай защиту кошелька.'});
    if(!walletPinAllowed(uid))return json(res,429,{error:'Слишком много попыток PIN. Попробуй через 10 минут.'});
-   if(!/^\\d{4}$/.test(pin)||walletSecretHash(pin,user.walletPinSalt)!==user.walletPinHash){walletPinFailure(uid);return json(res,401,{error:'Неверный PIN кошелька.'});}
+   if(!/^\d{4}$/.test(pin)||walletSecretHash(pin,user.walletPinSalt)!==user.walletPinHash){walletPinFailure(uid);return json(res,401,{error:'Неверный PIN кошелька.'});}
    walletPinSuccess(uid);
    if(!user)return json(res,401,{error:'Пользователь не найден'});
    if(!Number.isSafeInteger(amount)||amount<=0||amount>100000000) return json(res,400,{error:'Укажи целое положительное количество.'});
