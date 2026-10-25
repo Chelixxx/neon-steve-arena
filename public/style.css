@@ -849,3 +849,11 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .cat-seed-confirm{display:flex!important;align-items:center;gap:10px;padding:12px;border:1px solid #66558e;border-radius:12px;background:#ffffff0b}
 .cat-seed-confirm input{width:18px!important;height:18px!important;margin:0!important;accent-color:#1687ff}
 @media(max-height:700px){.cat-pin-dots{margin:20px 0 28px}.cat-pin-pad{gap:8px}.cat-pin-pad button{max-width:72px}}
+
+/* PIN keypad adapts to mouse, keyboard, touch, desktop and mobile */
+.cat-pin-overlay{box-sizing:border-box;min-height:100dvh;overflow-y:auto}
+.cat-pin-screen{width:min(100%,380px);margin:auto}
+.cat-pin-pad button{display:flex;align-items:center;justify-content:center;min-height:64px;cursor:pointer;-webkit-user-select:none;user-select:none;outline:none}
+.cat-pin-pad button:focus-visible{box-shadow:0 0 0 3px #b7ffc7,0 0 0 6px #086322}
+@media(min-width:700px){.cat-pin-overlay{background:radial-gradient(ellipse at center,#063719 0%,#001707 68%)}.cat-pin-screen{width:360px;padding:28px 12px}.cat-pin-pad{gap:14px}.cat-pin-pad button{max-width:88px;min-height:88px;font-size:27px}.cat-pin-dots{margin:30px 0 48px}}
+@media(max-width:380px){.cat-pin-overlay{padding:12px}.cat-pin-screen{padding:8px 2px 18px}.cat-pin-pad{gap:9px}.cat-pin-pad button{min-height:0;font-size:23px}.cat-pin-dots{margin:22px 0 32px}}
