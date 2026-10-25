@@ -72,7 +72,7 @@ function initBackNavigation(){
 }
 function init(){
  initBackNavigation();
- $('loginForm').onsubmit=e=>{e.preventDefault();authenticate()};try{const last=localStorage.getItem('pulseLastAccount');if(last&&!$('nickname').value)$('nickname').value=last}catch{}
+ try{const last=localStorage.getItem('pulseLastAccount');if(last&&!$('nickname').value)$('nickname').value=last}catch{}
  $('authSwitch').onclick=()=>{authMode=authMode==='login'?'register':'login';$('authTitle').textContent=authMode==='login'?'Связь без границ.':'Создай свой VOLTRA.';$('authSubtitle').textContent=authMode==='login'?'Войди, чтобы открыть свои чаты и сообщения.':'Создай аккаунт по нику и паролю. Старые аккаунты сохраняются.';$('authSubmit').innerHTML=authMode==='login'?'Войти в VOLTRA <span>↗</span>':'Создать аккаунт <span>↗</span>';$('authSwitch').textContent=authMode==='login'?'Нет аккаунта? Создать':'Уже есть аккаунт? Войти';$('openRecovery').classList.toggle('hidden',authMode!=='login');$('password').autocomplete=authMode==='login'?'current-password':'new-password';$('loginError').textContent=''};
  $('logoutBtn').onclick=logout;
  $('newChat').onclick=()=>{tab='people';renderTabs();$('search').focus();renderList()};
@@ -472,5 +472,6 @@ document.addEventListener('click',e=>{
 
 document.addEventListener('click',e=>{if(e.target.closest('#launchClassicStrike')){const modal=$('classicStrikeModal'),frame=$('classicStrikeFrame');if(modal&&frame){showModal('classicStrikeModal');if(frame.src==='about:blank'||!frame.src.endsWith('/classic-strike/'))frame.src='/classic-strike/';}}if(e.target.closest('#closeClassicStrike')){const frame=$('classicStrikeFrame');if(frame)frame.src='about:blank';hideModal('classicStrikeModal');}});
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('classicStrikeModal')&&!$('classicStrikeModal').classList.contains('hidden')){const frame=$('classicStrikeFrame');if(frame)frame.src='about:blank';hideModal('classicStrikeModal');}});
+document.addEventListener('submit',e=>{if(e.target&&e.target.id==='loginForm'){e.preventDefault();authenticate()}},true);
 window.addEventListener('DOMContentLoaded',init);
 })();
