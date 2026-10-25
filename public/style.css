@@ -776,3 +776,6 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 @keyframes repo-flicker{0%,18%,20%,54%,56%,100%{opacity:1}19%,55%{opacity:.45}72%{text-shadow:0 0 8px #d8e8b9,2px 0 #743d3d}}
 @keyframes repo-watch{0%,100%{transform:translateY(0);opacity:.3}50%{transform:translateY(5px);opacity:.9}}
 @media(prefers-reduced-motion:reduce){.repo-title,.repo-eyes{animation:none}}
+
+/* VOLTRA: show the thought easter egg as the display name, not as duplicate badges */
+.think-name{display:inline-block;color:#a5f3fc!important;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:900;letter-spacing:.15px;text-shadow:0 0 7px #22d3ee99;background:linear-gradient(90deg,#c4b5fd,#67e8f9,#f0abfc);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
