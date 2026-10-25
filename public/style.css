@@ -798,3 +798,16 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .wallet-security-submit{width:100%;margin-top:12px!important;padding:13px!important;border:0!important;border-radius:13px!important;background:linear-gradient(110deg,#7c3aed,#a855f7,#ec4899)!important;color:white!important;font-weight:800!important;box-shadow:0 8px 24px #8b5cf644}
 .wallet-security-submit:disabled{opacity:.65}
 @media(max-width:480px){.wallet-security-card{padding:18px;border-radius:20px}.wallet-seed-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.cat-open-app{width:100%;margin:0 0 14px!important;padding:13px!important;border-radius:14px!important;background:linear-gradient(110deg,#6d28d9,#8b5cf6,#ec4899)!important;color:white!important;font-weight:800!important;box-shadow:0 8px 24px #8b5cf644}
+.cat-miniapp{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;background:radial-gradient(ellipse at top left,#4c1d9588,transparent 45%),linear-gradient(160deg,#090b18,#111827 60%,#251238);color:#f8f6ff;overflow:hidden}
+.cat-miniapp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 18px 14px;border-bottom:1px solid #ffffff18;background:#0b0d1bd9;backdrop-filter:blur(16px)}
+.cat-miniapp-head div{display:grid;gap:3px}.cat-miniapp-head small{font-size:10px;letter-spacing:1.5px;color:#c4b5fd}.cat-miniapp-head b{font-size:18px}
+.cat-miniapp-head button{width:42px;height:42px;border:1px solid #ffffff25;border-radius:14px;background:#ffffff12;color:white;font-size:26px}
+.cat-miniapp-body{flex:1;overflow:auto;padding:18px 16px calc(22px + env(safe-area-inset-bottom));overscroll-behavior:contain}
+.cat-miniapp-body>.cookie-game{max-width:650px;margin:0 auto;background:transparent!important;border:0!important;box-shadow:none!important;padding:4px!important}
+.cat-miniapp-body .cat-open-app{display:none}
+.wallet-security-card input{touch-action:manipulation}
+.wallet-security-submit{position:relative;z-index:2;min-height:48px;touch-action:manipulation;cursor:pointer;pointer-events:auto}
+.wallet-security-overlay{touch-action:pan-y}
+.wallet-security-card{position:relative;z-index:1;pointer-events:auto}
