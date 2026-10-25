@@ -222,6 +222,16 @@ const server=http.createServer(async(req,res)=>{
    return json(res,200,{ok:true,message:'PIN обновлён. Кодовые фразы остались прежними.'});
   }catch(e){return json(res,400,{error:e.message||'Не удалось восстановить PIN'})}
  }
+ if(req.method==='POST'&&u.pathname==='/api/catcoin/security/verify'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  try{
+   const b=await parseBody(req),user=userById(uid),pin=String(b.pin||'');
+   if(!user||!user.walletPinHash)return json(res,403,{error:'Сначала создай защиту кошелька.'});
+   if(!walletPinAllowed(uid))return json(res,429,{error:'Слишком много попыток PIN. Попробуй через 10 минут.'});
+   if(!/^\\d{4}$/.test(pin)||walletSecretHash(pin,user.walletPinSalt)!==user.walletPinHash){walletPinFailure(uid);return json(res,401,{error:'Неверный PIN кошелька.'});}
+   walletPinSuccess(uid);return json(res,200,{ok:true,message:'PIN подтверждён.'});
+  }catch(e){return json(res,400,{error:e.message||'Не удалось проверить PIN'})}
+ }
  if(req.method==='POST'&&u.pathname==='/api/catcoin/action'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   try{
