@@ -143,3 +143,5 @@ body.volt-viewer-open{overflow:hidden}
 .pumpkin-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;max-width:1300px;margin:0 auto}.pumpkin-tile{display:grid;place-items:center;gap:5px;min-width:0;padding:7px;aspect-ratio:.85;border:1px solid #8870c866;border-radius:14px;color:#fff;background:#171329;overflow:hidden}.pumpkin-tile .pumpkin-svg{width:100%;aspect-ratio:1;border-radius:10px}.pumpkin-tile b{font-size:12px}.pumpkin-tile small{font-size:10px;color:#d8caff}
 @media(max-width:900px){.pumpkin-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.pumpkin-feature>.pumpkin-svg{width:76px;height:76px;flex-basis:76px}}
 @media(max-width:520px){.pumpkin-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pumpkin-tile{padding:5px}.pumpkin-feature{gap:9px}.pumpkin-feature>.pumpkin-svg{width:62px;height:62px;flex-basis:62px}.pumpkin-large{width:min(270px,72vw)}.pumpkin-meta span{font-size:11px;padding:7px}}
+
+.pumpkin-tile .pumpkin-svg{object-fit:contain}.gift-card [data-gift-sell]{margin-top:5px}
