@@ -857,3 +857,8 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .cat-pin-pad button:focus-visible{box-shadow:0 0 0 3px #b7ffc7,0 0 0 6px #086322}
 @media(min-width:700px){.cat-pin-overlay{background:radial-gradient(ellipse at center,#063719 0%,#001707 68%)}.cat-pin-screen{width:360px;padding:28px 12px}.cat-pin-pad{gap:14px}.cat-pin-pad button{max-width:88px;min-height:88px;font-size:27px}.cat-pin-dots{margin:30px 0 48px}}
 @media(max-width:380px){.cat-pin-overlay{padding:12px}.cat-pin-screen{padding:8px 2px 18px}.cat-pin-pad{gap:9px}.cat-pin-pad button{min-height:0;font-size:23px}.cat-pin-dots{margin:22px 0 32px}}
+
+.cat-pin-overlay{position:fixed!important;inset:0!important;z-index:2147483000!important;pointer-events:auto!important;isolation:isolate!important}
+.cat-pin-overlay *{pointer-events:auto!important}
+.cat-pin-screen{position:relative!important;z-index:1!important}
+.cat-pin-pad button{position:relative!important;z-index:2!important;pointer-events:auto!important;touch-action:manipulation!important;cursor:pointer!important}
