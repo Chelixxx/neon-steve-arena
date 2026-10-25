@@ -58,6 +58,15 @@ if(!store.collectibleGifts.some(g=>g.id==='halloween-pumpkin-01')){
  save();
 }
 
+if(!store.collectibleGifts.some(g=>g.id==='voltra-bat-01')){
+ const batSkins=['shadow','inferno','cobalt','royal','rose','pearl','gold','crystal','emerald','holographic'];
+ const batMaterials=['Матовый','Огненная эмаль','Синий металл','Королевский бархат','Розовый перламутр','Жемчуг','Золото','Кристалл','Изумруд','Голография'];
+ const batBackgrounds=['midnight','ember','ice','violet','rose','aurora','gold','ice','forest','cosmic'];
+ const batPatterns=['none','flames','stars','waves','grid','diamonds','runes','spiderweb','leaves','sparkles'];
+ const batRarities=['Обычный','Обычный','Обычный','Обычный','Необычный','Необычный','Редкий','Редкий','Эпический','Легендарный'];
+ for(let i=0;i<100;i++){const n=i+1,skin=batSkins[i%10];store.collectibleGifts.push({id:'voltra-bat-'+String(n).padStart(2,'0'),name:'Летучая мышь · '+String(n).padStart(2,'0'),emoji:'🦇',price:5000,rarity:batRarities[Math.min(9,Math.floor(i/10))],collectible:true,edition:100,totalSupply:100,remaining:100,effect:['sparkles','glow','confetti','aura','none'][i%5],intensity:45+(i*11)%56,background:batBackgrounds[i%10],skin,material:batMaterials[i%10],pattern:batPatterns[i%10],variant:n,createdAt:Date.now()})}save()
+}
+
 function allGiftCatalog(){return [...GIFT_CATALOG,...store.collectibleGifts]}
 function reserveCollectible(gift){if(!gift?.collectible)return true;if(!Number.isSafeInteger(gift.remaining)||gift.remaining<=0)return false;gift.remaining--;return true}
 if(!Array.isArray(store.games))store.games=[];
@@ -67,7 +76,7 @@ const cleanName=s=>String(s||'').normalize('NFKC').replace(/[^\p{L}\p{N}_. -]/gu
 const cleanUsername=s=>String(s||'').trim().replace(/^@/,'').toLowerCase();
 function makeUsername(){let value;do{value='user'+crypto.randomBytes(4).toString('hex').slice(0,6)}while(store.users.some(u=>String(u.username||'').toLowerCase()===value));return value}
 let usernamesMigrated=false;for(const user of store.users){if(!/^[a-z0-9_]{4,20}$/i.test(String(user.username||''))||store.users.some(other=>other!==user&&String(other.username||'').toLowerCase()===String(user.username||'').toLowerCase())){user.username=makeUsername();usernamesMigrated=true}}if(usernamesMigrated)save();
-const publicUser=u=>({id:u.id,name:u.name,username:u.username||'',online:!u.ghostMode&&(!!u.alwaysOnline||(clients.get(u.id)?.size||0)>0),lastSeen:Number.isFinite(u.lastSeen)?u.lastSeen:null,bio:u.bio||'',avatar:u.avatar||'',admin:!!u.admin,vip:!!u.vip,vipSeller:isVipSeller(u),roleLabel:String(u.roleLabel||'').slice(0,64),pulses:Number.isSafeInteger(u.pulses)?u.pulses:0,equippedGifts:(u.equippedGifts||[]).slice(0,1).map(id=>{const g=allGiftCatalog().find(x=>x.id===id);return g?{id:g.id,name:g.name,emoji:g.emoji,rarity:g.rarity,image:g.image||'',price:g.price,collectible:!!g.collectible,skin:g.skin||'classic',background:g.background||'midnight',pattern:g.pattern||'none',effect:g.effect||'sparkles',variant:Number(g.variant)||1}:null}).filter(Boolean)});
+const publicUser=u=>({id:u.id,name:u.name,username:u.username||'',online:!u.ghostMode&&(!!u.alwaysOnline||(clients.get(u.id)?.size||0)>0),lastSeen:Number.isFinite(u.lastSeen)?u.lastSeen:null,bio:u.bio||'',avatar:u.avatar||'',admin:!!u.admin,vip:!!u.vip,vipSeller:isVipSeller(u),roleLabel:String(u.roleLabel||'').slice(0,64),pulses:Number.isSafeInteger(u.pulses)?u.pulses:0,equippedGifts:(u.equippedGifts||[]).slice(0,1).map(id=>{const g=allGiftCatalog().find(x=>x.id===id);return g?{id:g.id,name:g.name,emoji:g.emoji,rarity:g.rarity,image:g.image||'',price:g.price,collectible:!!g.collectible,skin:g.skin||'classic',background:g.background||'midnight',pattern:g.pattern||'none',effect:g.effect||'sparkles',material:g.material||'Матовый',variant:Number(g.variant)||1}:null}).filter(Boolean)});
 const clients=new Map();
 if(!store.channels.length){store.channels.push({id:'pulse-news',name:'VOLTRA News',description:'Новости VOLTRA',type:'channel',owner:'system',members:[],createdAt:Date.now()})}
 if(!store.posts.some(p=>p.id==='pulse-welcome'))store.posts.push({id:'pulse-welcome',title:'Добро пожаловать в наш мессенджер!',body:'Добро пожаловать в VOLTRA — место для общения, идей и новых знакомств! 💜\n\nПроект создан @Chelixxx при помощи @ChatGPT. @Chelixxx — автор и создатель VOLTRA, а @ChatGPT помогал придумывать функции, продумывать интерфейс и писать код. Главная идея VOLTRA — удобное общение и развитие вместе с вами.\n\nСпасибо, что вы с нами. Это только начало! 🚀',link:'',author:'@Chelixxx × @ChatGPT',at:Date.now()});
