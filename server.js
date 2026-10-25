@@ -241,12 +241,12 @@ const server=http.createServer(async(req,res)=>{
    if(!/^\d{4}$/.test(pin)||walletSecretHash(pin,user.walletPinSalt)!==user.walletPinHash){walletPinFailure(uid);return json(res,401,{error:'Неверный PIN кошелька.'});}
    walletPinSuccess(uid);
    if(!user)return json(res,401,{error:'Пользователь не найден'});
-   if(!Number.isSafeInteger(amount)||amount<=0||amount>100000000) return json(res,400,{error:'Укажи целое положительное количество.'});
+   if(!Number.isFinite(amount)||amount<=0||amount>100000000||((action==='sell'||action==='send')&&!Number.isSafeInteger(amount))) return json(res,400,{error:action==='buy'?'Укажи положительное количество VLT (можно с десятыми).':'Укажи целое положительное количество CAT.'});
    const record=(type,fromId,toId,cat,vlt)=>({id:crypto.randomUUID(),type,fromId,toId,cat,vlt,at:Date.now()});
    if(action==='buy'){
-    const vlt=amount;if(vlt%128!==0)return json(res,400,{error:'Покупка возможна кратно 128 VLT.'});
+    const vlt=Math.round(amount*10)/10;
     if((user.pulses||0)<vlt)return json(res,400,{error:'Недостаточно вольтриксов.'});
-    const cat=vlt/128;user.pulses-=vlt;user.catCoins=(user.catCoins||0)+cat;
+    const cat=Math.round((vlt/128)*1000000)/1000000;user.pulses=Math.round(((user.pulses||0)-vlt)*10)/10;user.catCoins=Math.round(((user.catCoins||0)+cat)*1000000)/1000000;
     store.catCoinTransactions.push(record('buy',uid,uid,cat,vlt));
     save();return json(res,200,{ok:true,message:'Покупка CAT выполнена.',vlt:user.pulses,cat:user.catCoins});
    }
