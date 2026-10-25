@@ -862,3 +862,30 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .cat-pin-overlay *{pointer-events:auto!important}
 .cat-pin-screen{position:relative!important;z-index:1!important}
 .cat-pin-pad button{position:relative!important;z-index:2!important;pointer-events:auto!important;touch-action:manipulation!important;cursor:pointer!important}
+
+/* VOLTRA brand system: consistent inputs, forms, PIN and CAT wallet controls */
+:root{--voltra-blue:#1687ff;--voltra-blue2:#35b6ff;--voltra-violet:#6557ff;--voltra-glow:#1687ff44;--focus-ring:#40baff}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),textarea,select{accent-color:var(--voltra-blue)}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),textarea,select{border-color:color-mix(in srgb,var(--voltra-blue) 34%,var(--line,#303349));border-radius:12px;transition:border-color .16s,box-shadow .16s,background .16s}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):focus,textarea:focus,select:focus{border-color:var(--voltra-blue)!important;box-shadow:0 0 0 3px #1687ff25;outline:none}
+input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--muted,#9299b5) 84%,transparent)}
+.primary,.cat-miniapp-body .cookie-game button.primary,.wallet-security-submit{background:linear-gradient(115deg,#1267ed,#1687ff 55%,#35b6ff)!important;color:#fff!important;border:1px solid #75c9ff55!important;box-shadow:0 7px 22px #1687ff2c}
+.cat-pin-overlay{background:radial-gradient(ellipse at 50% 0%,#143a70 0%,#080d1b 58%,#060812 100%)!important;backdrop-filter:blur(14px)}
+.cat-pin-top>span{background:linear-gradient(135deg,#1267ed,#35b6ff)!important;box-shadow:0 8px 28px #1687ff55}
+.cat-pin-top button{background:#132849!important;border:1px solid #258bff55;color:#d9efff!important}
+.cat-pin-dots i{background:#13243d!important;border-color:#245b9a!important}
+.cat-pin-dots i.filled{background:#35b6ff!important;border-color:#b9e7ff!important;box-shadow:0 0 16px #1687ff88}
+.cat-pin-pad button{background:linear-gradient(145deg,#1456ad,#1687ff 70%,#249eff)!important;border:1px solid #80cbff55!important;box-shadow:0 6px 20px #006aff28,inset 0 1px 0 #ffffff25!important;color:white!important}
+.cat-pin-pad button:active{background:linear-gradient(145deg,#238fff,#48c0ff)!important}
+.cat-pin-error{color:#ffb8c1!important}
+.wallet-security-card{border-color:#258bff66!important;background:radial-gradient(ellipse at 10% 0%,#1687ff2a,transparent 45%),linear-gradient(145deg,#101a31,#0b1222 65%,#131d35)!important;box-shadow:0 24px 90px #000a,0 0 32px #1687ff1f!important}
+.wallet-security-icon{background:linear-gradient(135deg,#1267ed,#35b6ff)!important;box-shadow:0 8px 24px #1687ff44!important}
+.wallet-security-close{color:#e2f2ff!important;border:1px solid #258bff44!important}
+.wallet-security-card input{border-color:#294c79!important;background:#08111f!important;color:#f5faff!important}
+.wallet-security-card input:focus{border-color:#35b6ff!important;box-shadow:0 0 0 3px #1687ff2a!important}
+.wallet-security-card label{color:#dcecff!important}
+.wallet-security-sub{color:#a8c4e6!important}
+.cat-miniapp{background:radial-gradient(ellipse at top left,#1687ff35,transparent 45%),linear-gradient(160deg,#070c18,#0c1627 60%,#111c32)!important}
+.cat-miniapp-head small{color:#71c7ff!important}
+.cat-miniapp-body .cat-open-app{background:linear-gradient(110deg,#1267ed,#1687ff,#35b6ff)!important}
+.wallet-security-status{color:#ffb8c1;font-size:13px;min-height:18px}
