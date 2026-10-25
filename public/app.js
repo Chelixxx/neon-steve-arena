@@ -209,7 +209,7 @@ function makeListItem(x){
  const key=x.id===globalKey?globalKey:(String(x.id).startsWith('channel:')?channelKey(String(x.id).slice(8)):dmKey(x.id));
  const unread=unreadCounts.get(key)||0;
  const person=users.find(u=>u.id===x.id)||(window.pulseDirectoryUsers||[]).find(u=>u.id===x.id)||readAddedDirectoryContacts().find(u=>u.id===x.id);
- const baseShownName=person?labelFor(x.id):x.name;const rawThinkName=[person?.name,person?.username,person?.roleLabel].filter(Boolean).join(' ').toLocaleLowerCase('ru-RU').replace(/ё/g,'е');const isThinkUser=rawThinkName.includes('думайте')||rawThinkName.includes('дкмайте')||rawThinkName.includes('заставляет задуматься');const shownName=baseShownName;
+ const baseShownName=person?labelFor(x.id):x.name;const rawThinkName=[person?.name,person?.username,person?.roleLabel].filter(Boolean).join(' ').toLocaleLowerCase('ru-RU').replace(/ё/g,'е');const isThinkUser=rawThinkName.includes('думайте')||rawThinkName.includes('дкмайте')||rawThinkName.includes('заставляет задуматься');const shownName=isThinkUser?(person?.name||baseShownName):baseShownName;
  const miniBot=String(x.id).startsWith('mini-bot:');
  const miniApp=miniBot?[...((window.pulseMiniApps)||[]),...((window.pulseDirectoryApps)||[])].find(v=>v.id===String(x.id).slice(9)):null;
  const onlineClass=x.group?'':(users.some(u=>u.id===x.id&&u.online)?' online':'');
@@ -219,7 +219,7 @@ function makeListItem(x){
  else if(miniBot) icon=miniApp?.botImageUrl?'<img class="avatar-image" src="'+esc(miniApp.botImageUrl)+'" alt="">':esc(miniApp?.botIcon||'🤖');
  else if(x.group) icon='✦';
  else icon=avatarContent(shownName,person?.avatar);
- b.innerHTML='<div class="avatar">'+icon+'</div><div class="chat-preview"><div class="chat-meta"><b>'+esc(shownName)+easterEggDecor(isThinkUser?{...person,name:'',username:'',roleLabel:''}:{...person,name:shownName})+(isThinkUser?vipBadge(person):adminBadge(person))+giftDecor(person)+'</b><span class="presence-badge'+onlineClass+'"></span></div><small>'+esc(x.subtitle)+'</small></div>'+(unread?'<span class="unread-badge">'+(unread>99?'99+':unread)+'</span>':'');
+ b.innerHTML='<div class="avatar">'+icon+'</div><div class="chat-preview"><div class="chat-meta"><b>'+esc(shownName)+easterEggDecor({...person,name:shownName})+(isThinkUser?vipBadge(person):adminBadge(person))+giftDecor(person)+'</b><span class="presence-badge'+onlineClass+'"></span></div><small>'+esc(x.subtitle)+'</small></div>'+(unread?'<span class="unread-badge">'+(unread>99?'99+':unread)+'</span>':'');
  b.onclick=()=>openChat(x.id);
  return b;
 }
