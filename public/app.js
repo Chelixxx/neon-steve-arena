@@ -472,6 +472,7 @@ document.addEventListener('click',e=>{
 
 document.addEventListener('click',e=>{if(e.target.closest('#launchClassicStrike')){const modal=$('classicStrikeModal'),frame=$('classicStrikeFrame');if(modal&&frame){showModal('classicStrikeModal');if(frame.src==='about:blank'||!frame.src.endsWith('/classic-strike/'))frame.src='/classic-strike/';}}if(e.target.closest('#closeClassicStrike')){const frame=$('classicStrikeFrame');if(frame)frame.src='about:blank';hideModal('classicStrikeModal');}});
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('classicStrikeModal')&&!$('classicStrikeModal').classList.contains('hidden')){const frame=$('classicStrikeFrame');if(frame)frame.src='about:blank';hideModal('classicStrikeModal');}});
+document.addEventListener('click',e=>{const button=e.target.closest('#authSubmit');if(!button)return;e.preventDefault();e.stopImmediatePropagation();authenticate()},true);
 document.addEventListener('submit',e=>{if(e.target&&e.target.id==='loginForm'){e.preventDefault();authenticate()}},true);
 window.addEventListener('DOMContentLoaded',init);
 })();
