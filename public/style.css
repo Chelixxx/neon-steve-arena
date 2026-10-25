@@ -811,3 +811,14 @@ body[data-interface="telegram"][data-theme="light"] .chat-item.active .chat-prev
 .wallet-security-submit{position:relative;z-index:2;min-height:48px;touch-action:manipulation;cursor:pointer;pointer-events:auto}
 .wallet-security-overlay{touch-action:pan-y}
 .wallet-security-card{position:relative;z-index:1;pointer-events:auto}
+
+/* CAT Wallet: colorful controls and Telegram-style blue bottom menu */
+.cat-miniapp-bottom{flex:0 0 auto;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #ffffff16;background:#0b1020ed;backdrop-filter:blur(18px)}
+.cat-miniapp-bottom button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;border:0;border-radius:15px;background:linear-gradient(110deg,#1687ff,#249cff,#42b8ff);color:#fff;font-size:15px;font-weight:800;box-shadow:0 7px 24px #1687ff55;cursor:pointer;touch-action:manipulation}
+.cat-miniapp-body .cookie-game button:not(.cookie-big):not(.wallet-security-submit){border:1px solid #ffffff22;border-radius:12px;background:linear-gradient(135deg,#273858,#34466b);color:#f5f7ff;padding:11px 13px;font-weight:700;cursor:pointer;touch-action:manipulation}
+.cat-miniapp-body .cookie-game button.primary,.cat-miniapp-body .cookie-game .cat-open-app{border:0!important;background:linear-gradient(110deg,#1687ff,#6257f5,#a855f7)!important;color:#fff!important;box-shadow:0 7px 22px #5b5df044}
+.cat-miniapp-body .cookie-game [data-crypto-security]{background:linear-gradient(110deg,#7c3aed,#a855f7)!important;color:#fff!important;border:0!important}
+.cat-miniapp-body .cookie-game [data-crypto-action="buy"]{background:linear-gradient(110deg,#047857,#10b981)!important;color:#fff!important;border:0!important}
+.cat-miniapp-body .cookie-game [data-crypto-action="sell"]{background:linear-gradient(110deg,#b45309,#f59e0b)!important;color:#fff!important;border:0!important}
+.cat-miniapp-body .cookie-game [data-crypto-action="send"]{background:linear-gradient(110deg,#0369a1,#0ea5e9)!important;color:#fff!important;border:0!important}
+.cat-miniapp-body .cookie-game [data-crypto-action="refresh"]{background:linear-gradient(110deg,#334155,#64748b)!important;color:#fff!important;border:0!important}
