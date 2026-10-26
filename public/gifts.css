@@ -180,3 +180,20 @@ body.volt-viewer-open{overflow:hidden}
 .bat-feature{border-color:#5485ff;background:linear-gradient(120deg,#10264a,#231439)}
 @media(max-width:900px){.bat-feature>.bat-svg{width:76px;height:76px;flex-basis:76px}}
 @media(max-width:520px){.gift-art:has(> .bat-svg){width:84px;height:84px;flex-basis:84px}.profile-gift:has(> .bat-svg){width:36px;height:36px;min-width:36px;flex-basis:36px}.bat-feature>.bat-svg{width:62px;height:62px;flex-basis:62px}.bat-large{width:min(270px,72vw)}}
+
+/* Bat Collection v2: distinct finishes, not just palette swaps */
+.bat-svg{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 7px 12px #0006);overflow:visible}
+.gift-art:has(> .bat-svg){width:104px;height:104px;flex:0 0 104px;padding:0;border-radius:18px;overflow:hidden}
+.gift-art:has(> .bat-svg)>.bat-svg{display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit;filter:drop-shadow(0 5px 9px #0005)}
+.profile-gift:has(> .bat-svg){width:42px;height:42px;min-width:42px;flex:0 0 42px;margin-left:5px;box-sizing:border-box;border-radius:11px;overflow:hidden;vertical-align:middle;background:transparent}
+.profile-gift:has(> .bat-svg)>.bat-svg{display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit;filter:none}
+.bat-feature>.bat-svg{width:94px;height:94px;flex:0 0 94px;border-radius:14px}
+.bat-fullscreen{background:radial-gradient(ellipse at 50% 0,#203c70,#090914 65%)}
+.bat-fullscreen header{border-color:#4a78d0}
+.bat-large{width:min(340px,80vw);aspect-ratio:1.06;margin:18px auto;filter:drop-shadow(0 12px 25px #0008)}
+.bat-large .bat-svg{width:100%;height:100%;border-radius:24px}
+.bat-tile .bat-svg{width:100%;aspect-ratio:1;border-radius:10px}
+.bat-tile{background:linear-gradient(145deg,#141e33,#151326)}
+.bat-feature{border-color:#5485ff;background:linear-gradient(120deg,#10264a,#231439)}
+@media(max-width:900px){.bat-feature>.bat-svg{width:76px;height:76px;flex-basis:76px}}
+@media(max-width:520px){.gift-art:has(> .bat-svg){width:84px;height:84px;flex-basis:84px}.profile-gift:has(> .bat-svg){width:36px;height:36px;min-width:36px;flex-basis:36px}.bat-feature>.bat-svg{width:62px;height:62px;flex-basis:62px}.bat-large{width:min(270px,72vw)}}

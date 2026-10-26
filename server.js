@@ -67,6 +67,25 @@ if(!store.collectibleGifts.some(g=>g.id==='voltra-bat-01')){
  for(let i=0;i<100;i++){const n=i+1,skin=batSkins[i%10];store.collectibleGifts.push({id:'voltra-bat-'+String(n).padStart(2,'0'),name:'Летучая мышь · '+String(n).padStart(2,'0'),emoji:'🦇',price:5000,rarity:batRarities[Math.min(9,Math.floor(i/10))],collectible:true,edition:100,totalSupply:100,remaining:100,effect:['sparkles','glow','confetti','aura','none'][i%5],intensity:45+(i*11)%56,background:batBackgrounds[i%10],skin,material:batMaterials[i%10],pattern:batPatterns[i%10],variant:n,createdAt:Date.now()})}save()
 }
 
+
+{
+ const batSkins=['shadow','inferno','cobalt','royal','rose','pearl','gold','crystal','emerald','holographic'];
+ const batMaterials=['Глянцевая эмаль','Космос и галактика','Гравировка','Мрамор и лава','Полированный металл','Ткань и дерево','Неоновый контур','Шахматка и анимал','Флора и цветы','Кристаллы и северное сияние'];
+ const batBackgrounds=['midnight','ember','ice','violet','rose','aurora','gold','forest','cosmic','custom'];
+ const batPatterns=['none','flames','stars','waves','grid','diamonds','runes','spiderweb','leaves','sparkles'];
+ const batRarities=['Обычный','Обычный','Обычный','Необычный','Необычный','Редкий','Редкий','Эпический','Эпический','Легендарный'];
+ let batMetadataChanged=false;
+ for(const g of store.collectibleGifts.filter(x=>/^voltra-bat-\d+$/.test(String(x.id||'')))){
+  const match=String(g.id).match(/(\d+)$/),i=Number(match&&match[1])-1;
+  if(i<0||i>=100)continue;
+  const row=Math.floor(i/10),col=i%10;
+  const next={skin:batSkins[col],material:batMaterials[row],background:batBackgrounds[(i*7+row*3)%10],pattern:batPatterns[(i*3+row)%10],variant:i+1,price:5000,rarity:batRarities[row],totalSupply:100,edition:100};
+  for(const [k,v] of Object.entries(next)){if(g[k]!==v){g[k]=v;batMetadataChanged=true}}
+  if(!g.name||!/^Летучая мышь/.test(g.name)){g.name='Летучая мышь · '+String(i+1).padStart(2,'0');batMetadataChanged=true}
+ }
+ if(batMetadataChanged)save();
+}
+
 function allGiftCatalog(){return [...GIFT_CATALOG,...store.collectibleGifts]}
 function reserveCollectible(gift){if(!gift?.collectible)return true;if(!Number.isSafeInteger(gift.remaining)||gift.remaining<=0)return false;gift.remaining--;return true}
 if(!Array.isArray(store.games))store.games=[];
