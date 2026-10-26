@@ -251,6 +251,7 @@ function voltraRouteForCurrent(){const path=location.pathname.split('/').filter(
 function voltraResolveDeepLink(){
  const parts=location.pathname.split('/').filter(Boolean).map(decodeURIComponent);if(!parts.length)return;
  if(!window.currentUser&&!window.pulseCurrentUser&&!(typeof myUsername!=='undefined'&&myUsername)){try{sessionStorage.setItem('voltraPendingDeepLink',location.pathname)}catch{}return}
+ if(parts[0]==='gift'&&parts[1]){if(typeof window.pulseOpenGiftBySlugOrId==='function')window.pulseOpenGiftBySlugOrId(parts[1]).catch(e=>console.warn('Gift deep link failed:',e));else try{sessionStorage.setItem('voltraPendingDeepLink',location.pathname)}catch{}return}
  if(parts[0]==='settings'){showModal('settingsModal');return}
  if(parts[0]==='chat'&&parts[1]==='general'){openChat(globalKey);return}
  if(parts[0]==='bot'&&parts[1]){const wanted=voltraSlug(parts.slice(1).join('/'));if(wanted==='pechenka'){openChat('cookie-bot');return}if(wanted==='kripto-bot'){openChat('crypto-bot');return}
