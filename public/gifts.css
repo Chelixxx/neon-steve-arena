@@ -405,3 +405,58 @@ body.volt-viewer-open{overflow:hidden}
 #cosmicArtifactDetail .galaxy-heart-preview>img{display:block;width:100%!important;height:100%!important;object-fit:contain;border-radius:inherit}
 #cosmicArtifactDetail .galaxy-heart-info{min-width:0;overflow-wrap:anywhere}
 @media(max-width:700px){#openCosmicArtifactCollection>img{width:60px!important;height:60px!important;min-width:60px;flex-basis:60px}#cosmicArtifactDetail.galaxy-heart-detail{grid-template-columns:minmax(0,1fr);gap:10px;padding:4px 0 16px}#cosmicArtifactDetail .galaxy-heart-preview{width:min(240px,68vw);height:auto;aspect-ratio:1}#cosmicArtifactDetail .galaxy-heart-info{width:100%}}
+
+
+/* Unified collectible purchase UI: consistent preview, metadata and gradient actions across every collection. */
+.pumpkin-fullscreen.unified-collection{padding:clamp(12px,2vw,26px)}
+.pumpkin-fullscreen .unified-collection-detail{display:grid!important;grid-template-columns:minmax(190px,260px) minmax(0,1fr);align-items:center;gap:clamp(14px,2.4vw,26px);max-width:1000px;margin:0 auto;padding:14px 0 24px;text-align:left!important}
+.unified-collection-preview{width:100%;max-width:260px;aspect-ratio:1;min-width:0;margin:0 auto}
+.unified-collection-art{display:grid;place-items:center;box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;padding:12px;border:1px solid #8b69ff88;border-radius:26px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#39235f,#151328 72%);box-shadow:inset 0 0 32px #a46aff18,0 14px 40px #0005}
+.unified-collection-art>svg,.unified-collection-art>img{display:block!important;width:100%!important;height:100%!important;max-width:100%;max-height:100%;object-fit:contain}
+.unified-collection-art>.pumpkin-large,.unified-collection-art>.bat-large,.unified-collection-art>.chocolate-large,.unified-collection-art>.lightning-large{display:grid;place-items:center;width:100%!important;height:100%!important;max-width:100%;max-height:100%;margin:0!important;aspect-ratio:auto;border-radius:20px;box-sizing:border-box}
+.unified-collection-art>.pumpkin-large{font-size:clamp(94px,15vw,150px)}
+.unified-collection-art>.bat-large>svg,.unified-collection-art>.chocolate-large>svg,.unified-collection-art>.lightning-large>svg{display:block;width:100%!important;height:100%!important;object-fit:contain}
+.unified-collection-info{display:grid;gap:12px;min-width:0;align-content:center}
+.unified-collection-kicker{font-size:10px;font-weight:900;letter-spacing:1.7px;color:#c5abff;text-transform:uppercase}
+.pumpkin-fullscreen .unified-collection-info>h2{margin:0;font-size:clamp(19px,2vw,27px);line-height:1.15;overflow-wrap:anywhere}
+.unified-collection-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;min-width:0}
+.unified-collection-meta-item{display:grid;gap:3px;min-width:0;padding:9px 10px;border:1px solid #62518d77;border-radius:12px;background:linear-gradient(135deg,#211b39d9,#141a2bd9)}
+.unified-collection-meta-item>small{font-size:10px;color:#a9a1ca}
+.unified-collection-meta-item>b{font-size:12px;font-weight:800;color:#f4efff;overflow-wrap:anywhere}
+.unified-collection-price{display:grid;gap:4px;padding:12px 14px;border:1px solid #8e70ff66;border-radius:14px;background:linear-gradient(120deg,#28204b,#172638)}
+.unified-collection-price>small{font-size:11px;color:#c8c0e8}
+.unified-collection-price>b{font-size:23px;font-weight:900;letter-spacing:-.4px;color:#7df2e9}
+.unified-collection-reference{display:block;color:#f0c5ff!important}
+.unified-collection-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.unified-collection-actions>button,.unified-collection-price-card>button{flex:1 1 150px;min-width:0;min-height:42px;padding:10px 13px;border:1px solid #9b78ff;border-radius:12px;background:linear-gradient(112deg,#8d70ff,#bf6dff 52%,#59dfe9);color:#10111d;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 5px 18px #8c5dff22;transition:transform .15s ease,filter .15s ease,box-shadow .15s ease}
+.unified-collection-actions>button:hover:not(:disabled),.unified-collection-price-card>button:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.08);box-shadow:0 7px 22px #8c5dff44}
+.unified-collection-actions>button:disabled,.unified-collection-price-card>button:disabled{opacity:.48;filter:saturate(.5);box-shadow:none;cursor:not-allowed}
+.unified-collection-prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}
+.unified-collection-price-card{display:grid;align-content:start;gap:8px;min-width:0;padding:12px;border:1px solid #7f6abe88;border-radius:14px;background:linear-gradient(135deg,#241b43,#142535)}
+.unified-collection-price-card>small{color:#c6bddf;font-size:11px}
+.unified-collection-price-card>b{font-size:20px;color:#7df2e9;overflow-wrap:anywhere}
+.unified-collection-price-card>button{width:100%;flex:initial}
+.unified-collection-footnote{display:block;color:#9f9abf;font-size:10px;line-height:1.45}
+.unified-collection-empty{grid-column:1/-1;display:grid;gap:8px;place-items:center;min-height:170px;padding:28px;text-align:center;color:#b9b1d8}
+.unified-collection-empty>b{font-size:18px;color:#fff}
+.unified-collection-empty>span{font-size:12px}
+.pumpkin-fullscreen.unified-collection header button{background:linear-gradient(112deg,#8d70ff,#bf6dff 52%,#59dfe9);color:#10111d;border:0;box-shadow:0 4px 16px #8c5dff2b}
+.pumpkin-fullscreen.unified-collection .pumpkin-grid,.pumpkin-fullscreen.unified-collection .galaxy-heart-grid{max-width:1080px;margin:8px auto 0}
+.pumpkin-fullscreen.unified-collection .pumpkin-tile,.pumpkin-fullscreen.unified-collection .galaxy-heart-tile{border:1px solid #7052ad;border-radius:14px;background:linear-gradient(145deg,#211a39,#111b2b);color:#fff;overflow:hidden;transition:border-color .15s ease,transform .15s ease}
+.pumpkin-fullscreen.unified-collection .pumpkin-tile:hover,.pumpkin-fullscreen.unified-collection .galaxy-heart-tile:hover{border-color:#c28aff;transform:translateY(-1px)}
+@media(max-width:700px){
+ .pumpkin-fullscreen .unified-collection-detail{grid-template-columns:minmax(0,1fr);gap:12px;padding:4px 0 18px}
+ .unified-collection-preview{width:min(240px,72vw);max-width:240px}
+ .unified-collection-info{width:100%}
+ .unified-collection-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .unified-collection-actions>button{flex:1 1 130px}
+}
+@media(max-width:420px){
+ .pumpkin-fullscreen .unified-collection-detail{gap:10px}
+ .unified-collection-preview{width:min(210px,66vw);max-width:210px}
+ .unified-collection-art{padding:9px;border-radius:20px}
+ .unified-collection-meta-item{padding:8px}
+ .unified-collection-meta-item>b{font-size:11px}
+ .unified-collection-prices{grid-template-columns:minmax(0,1fr)}
+ .unified-collection-price-card>button{min-height:40px}
+}
