@@ -73,7 +73,7 @@ function initBackNavigation(){
 function init(){
  initBackNavigation();
  try{const last=localStorage.getItem('pulseLastAccount');if(last&&!$('nickname').value)$('nickname').value=last}catch{}
- $('authSwitch').onclick=()=>{authMode=authMode==='login'?'register':'login';$('authTitle').textContent=authMode==='login'?'Связь без границ.':'Создай свой VOLTRA.';$('authSubtitle').textContent=authMode==='login'?'Войди, чтобы открыть свои чаты и сообщения.':'Создай аккаунт по нику, паролю и номеру телефона. Код придёт по SMS.';$('authSubmit').innerHTML=authMode==='login'?'Войти в VOLTRA <span>↗</span>':'Отправить код SMS <span>↗</span>';$('authSwitch').textContent=authMode==='login'?'Нет аккаунта? Создать':'Уже есть аккаунт? Войти';$('openRecovery').classList.toggle('hidden',authMode!=='login');$('registerPhoneWrap').classList.toggle('hidden',authMode!=='register');$('registerCodeWrap').classList.add('hidden');$('password').autocomplete=authMode==='login'?'current-password':'new-password';$('loginError').textContent='';registrationId=null;};
+ $('authSwitch').onclick=()=>{authMode=authMode==='login'?'register':'login';$('authTitle').textContent=authMode==='login'?'Связь без границ.':'Создай свой VOLTRA.';$('authSubtitle').textContent=authMode==='login'?'Войди, чтобы открыть свои чаты и сообщения.':'Создай аккаунт по нику и паролю.';$('authSubmit').innerHTML=authMode==='login'?'Войти в VOLTRA <span>↗</span>':'Создать аккаунт <span>↗</span>';$('authSwitch').textContent=authMode==='login'?'Нет аккаунта? Создать':'Уже есть аккаунт? Войти';$('openRecovery').classList.toggle('hidden',authMode!=='login');$('registerPhoneWrap').classList.add('hidden');$('registerCodeWrap').classList.add('hidden');$('password').autocomplete=authMode==='login'?'current-password':'new-password';$('loginError').textContent='';registrationId=null;};
  $('sendPhoneLinkCode').onclick=async()=>{try{const r=await fetch('/api/contact/start',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({method:'phone',contact:$('linkPhone').value.trim()})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось отправить SMS');$('phoneLinkStatus').textContent=d.message||'Код отправлен по SMS'}catch(e){$('phoneLinkStatus').textContent=e.message||'Ошибка отправки'}};
  $('verifyPhoneLinkCode').onclick=async()=>{try{const r=await fetch('/api/contact/verify',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({code:$('linkPhoneCode').value.trim()})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось подтвердить номер');$('phoneLinkStatus').textContent='Номер подтверждён ✓';setTimeout(()=>hideModal('phoneLinkModal'),700)}catch(e){$('phoneLinkStatus').textContent=e.message||'Ошибка подтверждения'}};
  $('laterPhoneLink').onclick=()=>hideModal('phoneLinkModal');
@@ -128,16 +128,8 @@ async function authenticate(){
  $('authSubmit').disabled=true;$('loginError').textContent=authMode==='login'?'Входим…':'';
  try{
   if(authMode==='register'){
-   if(!registrationId){
-    const phone=$('registerPhone').value.trim();
-    const r=await fetch('/api/register/start',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({name,password,method:'phone',phone})});
-    const d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось отправить SMS');
-    registrationId=d.registrationId;$('registerCodeWrap').classList.remove('hidden');$('registerPhone').disabled=true;$('authSubmit').innerHTML='Подтвердить код <span>↗</span>';$('loginError').textContent=d.message||'Код отправлен по SMS. Проверяй сообщения.';
-    return;
-   }
-   const code=$('registerCode').value.trim();
-   const r=await fetch('/api/register/verify',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({registrationId,code})});
-   const d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось подтвердить код');
+   const r=await fetch('/api/register',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({name,password})});
+   const d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось создать аккаунт');
    myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();return;
   }
   const r=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({name,password})});
@@ -146,7 +138,7 @@ async function authenticate(){
  }catch(e){$('loginError').textContent=e.message||'Ошибка соединения'}finally{$('authSubmit').disabled=false}
 }
 async function checkSession(){
- try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();if(!d.user.phoneVerified)setTimeout(()=>{if(myId===d.user.id){showModal('phoneLinkModal');$('phoneLinkStatus').textContent='';}},1200)}catch{}
+ try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect()}catch{}
 }
 async function logout(){
  if(!confirm('Выйти из аккаунта на этом устройстве?'))return;
