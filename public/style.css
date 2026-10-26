@@ -946,3 +946,19 @@ input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--muted,#92
   .gift-catalog{max-height:38dvh}
   .news-announcement-card{max-height:calc(100dvh - 16px)}
 }
+
+
+/* Desktop chat: keep the viewport fixed and the message list as the only vertical scroller. */
+html,body{height:100%;min-height:0}
+body{overflow:hidden}
+.app{height:100dvh;max-height:100dvh;min-height:0;overflow:hidden}
+.main{min-height:0;min-width:0;overflow:hidden}
+.main>.messages{flex:1 1 auto;min-height:0;max-height:100%;overscroll-behavior-y:contain;overflow-y:auto;overflow-x:hidden;overflow-anchor:none;scrollbar-gutter:stable}
+.main>.composer{flex:0 0 auto;min-width:0}
+.main>.composer .compose-row{min-width:0}
+.main>.composer textarea{scroll-margin-block:0}
+.cookie-game{position:relative;isolation:isolate;overflow:hidden;border-color:#a16cff!important;background:radial-gradient(ellipse at 12% 0%,#a45cff2c,transparent 38%),radial-gradient(ellipse at 100% 100%,#44e7eb20,transparent 40%),linear-gradient(145deg,#17162a,#111b2b 72%,#241535)!important;box-shadow:0 20px 70px #0004,inset 0 1px #ffffff12!important}
+.cookie-game:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.2;background-image:radial-gradient(circle at 12px 12px,#c7a7ff 1px,transparent 1.7px),linear-gradient(45deg,transparent 48%,#8b65db 49%,transparent 51%);background-size:28px 28px,40px 40px;mask-image:linear-gradient(120deg,#000,transparent 82%)}
+.cookie-big{border:2px solid #ffd99a!important;outline:1px solid #ffb45b44;outline-offset:5px;box-shadow:0 7px 0 #633a28,0 14px 32px #0006,0 0 40px #ffca6a28!important}
+.cookie-big.cookie-clicking{transform:translateY(3px) scale(.97);filter:brightness(1.1)}
+@media(min-width:701px){.main>.messages{scrollbar-width:thin;scrollbar-color:#62518a transparent}.main>.composer .compose-row{align-items:flex-end}.main>.composer textarea{max-height:110px}}
