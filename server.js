@@ -406,6 +406,44 @@ const server=http.createServer(async(req,res)=>{
   }catch(e){return json(res,e.status||400,{error:e.message||'Ошибка запроса'})}
  }
  if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);if(!user)return json(res,401,{error:'Не авторизован'});return json(res,200,{user:{id:user.id,name:user.name,username:user.username||'',phoneVerified:!!user.phoneVerified,phone:user.phone||''}})}
+
+ if(req.method==='POST'&&u.pathname==='/api/payments/test/orders'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  if(process.env.VOLTRA_PAYMENTS_TEST_MODE!=='1')return json(res,503,{error:'Тестовый режим оплаты не включён на сервере.'});
+  try{
+   const b=await parseBody(req),kind=String(b.kind||''),product=String(b.product||''),key=String(b.idempotencyKey||'');
+   const catalog={
+    vip_monthly:{kind:'vip',product:'vip_monthly',price:399,title:'VOLTRA VIP · 1 месяц'},
+    vlt_500:{kind:'vlt',product:'vlt_500',price:50,amount:500,title:'500 ϟ'},
+    vlt_5000:{kind:'vlt',product:'vlt_5000',price:475,amount:5000,title:'5 000 ϟ'},
+    vlt_25000:{kind:'vlt',product:'vlt_25000',price:2250,amount:25000,title:'25 000 ϟ'},
+    vlt_100000:{kind:'vlt',product:'vlt_100000',price:8000,amount:100000,title:'100 000 ϟ'},
+    vlt_250000:{kind:'vlt',product:'vlt_250000',price:15000,amount:250000,title:'250 000 ϟ'},
+    vlt_1000000:{kind:'vlt',product:'vlt_1000000',price:50000,amount:1000000,title:'1 000 000 ϟ'}
+   };
+   const item=catalog[product];
+   if(!item||kind!==item.kind)return json(res,400,{error:'Неизвестный тестовый товар.'});
+   if(!/^[a-zA-Z0-9_-]{12,100}$/.test(key))return json(res,400,{error:'Неверный ключ идемпотентности.'});
+   if(!Array.isArray(store.paymentTestOrders))store.paymentTestOrders=[];
+   let order=store.paymentTestOrders.find(o=>o.uid===uid&&o.idempotencyKey===key);
+   if(!order){order={id:crypto.randomUUID(),uid,kind:item.kind,product:item.product,title:item.title,price:item.price,amount:item.amount||null,status:'pending_test',idempotencyKey:key,createdAt:Date.now(),testMode:true,entitlementGranted:false};store.paymentTestOrders.push(order);save();}
+   return json(res,200,{ok:true,order:{id:order.id,title:order.title,price:order.price,status:order.status,testMode:true,entitlementGranted:false},notice:'Демо-заказ создан. Денег не списываем и реальные права/валюту не выдаём.'});
+  }catch(e){return json(res,400,{error:e.message||'Не удалось создать тестовый заказ'})}
+ }
+ if(req.method==='POST'&&u.pathname==='/api/payments/test/complete'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  if(process.env.VOLTRA_PAYMENTS_TEST_MODE!=='1')return json(res,503,{error:'Тестовый режим оплаты не включён на сервере.'});
+  try{
+   const b=await parseBody(req),id=String(b.orderId||'');
+   if(!Array.isArray(store.paymentTestOrders))store.paymentTestOrders=[];
+   const order=store.paymentTestOrders.find(o=>o.id===id&&o.uid===uid);
+   if(!order)return json(res,404,{error:'Тестовый заказ не найден.'});
+   if(order.status==='test_completed')return json(res,200,{ok:true,duplicate:true,order:{id:order.id,status:order.status,entitlementGranted:false},notice:'Повторный запрос безопасен: заказ уже обработан, повторного начисления нет.'});
+   if(order.status!=='pending_test')return json(res,409,{error:'Заказ уже закрыт.'});
+   order.status='test_completed';order.completedAt=Date.now();order.entitlementGranted=false;save();
+   return json(res,200,{ok:true,duplicate:false,order:{id:order.id,status:order.status,entitlementGranted:false},notice:'Тестовый сценарий завершён. Реальные балансы и VIP не менялись.'});
+  }catch(e){return json(res,400,{error:e.message||'Не удалось завершить тестовый заказ'})}
+ }
  if(req.method==='GET'&&u.pathname==='/api/catcoin'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   const user=userById(uid);if(!user)return json(res,401,{error:'Пользователь не найден'});
