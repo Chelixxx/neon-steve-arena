@@ -97,11 +97,32 @@ if(!Array.isArray(store.giftInstances))store.giftInstances=[];
  if(changed)save();
 }
 
-function allGiftCatalog(){return [...GIFT_CATALOG,...store.collectibleGifts]}
+function allGiftCatalog(){return [...GIFT_CATALOG.filter(g=>g.id!=='gift-013'&&!/\s+(?:[2-9]|\d{2,})$/.test(String(g.name||''))),...store.collectibleGifts]}
 const GIFT_VARIANT_SKINS=['classic','chrome','holographic','crystal','neon','ember','ice','shadow','royal','candy'];
 const GIFT_VARIANT_BACKGROUNDS=['midnight','aurora','gold','rose','ice','custom','ember','forest','cosmic','violet'];
 const GIFT_VARIANT_PATTERNS=['none','stars','waves','grid','diamonds','runes','bats','spiderweb','leaves','sparkles'];
 const GIFT_VARIANT_MATERIALS=['Глянцевая эмаль','Галактический блеск','Гравировка','Мрамор и лава','Полированный металл','Ткань и дерево','Неоновый контур','Шахматка и анимал','Флора и цветы','Кристаллы и снег','Золотая фольга','Перламутр'];
+
+{
+ const skins=['classic','chrome','holographic','crystal','neon','ember','ice','shadow','royal','candy'];
+ const backgrounds=['midnight','aurora','gold','rose','ice','custom','ember','forest','cosmic','violet'];
+ const patterns=['none','stars','waves','grid','diamonds','runes','bats','spiderweb','leaves','sparkles'];
+ const rarities=['Обычный','Обычный','Необычный','Необычный','Редкий','Редкий','Эпический','Эпический','Легендарный','Мифический'];
+ let changed=false;
+ for(let i=0;i<120;i++){
+  const n=i+1,id='voltra-lightning-'+String(n).padStart(3,'0'),row=Math.floor(i/10),col=i%10;
+  let g=store.collectibleGifts.find(x=>x.id===id);
+  if(!g){
+   g={id,name:'Молния · '+String(n).padStart(3,'0'),emoji:'⚡',price:5000,rarity:rarities[Math.min(9,Math.floor(i/12))],collectible:true,collection:'lightning',baseGiftId:'gift-013',variant:n,shape:Math.floor(i/30)%4+1,skin:skins[col],material:GIFT_VARIANT_MATERIALS[Math.floor(i/10)%GIFT_VARIANT_MATERIALS.length],background:backgrounds[(i*7+Math.floor(i/10))%10],pattern:patterns[(i*3+Math.floor(i/10))%10],effect:['sparkles','glow','confetti','aura','none'][i%5],intensity:45+(i*11)%56,edition:100,totalSupply:100,remaining:100,createdAt:Date.now()};
+   store.collectibleGifts.push(g);changed=true;
+  }
+  const vals={name:'Молния · '+String(n).padStart(3,'0'),emoji:'⚡',price:5000,rarity:rarities[Math.min(9,Math.floor(i/12))],collectible:true,collection:'lightning',baseGiftId:'gift-013',variant:n,shape:Math.floor(i/30)%4+1,skin:skins[col],material:GIFT_VARIANT_MATERIALS[Math.floor(i/10)%GIFT_VARIANT_MATERIALS.length],background:backgrounds[(i*7+Math.floor(i/10))%10],pattern:patterns[(i*3+Math.floor(i/10))%10],edition:100,totalSupply:100};
+  for(const [k,v] of Object.entries(vals)){if(g[k]!==v){g[k]=v;changed=true}}
+  if(!Number.isSafeInteger(g.remaining)||g.remaining<0){g.remaining=100;changed=true}
+ }
+ if(changed)save();
+}
+
 function normalizeGiftVariant(v,baseGiftId){const bolt=baseGiftId==='gift-013',max=bolt?120:12,n=Math.max(1,Math.min(max,Number.isInteger(Number(v&&v.variant))?Number(v.variant):1)),i=n-1;return {variant:n,skin:GIFT_VARIANT_SKINS.includes(v&&v.skin)?v.skin:GIFT_VARIANT_SKINS[i%10],background:GIFT_VARIANT_BACKGROUNDS.includes(v&&v.background)?v.background:GIFT_VARIANT_BACKGROUNDS[(i*7+Math.floor(i/10))%10],pattern:GIFT_VARIANT_PATTERNS.includes(v&&v.pattern)?v.pattern:GIFT_VARIANT_PATTERNS[(i*3)%10],material:GIFT_VARIANT_MATERIALS.includes(v&&v.material)?v.material:GIFT_VARIANT_MATERIALS[bolt?Math.floor(i/10)%GIFT_VARIANT_MATERIALS.length:i%GIFT_VARIANT_MATERIALS.length],shape:bolt?Math.max(1,Math.min(4,Number(v&&v.shape)||Math.floor(i/30)%4+1)):1}}
 function makeGiftInstance(gift,ownerId,variant){const v=normalizeGiftVariant(variant,gift.id),id='owned-gift-'+crypto.randomUUID(),baseName=String(gift.name||'Подарок').replace(/\s+1$/,''),instance={id,baseGiftId:gift.id,baseName,name:baseName+' · '+v.material+' #'+String(v.variant).padStart(2,'0'),emoji:gift.emoji,price:gift.price,rarity:gift.rarity||'Обычный',collectible:false,ownedInstance:true,ownerId,skin:v.skin,background:v.background,pattern:v.pattern,material:v.material,variant:v.variant,shape:v.shape,effect:'sparkles',intensity:55,createdAt:Date.now()};store.giftInstances.push(instance);return instance}
 function giftForUser(user,id){return allGiftCatalog().find(g=>g.id===id)||store.giftInstances.find(g=>g.id===id&&g.ownerId===user.id)||null}
@@ -132,6 +153,26 @@ for(const user of store.users){
  }
 }
 if(legacyGiftInstancesMigrated)save();
+
+if(!store.giftCleanupAllUsersV1){
+ let clearedEntries=0,clearedUsers=0;
+ for(const user of store.users){
+  const count=(Array.isArray(user.ownedGifts)?user.ownedGifts.length:0)+(Array.isArray(user.equippedGifts)?user.equippedGifts.length:0);
+  if(count)clearedUsers++;
+  clearedEntries+=Array.isArray(user.ownedGifts)?user.ownedGifts.length:0;
+  user.ownedGifts=[];
+  user.equippedGifts=[];
+ }
+ store.giftInstances=[];
+ for(const listing of store.giftResaleListings||[])if(listing.status==='active'){listing.status='cancelled';listing.cancelledAt=Date.now();listing.cancelReason='gift-inventory-cleanup'}
+ for(const offer of store.giftResaleOffers||[])if(offer.status==='pending')offer.status='closed';
+ for(const gift of store.collectibleGifts||[]){const total=Number(gift.totalSupply||gift.edition||100);if(Number.isSafeInteger(total)&&total>0)gift.remaining=total}
+ store.giftCleanupAllUsersV1=true;
+ store.giftCleanupSummary={at:Date.now(),usersWithGifts:clearedUsers,ownedGiftEntries:clearedEntries};
+ save();
+ console.log('Gift inventory cleanup completed: '+clearedEntries+' owned gifts cleared across '+clearedUsers+' users; balances and messages preserved.');
+}
+
 
 const cleanName=s=>String(s||'').normalize('NFKC').replace(/[^\p{L}\p{N}_. -]/gu,'').trim().slice(0,24);
 const cleanUsername=s=>String(s||'').trim().replace(/^@/,'').toLowerCase();

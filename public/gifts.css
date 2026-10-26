@@ -260,3 +260,18 @@ body.volt-viewer-open{overflow:hidden}
 #giftMarketOpen{border-color:#8672d7}
 .gift-purchase-emoji>.lightning-svg{width:100%;height:100%;filter:drop-shadow(0 5px 8px #0006)}
 @media(max-width:560px){.gift-variant-preview>.lightning-svg{width:84px;height:84px;flex-basis:84px}.gift-resale-card{grid-template-columns:60px minmax(0,1fr);gap:9px}.gift-resale-art{width:60px;height:60px}.gift-resale-actions{grid-column:1/-1;flex-direction:row;min-width:0}.gift-resale-actions button{flex:1}.gift-variant-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* VOLTRA Lightning collectible collection. */
+.lightning-feature>.lightning-svg{display:block;width:76px;height:76px;flex:0 0 76px}
+.lightning-svg{display:block;width:100%;height:100%;object-fit:contain;overflow:visible;filter:drop-shadow(0 6px 12px #0008)}
+.gift-art:has(>.lightning-svg){padding:0;overflow:hidden;border-radius:18px}
+.gift-art:has(>.lightning-svg)>.lightning-svg{width:100%;height:100%}
+.lightning-fullscreen .lightning-tile>.lightning-svg{display:block;width:100%;height:112px;object-fit:contain}
+.lightning-fullscreen .lightning-large{width:min(260px,68vw);height:min(260px,68vw);margin:12px auto;display:grid;place-items:center;border-radius:22px;background:linear-gradient(145deg,#ffffff12,#ffffff04);border:1px solid #ffffff20;padding:8px;box-sizing:border-box}
+.lightning-fullscreen .lightning-large>.lightning-svg{width:100%;height:100%}
+.lightning-fullscreen #inspectLightning,.lightning-fullscreen #buyLightning{margin:5px}
+.gift-variant-preview>.lightning-svg{width:112px;height:112px;flex:0 0 112px}
+.gift-variant-option>.lightning-svg{width:100%;aspect-ratio:1}
+.send-gift-variant-art>.lightning-svg,.gift-purchase-emoji>.lightning-svg,.gift-resale-art>.lightning-svg{width:100%;height:100%}
+.gift3d-object-face.gift3d-custom-face>.lightning-svg{width:100%;height:100%}
+@media(max-width:560px){.lightning-fullscreen .lightning-tile>.lightning-svg{height:86px}.lightning-feature>.lightning-svg{width:60px;height:60px;flex-basis:60px}.gift-variant-preview>.lightning-svg{width:84px;height:84px;flex-basis:84px}}
