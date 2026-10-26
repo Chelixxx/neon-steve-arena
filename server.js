@@ -792,8 +792,8 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
    const purchased=owned.find(g=>(store.giftTransactions||[]).some(t=>t.type==='purchase'&&t.userId===uid&&t.giftId===g.id));
    if(!purchased)return json(res,200,{ok:true,announced:false});
    if(store.galaxyHeartAnnouncements.some(a=>a.giftId===purchased.id&&a.buyerId===uid))return json(res,200,{ok:true,announced:false,alreadyAnnounced:true});
-   const at=Date.now();store.galaxyHeartAnnouncements.push({giftId:purchased.id,buyerId:uid,at});
-   const msg={id:crypto.randomUUID(),from:'voltra-system',name:'VOLTRA',to:null,channelId:null,text:'💎 '+user.name+' приобрёл(а) дорогой коллекционный подарок «'+purchased.name+'» за '+Number(purchased.price).toLocaleString('ru-RU')+' ϟ в коллекции «Сердце Галактики»!',kind:'collection-announcement',at,readBy:[],deliveredTo:[]};
+   const purchaseRecord=(store.giftTransactions||[]).find(t=>t.type==='purchase'&&t.userId===uid&&t.giftId===purchased.id);const paidCurrency=purchaseRecord?.currency==='cat'?'CAT':'ϟ';const paidAmount=Math.abs(Number(purchaseRecord?.amount)||Number(purchased.price)||0);const at=Date.now();store.galaxyHeartAnnouncements.push({giftId:purchased.id,buyerId:uid,at});
+   const msg={id:crypto.randomUUID(),from:'voltra-system',name:'VOLTRA',to:null,channelId:null,text:'💎 '+user.name+' приобрёл(а) дорогой коллекционный подарок «'+purchased.name+'» за '+paidAmount.toLocaleString('ru-RU')+' '+paidCurrency+' в коллекции «Сердце Галактики»!',kind:'collection-announcement',at,readBy:[],deliveredTo:[]};
    store.messages.push(msg);if(store.messages.length>20000)store.messages=store.messages.slice(-20000);
    save();broadcast({t:'message',message:msg});
    return json(res,200,{ok:true,announced:true});
