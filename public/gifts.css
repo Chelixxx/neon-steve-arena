@@ -275,3 +275,120 @@ body.volt-viewer-open{overflow:hidden}
 .send-gift-variant-art>.lightning-svg,.gift-purchase-emoji>.lightning-svg,.gift-resale-art>.lightning-svg{width:100%;height:100%}
 .gift3d-object-face.gift3d-custom-face>.lightning-svg{width:100%;height:100%}
 @media(max-width:560px){.lightning-fullscreen .lightning-tile>.lightning-svg{height:86px}.lightning-feature>.lightning-svg{width:60px;height:60px;flex-basis:60px}.gift-variant-preview>.lightning-svg{width:84px;height:84px;flex-basis:84px}}
+
+/* Compact-phone sizing for gift shop, collections, picker and 3D view. */
+.gifts-modal{width:min(900px,calc(100vw - 24px));max-width:100%;min-width:0;max-height:min(90dvh,900px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+.gift-catalog{grid-template-columns:repeat(4,minmax(0,1fr));min-width:0;gap:clamp(5px,1.5vw,10px);max-height:min(48dvh,540px)}
+.gift-card{min-width:0;overflow:hidden}
+.gift-card>b,.gift-card>small{max-width:100%;overflow-wrap:anywhere}
+.gift-card button{min-width:0;min-height:34px;line-height:1.2;white-space:normal;overflow-wrap:anywhere}
+.gift-card .gift-art{width:100%;max-width:112px;height:auto;aspect-ratio:1;min-width:0;display:grid;place-items:center;flex:0 0 auto}
+.gift-card .gift-art>img,.gift-card .gift-art>svg{display:block;width:100%;height:100%;object-fit:contain}
+.gifts-tabs{flex-wrap:wrap;min-width:0}
+.gifts-tabs button{min-width:0;overflow-wrap:anywhere}
+.gift-variant-backdrop{padding:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));align-items:center;box-sizing:border-box}
+.gift-variant-panel{width:min(900px,100%);max-width:100%;min-width:0;max-height:calc(100dvh - 12px);padding:clamp(10px,3vw,24px);border-radius:clamp(14px,3vw,24px);overscroll-behavior:contain}
+.gift-variant-panel header{min-width:0}
+.gift-variant-panel header h2{font-size:clamp(17px,4.8vw,22px);overflow-wrap:anywhere}
+.gift-variant-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(5px,1.5vw,9px)}
+.gift-variant-option{min-width:0;overflow:hidden;padding:clamp(4px,1.5vw,8px)}
+.gift-variant-option small{overflow-wrap:anywhere}
+.pumpkin-fullscreen{padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));overscroll-behavior:contain}
+.pumpkin-fullscreen header{gap:clamp(6px,2vw,14px);flex-wrap:wrap}
+.pumpkin-fullscreen header>div{min-width:0;flex:1}
+.pumpkin-fullscreen header button{padding:clamp(7px,2vw,12px) clamp(8px,2.5vw,16px);font-size:clamp(11px,3vw,14px);white-space:nowrap}
+.pumpkin-fullscreen header small{display:block;font-size:clamp(9px,2.8vw,12px);overflow-wrap:anywhere}
+.pumpkin-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(4px,1.5vw,9px)}
+.pumpkin-tile{min-width:0;overflow:hidden}
+.pumpkin-tile>b,.pumpkin-tile>small{max-width:100%;overflow-wrap:anywhere}
+.gift3d-viewer{padding:calc(12px + env(safe-area-inset-top)) 10px calc(14px + env(safe-area-inset-bottom))}
+.gift3d-stage{width:min(82vw,360px);height:min(82vw,360px);max-height:43dvh}
+.gift3d-object{width:min(64vw,245px);height:min(64vw,245px)}
+.gift-resale-card{min-width:0}
+.gift-resale-info{min-width:0;overflow-wrap:anywhere}
+.gift-resale-actions{min-width:0}
+.lightning-fullscreen .lightning-large,.chocolate-fullscreen .chocolate-large{width:min(68vw,260px);height:min(36dvh,260px);margin:10px auto;padding:6px;box-sizing:border-box}
+.lightning-fullscreen .lightning-large>svg,.chocolate-fullscreen .chocolate-large>svg{width:100%;height:100%}
+@media(max-width:560px){
+ .gifts-modal{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);padding:clamp(10px,3vw,16px)}
+ .gifts-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .gifts-tabs button{padding:8px 5px;font-size:clamp(10px,2.9vw,12px);line-height:1.2}
+ .gift-catalog{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:min(44dvh,440px);padding:2px}
+ .gift-card{gap:5px;padding:8px 5px;border-radius:10px}
+ .gift-card .gift-art{max-width:clamp(62px,20vw,92px)}
+ .gift-card>b{font-size:clamp(10px,2.8vw,12px);line-height:1.2}
+ .gift-card>small,.gift-price{font-size:clamp(9px,2.4vw,11px)}
+ .gift-card button{padding:7px 4px;font-size:clamp(9px,2.4vw,11px);min-height:34px}
+ .pulse-admin{padding:10px}
+ .gift-variant-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+ .gift-variant-preview>.gift-sticker-svg,.gift-variant-preview>.lightning-svg,.gift-variant-preview>.chocolate-svg{width:clamp(68px,24vw,90px);height:clamp(68px,24vw,90px);flex:0 0 clamp(68px,24vw,90px)}
+ .gift-variant-preview{gap:8px;padding:8px}
+ .gift-variant-preview>div b{font-size:clamp(12px,3.7vw,16px)}
+ .gift-variant-preview small{font-size:clamp(10px,2.8vw,12px)}
+ .gift-variant-option b{font-size:11px}
+ .gift-variant-option small{font-size:clamp(9px,2.4vw,10px)}
+ .pumpkin-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+ .pumpkin-tile{padding:5px 3px;font-size:11px}
+ .pumpkin-tile svg{max-width:100%;height:auto}
+ .gift3d-stage{width:min(82vw,320px);height:min(82vw,320px);max-height:39dvh}
+ .gift3d-object{width:min(62vw,220px);height:min(62vw,220px)}
+ .gift3d-close{width:40px;height:40px;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top))}
+ .gift3d-name{max-width:94vw;font-size:clamp(15px,4.5vw,21px);text-align:center;overflow-wrap:anywhere}
+ .gift3d-rarity{max-width:94vw;text-align:center;overflow-wrap:anywhere;font-size:10px}
+ .gift-resale-card{grid-template-columns:58px minmax(0,1fr);gap:8px;padding:8px}
+ .gift-resale-art{width:58px;height:58px}
+ .gift-resale-actions{grid-column:1/-1;flex-direction:row;min-width:0}
+ .gift-resale-actions button{flex:1;min-height:36px}
+ .send-gift-card{width:100%;max-width:100%}
+ .gift-purchase-emoji{width:clamp(54px,18vw,72px);height:clamp(54px,18vw,72px);flex:0 0 clamp(54px,18vw,72px)}
+ .pumpkin-fullscreen .pumpkin-detail{padding-top:4px}
+ .pumpkin-fullscreen h2{font-size:clamp(16px,4.8vw,22px);overflow-wrap:anywhere}
+ .pumpkin-meta{gap:6px}
+ .pumpkin-meta span{min-width:0;overflow-wrap:anywhere;font-size:clamp(10px,2.8vw,12px)}
+ .lightning-fullscreen .lightning-tile>svg,.chocolate-fullscreen .chocolate-tile>svg{height:clamp(54px,19vw,84px)}
+}
+@media(max-width:390px){
+ .gifts-modal{padding:10px}
+ .gift-catalog{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:46dvh}
+ .gift-card{padding:8px}
+ .gift-card .gift-art{max-width:clamp(74px,25vw,94px)}
+ .gift-card button{min-height:36px;font-size:10px}
+ .gift-variant-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .gift-variant-preview{align-items:flex-start}
+ .gift-variant-preview>div{min-width:0}
+ .pumpkin-fullscreen header{gap:6px}
+ .pumpkin-fullscreen header b{font-size:13px}
+ .pumpkin-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .gift3d-stage{width:min(82vw,280px);height:min(82vw,280px);max-height:36dvh}
+ .gift3d-object{width:min(60vw,190px);height:min(60vw,190px)}
+}
+@media(max-height:620px) and (max-width:560px){
+ .gifts-modal{max-height:calc(100dvh - 8px)}
+ .gift-catalog{max-height:32dvh}
+ .gift3d-stage{max-height:32dvh}
+ .gift-variant-panel{max-height:calc(100dvh - 8px)}
+ .gift-variant-preview>.gift-sticker-svg,.gift-variant-preview>.lightning-svg,.gift-variant-preview>.chocolate-svg{width:64px;height:64px;flex-basis:64px}
+ .pumpkin-fullscreen header{padding-block:4px 8px}
+ .pumpkin-detail{padding:2px 0 8px}
+}
+
+/* Chocolate collectible artwork: use the same responsive footprint as the other vector gifts. */
+.chocolate-svg{display:block;width:100%;height:100%;object-fit:contain;overflow:visible;filter:drop-shadow(0 6px 12px #0008)}
+.gift-art:has(>.chocolate-svg){padding:0;overflow:hidden;border-radius:18px}
+.gift-art:has(>.chocolate-svg)>.chocolate-svg{width:100%;height:100%}
+.chocolate-feature>.chocolate-svg{display:block;width:76px;height:76px;flex:0 0 76px}
+.chocolate-fullscreen .chocolate-tile>.chocolate-svg{display:block;width:100%;height:112px;object-fit:contain}
+.gift-variant-preview>.chocolate-svg{width:112px;height:112px;flex:0 0 112px}
+.gift-variant-option>.chocolate-svg{width:100%;aspect-ratio:1}
+.send-gift-variant-art>.chocolate-svg,.gift-purchase-emoji>.chocolate-svg,.gift-resale-art>.chocolate-svg{width:100%;height:100%}
+.gift-purchase-emoji>.chocolate-svg{filter:drop-shadow(0 5px 8px #0006)}
+.gift3d-object-face.gift3d-custom-face>.chocolate-svg{width:100%;height:100%}
+.gift3d-object[data-kind="chocolate"]{width:min(65vw,290px);height:min(65vw,290px)}
+@media(max-width:560px){
+ .chocolate-feature>.chocolate-svg{width:60px;height:60px;flex-basis:60px}
+ .chocolate-fullscreen .chocolate-tile>.chocolate-svg{height:clamp(54px,19vw,84px)}
+}
+@media(max-width:390px){
+ .gift-variant-preview>.chocolate-svg{width:64px;height:64px;flex-basis:64px}
+ .gift3d-object[data-kind="chocolate"]{width:min(60vw,190px);height:min(60vw,190px)}
+}
