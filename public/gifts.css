@@ -238,3 +238,25 @@ body.volt-viewer-open{overflow:hidden}
 .gift3d-object[data-kind="sticker"]{width:min(65vw,290px);height:min(65vw,290px)}
 .gift3d-particle{color:var(--gift3d-accent,#cbb8ff)!important}
 @media(max-width:560px){.gift-variant-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.gift-variant-preview>.gift-sticker-svg{width:84px;height:84px;flex-basis:84px}.gift-variant-panel header h2{font-size:18px}.gift-purchase-emoji{width:64px;height:64px;flex-basis:64px}}
+
+/* Lightning gift styles and fixed-price resale market. */
+.lightning-svg{display:block;width:100%;height:100%;object-fit:contain;overflow:visible;filter:drop-shadow(0 6px 12px #0008)}
+.gift-art:has(>.lightning-svg){padding:0;overflow:hidden;border-radius:18px}
+.gift-art:has(>.lightning-svg)>.lightning-svg{width:100%;height:100%}
+.gift-variant-preview>.lightning-svg{width:112px;height:112px;flex:0 0 112px}
+.gift-variant-option>.lightning-svg{width:100%;aspect-ratio:1}
+.send-gift-variant-art>.lightning-svg,.gift-purchase-emoji>.lightning-svg,.gift-resale-art>.lightning-svg{width:100%;height:100%}
+.gift-market-panel{max-width:860px}
+.gift-resale-listings{display:grid;gap:10px;max-height:60dvh;overflow:auto;padding:3px}
+.gift-resale-card{display:grid;grid-template-columns:82px minmax(0,1fr) auto;gap:13px;align-items:center;padding:10px;border-radius:16px;border:1px solid #ffffff1c;background:linear-gradient(120deg,#ffffff0a,#ffffff03)}
+.gift-resale-art{width:82px;height:82px;display:grid;place-items:center;border-radius:14px;overflow:hidden;background:#ffffff08}
+.gift-resale-art>.gift-sticker-svg,.gift-resale-art>.pumpkin-svg,.gift-resale-art>.bat-svg,.gift-resale-art>.lightning-svg{width:100%;height:100%}
+.gift-resale-info{min-width:0;display:grid;gap:5px}
+.gift-resale-info>b{font-size:14px;overflow-wrap:anywhere}
+.gift-resale-info>small{font-size:11px;color:#c2c0dd;overflow-wrap:anywhere}
+.gift-resale-actions{display:flex;flex-direction:column;gap:7px;min-width:145px}
+.gift-resale-actions button{font-size:11px;padding:9px 10px}
+.gift-resale-actions span{font-size:11px;color:#9fe7e2;text-align:center}
+#giftMarketOpen{border-color:#8672d7}
+.gift-purchase-emoji>.lightning-svg{width:100%;height:100%;filter:drop-shadow(0 5px 8px #0006)}
+@media(max-width:560px){.gift-variant-preview>.lightning-svg{width:84px;height:84px;flex-basis:84px}.gift-resale-card{grid-template-columns:60px minmax(0,1fr);gap:9px}.gift-resale-art{width:60px;height:60px}.gift-resale-actions{grid-column:1/-1;flex-direction:row;min-width:0}.gift-resale-actions button{flex:1}.gift-variant-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
