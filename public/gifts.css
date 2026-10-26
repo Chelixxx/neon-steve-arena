@@ -396,3 +396,12 @@ body.volt-viewer-open{overflow:hidden}
 /* Optional CAT resale guidance under collectible prices. */
 .gift-price-cat{display:block;margin-top:3px;font-size:10px;line-height:1.2;font-weight:700;color:#f8c66b;white-space:normal;overflow-wrap:anywhere}
 .gift-price{min-width:0;overflow-wrap:anywhere}
+
+
+/* Cosmic Artifact: use the same compact thumbnail size as the other collection cards. */
+#openCosmicArtifactCollection>img{display:block!important;width:70px!important;height:70px!important;min-width:70px;flex:0 0 70px;object-fit:contain;border-radius:18px;background:radial-gradient(circle,#2c1857,#111225);padding:2px;box-sizing:border-box;filter:drop-shadow(0 0 12px #a45dff)}
+#cosmicArtifactDetail.galaxy-heart-detail{display:grid;grid-template-columns:minmax(190px,260px) minmax(0,1fr);align-items:center;gap:22px;padding:12px 0 22px}
+#cosmicArtifactDetail .galaxy-heart-preview{display:grid;place-items:center;width:min(260px,100%);height:260px;aspect-ratio:1;margin:0 auto;border-radius:26px;overflow:hidden;background:radial-gradient(circle at 50% 38%,#3a206b,#100d20 72%);box-shadow:inset 0 0 35px #b46aff20,0 12px 44px #6d2be52a}
+#cosmicArtifactDetail .galaxy-heart-preview>img{display:block;width:100%!important;height:100%!important;object-fit:contain;border-radius:inherit}
+#cosmicArtifactDetail .galaxy-heart-info{min-width:0;overflow-wrap:anywhere}
+@media(max-width:700px){#openCosmicArtifactCollection>img{width:60px!important;height:60px!important;min-width:60px;flex-basis:60px}#cosmicArtifactDetail.galaxy-heart-detail{grid-template-columns:minmax(0,1fr);gap:10px;padding:4px 0 16px}#cosmicArtifactDetail .galaxy-heart-preview{width:min(240px,68vw);height:auto;aspect-ratio:1}#cosmicArtifactDetail .galaxy-heart-info{width:100%}}
