@@ -42,7 +42,7 @@ async function openCurrency(tab='vlt'){
 function updateCatQuote(){
  const input=$('catExchangeAmount');if(!input)return;
  let amount=Math.floor(Number(input.value)||0);if(amount<0)amount=0;if(Number.isFinite(catBalance)&&catBalance>0&&amount>catBalance){amount=Math.floor(catBalance);input.value=String(amount)}
- $('catRubQuote').textContent=money(Math.floor(amount/100*10))+' ₽';
+ $('catRubQuote').textContent=(amount/10).toLocaleString('ru-RU',{maximumFractionDigits:2})+' ₽';
 }
 function openVip(){ensureModals();$('vipShopModal').classList.remove('hidden')}
 document.addEventListener('click',e=>{
@@ -58,6 +58,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{if(e.target?.id==='catExchangeAmount')updateCatQuote()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){['currencyShopModal','vipShopModal'].forEach(id=>$(id)?.classList.add('hidden'))}});
 window.addEventListener('pulseCatCoinsUpdated',e=>{catBalance=Math.max(0,Number(e.detail?.catCoins)||0);if($('catShopBalance'))$('catShopBalance').textContent=money(catBalance)+' CAT';updateCatQuote()});
+const premiumStatus=$('premiumStatus');if(premiumStatus&&typeof MutationObserver!=='undefined'){const fixPremiumStatus=()=>{const el=$('premiumStatus');if(!el)return;const text=el.textContent||'';if(text.includes('уже активирован'))return;const desired='Создатель ещё не подключил оплату. VIP за 399 ₽ пока нельзя купить.';if(text!==desired)el.textContent=desired};new MutationObserver(fixPremiumStatus).observe(premiumStatus,{childList:true,characterData:true,subtree:true});fixPremiumStatus();}
 window.voltraOpenCurrencyShop=openCurrency;window.voltraOpenVipShop=openVip;
 document.addEventListener('DOMContentLoaded',()=>{ensureModals();renderPackages()});
 })();
