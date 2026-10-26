@@ -250,7 +250,7 @@ async function voltraCopyLink(url){try{await navigator.clipboard.writeText(url);
 function voltraRouteForCurrent(){const path=location.pathname.split('/').filter(Boolean);return path.length?path:null}
 function voltraResolveDeepLink(){
  const parts=location.pathname.split('/').filter(Boolean).map(decodeURIComponent);if(!parts.length)return;
- if(!window.currentUser&&!window.pulseCurrentUser&&!myUsername){try{sessionStorage.setItem('voltraPendingDeepLink',location.pathname)}catch{}return}
+ if(!window.currentUser&&!window.pulseCurrentUser&&!(typeof myUsername!=='undefined'&&myUsername)){try{sessionStorage.setItem('voltraPendingDeepLink',location.pathname)}catch{}return}
  if(parts[0]==='settings'){showModal('settingsModal');return}
  if(parts[0]==='chat'&&parts[1]==='general'){openChat(globalKey);return}
  if(parts[0]==='bot'&&parts[1]){const wanted=voltraSlug(parts.slice(1).join('/'));if(wanted==='pechenka'){openChat('cookie-bot');return}if(wanted==='kripto-bot'){openChat('crypto-bot');return}
@@ -555,5 +555,5 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('classicStrikeModal
 
 document.addEventListener('submit',e=>{if(e.target&&e.target.id==='loginForm'){e.preventDefault();authenticate()}},true);
 window.voltraAuthenticate=authenticate;
-window.addEventListener('DOMContentLoaded',()=>{init();document.getElementById('shareCurrentLink')?.addEventListener('click',()=>voltraCopyLink(voltraLinkForChat(activeId||globalKey)));document.getElementById('shareSettingsLink')?.addEventListener('click',()=>voltraCopyLink(location.origin+'/settings'));setTimeout(()=>{let pending=null;try{pending=sessionStorage.getItem('voltraPendingDeepLink')}catch{}if(pending&&location.pathname==='/'){history.replaceState({voltraDeepLink:true},'',pending)}voltraResolveDeepLink()},2500)});
+window.addEventListener('DOMContentLoaded',()=>{init();document.getElementById('shareCurrentLink')?.addEventListener('click',()=>voltraCopyLink(voltraLinkForChat(activeId||globalKey)));document.getElementById('shareSettingsLink')?.addEventListener('click',()=>voltraCopyLink(location.origin+'/settings'));setTimeout(()=>{try{voltraResolveDeepLink()}catch(e){console.warn('VOLTRA deep link skipped:',e)}},3500)});
 })();
