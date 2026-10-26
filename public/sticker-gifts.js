@@ -128,7 +128,7 @@ function chocolateSvg(g){
 
 function galaxyHeartSvg(g){
  const palettes={classic:['#ff75da','#9c46f0','#39d9ff'],chrome:['#f5f8ff','#8c9ab6','#d5aaff'],holographic:['#ff8bdb','#58f5ef','#a18bff'],crystal:['#d5fbff','#67a9ff','#e8caff'],neon:['#b9ff52','#43e7c7','#ff5de3'],ember:['#ffb05c','#ff436b','#7e2cff'],ice:['#e4ffff','#69c8ff','#b3a9ff'],shadow:['#a99bcf','#584c87','#ff72cb'],royal:['#ffe79a','#b16aff','#ff83d5'],candy:['#ffb2de','#ff6798','#8cecff']};
- const p=palettes[g.skin]||palettes.classic,n=Math.max(1,Number(g.variant)||1),id='gh'+n;
+ const p=palettes[g.skin]||palettes.classic,n=Math.max(1,Number(g.variant)||1),id='gh'+n+'x'+Math.random().toString(36).slice(2,7);
  const bg={midnight:'#100c29',aurora:'#123744',gold:'#3b241c',rose:'#451b40',ice:'#102e53',custom:'#302053',ember:'#401627',forest:'#12342b',cosmic:'#17103f',violet:'#27103e'}[g.background]||'#100c29';
  const pat=String(g.pattern||'stars');
  let detail='';
