@@ -123,7 +123,6 @@ $('refreshModeration')?.addEventListener('click',loadModerationQueue);$('moderat
 window.addEventListener('beforeunload',()=>{try{send({t:'call-end',to:callPeer})}catch{}if(localStream)localStream.getTracks().forEach(t=>t.stop())});
  checkSession();if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(()=>updatePushButton()).catch(()=>{});
 }
-let registrationId=null;
 async function authenticate(){
  const name=$('nickname').value.trim(),password=$('password').value;
  $('authSubmit').disabled=true;$('loginError').textContent=authMode==='login'?'Входим…':'';
