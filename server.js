@@ -166,6 +166,27 @@ const GIFT_VARIANT_MATERIALS=['Глянцевая эмаль','Галактич�
 }
 if(!Array.isArray(store.galaxyHeartAnnouncements))store.galaxyHeartAnnouncements=[];
 
+// Коллекция «Космический артефакт»: 76 уникальных подарков, постоянные ID и общий лимит выпуска.
+{
+ const skins=['classic','chrome','holographic','crystal','neon','ember','ice','shadow','royal','candy'];
+ const backgrounds=['midnight','aurora','gold','rose','ice','custom','ember','forest','cosmic','violet'];
+ const materials=['Галактическая эмаль','Полированный хром','Голографический опал','Ледяной кристалл','Неоновый титан','Золотая фольга','Перламутр','Обсидиан'];
+ const patterns=['stars','waves','grid','diamonds','sparkles','constellation','ornate','none'];
+ const rarities=['Обычный','Необычный','Редкий','Эпический','Легендарный','Мифический'];
+ let changed=false;
+ for(let i=0;i<76;i++){
+  const n=i+1,id='voltra-cosmic-artifact-'+String(n).padStart(2,'0');
+  let g=store.collectibleGifts.find(v=>v.id===id);
+  const rarity=rarities[Math.min(rarities.length-1,Math.floor(i/13))];
+  const price=[1500,3500,7500,15000,35000,75000][Math.min(5,Math.floor(i/13))];
+  const vals={name:'Космический артефакт · '+String(n).padStart(2,'0'),emoji:'🎁',price,rarity,collectible:true,collection:'cosmic-artifact',variant:n,material:materials[(i*3)%materials.length],skin:skins[(i*7)%skins.length],background:backgrounds[(i*3+Math.floor(i/10))%backgrounds.length],pattern:patterns[(i*5)%patterns.length],ornament:['звезда','кристалл','орбита','комета'][i%4],effect:['sparkles','glow','aura','none'][i%4],intensity:35+(i*9)%56,edition:76,totalSupply:76};
+  if(!g){g={id,...vals,remaining:76,createdAt:Date.now()};store.collectibleGifts.push(g);changed=true}
+  else{for(const [k,v] of Object.entries(vals)){if(g[k]!==v){g[k]=v;changed=true}}if(!Number.isSafeInteger(g.remaining)||g.remaining<0){g.remaining=76;changed=true}}
+ }
+ if(changed)save();
+}
+
+
 if(!store.giftPricingV2){
  const intPrice=n=>Math.max(500,Math.min(1000000,Math.round(n)));
  const between=(n,start,end,min,max)=>min+(max-min)*(end<=start?0:(n-start)/(end-start));
