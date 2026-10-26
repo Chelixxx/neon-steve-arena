@@ -79,9 +79,9 @@ if(!store.collectibleGifts.some(g=>g.id==='voltra-bat-01')){
   const match=String(g.id).match(/(\d+)$/),i=Number(match&&match[1])-1;
   if(i<0||i>=100)continue;
   const row=Math.floor(i/10),col=i%10;
-  const next={skin:batSkins[col],material:batMaterials[row],background:batBackgrounds[(i*7+row*3)%10],pattern:batPatterns[(i*3+row)%10],variant:i+1,price:5000,rarity:batRarities[row],totalSupply:100,edition:100};
+  const next={name:'Bat · '+String(i+1).padStart(2,'0'),skin:batSkins[col],material:batMaterials[row],background:batBackgrounds[(i*7+row*3)%10],pattern:batPatterns[(i*3+row)%10],variant:i+1,price:5000,rarity:batRarities[row],totalSupply:100,edition:100};
   for(const [k,v] of Object.entries(next)){if(g[k]!==v){g[k]=v;batMetadataChanged=true}}
-  if(!g.name||!/^Летучая мышь/.test(g.name)){g.name='Летучая мышь · '+String(i+1).padStart(2,'0');batMetadataChanged=true}
+  if(!g.name||!/^Bat\s*[·#]/i.test(g.name)){g.name='Bat · '+String(i+1).padStart(2,'0');batMetadataChanged=true}
  }
  if(batMetadataChanged)save();
 }
@@ -93,11 +93,77 @@ if(!Array.isArray(store.giftInstances))store.giftInstances=[];
  const backgrounds=['midnight','aurora','gold','rose','ice','custom','ember','forest','cosmic','violet'];
  const patterns=['none','stars','waves','grid','diamonds','runes','bats','spiderweb','leaves','sparkles'];
  const rarities=['Обычный','Обычный','Обычный','Необычный','Необычный','Редкий','Редкий','Эпический','Эпический','Легендарный'];let changed=false;
- for(let i=0;i<100;i++){const n=i+1,id='halloween-pumpkin-'+String(n).padStart(2,'0'),row=Math.floor(i/10),col=i%10;let g=store.collectibleGifts.find(x=>x.id===id);if(!g){g={id,name:'Halloween pumpkin · '+String(n).padStart(2,'0'),emoji:'🎃',price:5000,rarity:rarities[row],collectible:true,edition:100,totalSupply:100,remaining:100,effect:'sparkles',intensity:50,createdAt:Date.now()};store.collectibleGifts.push(g);changed=true}const vals={variant:n,skin:skins[col],material:materials[row],background:backgrounds[(i*7+row*3)%10],pattern:patterns[(i*3+row)%10],rarity:rarities[row],edition:100,totalSupply:100};for(const [k,v] of Object.entries(vals)){if(g[k]!==v){g[k]=v;changed=true}}if(!Number.isSafeInteger(g.price)||g.price<1){g.price=5000;changed=true}}
+ for(let i=0;i<100;i++){const n=i+1,id='halloween-pumpkin-'+String(n).padStart(2,'0'),row=Math.floor(i/10),col=i%10;let g=store.collectibleGifts.find(x=>x.id===id);if(!g){g={id,name:'Halloween pumpkin · '+String(n).padStart(2,'0'),emoji:'🎃',price:5000,rarity:rarities[row],collectible:true,edition:100,totalSupply:100,remaining:100,effect:'sparkles',intensity:50,createdAt:Date.now()};store.collectibleGifts.push(g);changed=true}const vals={name:'Halloween Pumpkin · '+String(n).padStart(2,'0'),variant:n,skin:skins[col],material:materials[row],background:backgrounds[(i*7+row*3)%10],pattern:patterns[(i*3+row)%10],rarity:rarities[row],edition:100,totalSupply:100};for(const [k,v] of Object.entries(vals)){if(g[k]!==v){g[k]=v;changed=true}}if(!Number.isSafeInteger(g.price)||g.price<1){g.price=5000;changed=true}}
  if(changed)save();
 }
 
-function allGiftCatalog(){return [...GIFT_CATALOG.filter(g=>g.id!=='gift-013'&&!/\s+(?:[2-9]|\d{2,})$/.test(String(g.name||''))),...store.collectibleGifts]}
+function isTestGift(g){return /^(?:test|тест)$/i.test(String(g&&g.name||'').trim())}
+const TEST_GIFT_IDS=new Set();
+for(const g of [...GIFT_CATALOG,...store.collectibleGifts,...store.giftInstances]){
+ if(isTestGift(g)&&g.id)TEST_GIFT_IDS.add(String(g.id));
+}
+for(const g of store.giftInstances){
+ if(g.baseGiftId&&TEST_GIFT_IDS.has(String(g.baseGiftId))&&g.id)TEST_GIFT_IDS.add(String(g.id));
+}
+const originalGiftCount=GIFT_CATALOG.length;
+GIFT_CATALOG.splice(0,GIFT_CATALOG.length,...GIFT_CATALOG.filter(g=>!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))));
+let giftDataCleanupChanged=GIFT_CATALOG.length!==originalGiftCount;
+const previousCollectibleCount=store.collectibleGifts.length;
+store.collectibleGifts=store.collectibleGifts.filter(g=>!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id)));
+if(store.collectibleGifts.length!==previousCollectibleCount)giftDataCleanupChanged=true;
+const previousInstanceCount=store.giftInstances.length;
+store.giftInstances=store.giftInstances.filter(g=>!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))&&!(g.baseGiftId&&TEST_GIFT_IDS.has(String(g.baseGiftId))));
+if(store.giftInstances.length!==previousInstanceCount)giftDataCleanupChanged=true;
+for(const u of store.users){
+ const owned=Array.isArray(u.ownedGifts)?u.ownedGifts:[];
+ const equipped=Array.isArray(u.equippedGifts)?u.equippedGifts:[];
+ const nextOwned=owned.filter(id=>!TEST_GIFT_IDS.has(String(id)));
+ const nextEquipped=equipped.filter(id=>!TEST_GIFT_IDS.has(String(id)));
+ if(nextOwned.length!==owned.length){u.ownedGifts=nextOwned;giftDataCleanupChanged=true}
+ if(nextEquipped.length!==equipped.length){u.equippedGifts=nextEquipped;giftDataCleanupChanged=true}
+}
+function allGiftCatalog(){return [...GIFT_CATALOG.filter(g=>g.id!=='gift-013'&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))&&!/\s+(?:[2-9]|\d{2,})$/.test(String(g.name||''))),...store.collectibleGifts.filter(g=>!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id)))]}
+function giftCatalogForUser(uid){
+ const user=store.users.find(u=>u.id===uid),owned=new Set(Array.isArray(user?.ownedGifts)?user.ownedGifts.map(String):[]),globallyOwned=new Set();
+ for(const u of store.users)for(const id of Array.isArray(u.ownedGifts)?u.ownedGifts:[])globallyOwned.add(String(id));
+ const definitions=allGiftCatalog().filter(g=>!g.collectible||!globallyOwned.has(String(g.id)));
+ const ownedDefinitions=allGiftCatalog().filter(g=>owned.has(String(g.id)));
+ const instances=store.giftInstances.filter(g=>g.ownerId===uid&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id)));
+ return [...new Map([...definitions,...ownedDefinitions,...instances].map(g=>[String(g.id),g])).values()];
+}
+function giftHasAnotherOwner(giftId,uid){return store.users.some(u=>u.id!==uid&&Array.isArray(u.ownedGifts)&&u.ownedGifts.includes(String(giftId)))}
+const GIFT_HISTORY_ACTOR_KEYS=['userId','adminId','targetId','buyerId','sellerId','recipientId','giverId','fromId','toId'];
+function giftRecordReferencesMissingUser(record,liveIds){
+ return GIFT_HISTORY_ACTOR_KEYS.some(key=>record&&record[key]!=null&&String(record[key])!==''&&!liveIds.has(String(record[key])));
+}
+function purgeGiftRecordsForDeletedUser(uid){
+ const id=String(uid),actorFields=['userId','adminId','targetId','buyerId','sellerId','recipientId','giverId','fromId','toId'];
+ store.giftTransactions=(store.giftTransactions||[]).filter(t=>!actorFields.some(k=>t&&t[k]!=null&&String(t[k])===id));
+ store.giftResaleListings=(store.giftResaleListings||[]).filter(x=>x.sellerId!==id&&x.buyerId!==id);
+ store.giftResaleOffers=(store.giftResaleOffers||[]).filter(x=>x.buyerId!==id&&x.sellerId!==id);
+ store.giftInstances=(store.giftInstances||[]).filter(x=>String(x.ownerId||'')!==id);
+ store.messages=(store.messages||[]).filter(m=>{
+  if(!(m&&(m.kind==='gift'||m.giftPurchase)))return true;
+  const p=m.giftPurchase||{};
+  return ![m.from,m.to,p.buyerId,p.recipientId,p.giverId].some(v=>v!=null&&String(v)===id);
+ });
+}
+{
+ const liveIds=new Set(store.users.map(u=>String(u.id)));
+ const txBefore=(store.giftTransactions||[]).length,listingBefore=(store.giftResaleListings||[]).length,offerBefore=(store.giftResaleOffers||[]).length,messageBefore=(store.messages||[]).length,instanceBefore=(store.giftInstances||[]).length;
+ store.giftTransactions=(store.giftTransactions||[]).filter(t=>!TEST_GIFT_IDS.has(String(t.giftId||''))&&!TEST_GIFT_IDS.has(String(t.baseGiftId||''))&&!giftRecordReferencesMissingUser(t,liveIds));
+ store.giftResaleListings=(store.giftResaleListings||[]).filter(x=>!TEST_GIFT_IDS.has(String(x.giftId||''))&&!TEST_GIFT_IDS.has(String(x.baseGiftId||''))&&!giftRecordReferencesMissingUser(x,liveIds));
+ store.giftResaleOffers=(store.giftResaleOffers||[]).filter(x=>!TEST_GIFT_IDS.has(String(x.giftId||''))&&!giftRecordReferencesMissingUser(x,liveIds));
+ store.messages=(store.messages||[]).filter(m=>{
+  if(!(m&&(m.kind==='gift'||m.giftPurchase)))return true;
+  const p=m.giftPurchase||{},giftIds=[p.giftId,p.baseGiftId,m.giftId].filter(Boolean).map(String);
+  return !giftIds.some(id=>TEST_GIFT_IDS.has(id))&&!giftRecordReferencesMissingUser({userId:m.from,targetId:m.to,buyerId:p.buyerId,recipientId:p.recipientId,giverId:p.giverId},liveIds);
+ });
+ store.giftInstances=(store.giftInstances||[]).filter(x=>!giftRecordReferencesMissingUser({userId:x.ownerId},liveIds));
+ if((store.giftTransactions||[]).length!==txBefore||(store.giftResaleListings||[]).length!==listingBefore||(store.giftResaleOffers||[]).length!==offerBefore||(store.messages||[]).length!==messageBefore||(store.giftInstances||[]).length!==instanceBefore)giftDataCleanupChanged=true;
+}
+if(giftDataCleanupChanged)save();
+
 const GIFT_VARIANT_SKINS=['classic','chrome','holographic','crystal','neon','ember','ice','shadow','royal','candy'];
 const GIFT_VARIANT_BACKGROUNDS=['midnight','aurora','gold','rose','ice','custom','ember','forest','cosmic','violet'];
 const GIFT_VARIANT_PATTERNS=['none','stars','waves','grid','diamonds','runes','bats','spiderweb','leaves','sparkles'];
@@ -113,7 +179,7 @@ const GIFT_VARIANT_MATERIALS=['Глянцевая эмаль','Галактич�
   const n=i+1,id='voltra-lightning-'+String(n).padStart(3,'0'),row=Math.floor(i/10),col=i%10;
   let g=store.collectibleGifts.find(x=>x.id===id);
   if(!g){
-   g={id,name:'Молния · '+String(n).padStart(3,'0'),emoji:'⚡',price:5000,rarity:rarities[Math.min(9,Math.floor(i/12))],collectible:true,collection:'lightning',baseGiftId:'gift-013',variant:n,shape:Math.floor(i/30)%4+1,skin:skins[col],material:GIFT_VARIANT_MATERIALS[Math.floor(i/10)%GIFT_VARIANT_MATERIALS.length],background:backgrounds[(i*7+Math.floor(i/10))%10],pattern:patterns[(i*3+Math.floor(i/10))%10],effect:['sparkles','glow','confetti','aura','none'][i%5],intensity:45+(i*11)%56,edition:100,totalSupply:100,remaining:100,createdAt:Date.now()};
+   g={id,name:'Lightning · '+String(n).padStart(3,'0'),emoji:'⚡',price:5000,rarity:rarities[Math.min(9,Math.floor(i/12))],collectible:true,collection:'lightning',baseGiftId:'gift-013',variant:n,shape:Math.floor(i/30)%4+1,skin:skins[col],material:GIFT_VARIANT_MATERIALS[Math.floor(i/10)%GIFT_VARIANT_MATERIALS.length],background:backgrounds[(i*7+Math.floor(i/10))%10],pattern:patterns[(i*3+Math.floor(i/10))%10],effect:['sparkles','glow','confetti','aura','none'][i%5],intensity:45+(i*11)%56,edition:100,totalSupply:100,remaining:100,createdAt:Date.now()};
    store.collectibleGifts.push(g);changed=true;
   }
   const vals={name:'Молния · '+String(n).padStart(3,'0'),emoji:'⚡',rarity:rarities[Math.min(9,Math.floor(i/12))],collectible:true,collection:'lightning',baseGiftId:'gift-013',variant:n,shape:Math.floor(i/30)%4+1,skin:skins[col],material:GIFT_VARIANT_MATERIALS[Math.floor(i/10)%GIFT_VARIANT_MATERIALS.length],background:backgrounds[(i*7+Math.floor(i/10))%10],pattern:patterns[(i*3+Math.floor(i/10))%10],edition:100,totalSupply:100};
@@ -135,7 +201,7 @@ const GIFT_VARIANT_MATERIALS=['Глянцевая эмаль','Галактич�
  for(let i=0;i<60;i++){
   const n=i+1,id='voltra-chocolate-'+String(n).padStart(3,'0'),row=Math.floor(i/10),col=i%10;
   let g=store.collectibleGifts.find(x=>x.id===id);
-  if(!g){g={id,name:'Шоколадка · '+String(n).padStart(3,'0'),emoji:'🍫',price:5000,rarity:rarities[Math.min(9,Math.floor(i/6))],collectible:true,collection:'chocolate',variant:n,shape:Math.floor(i/10)%6+1,skin:skins[col],material:chocolateMaterials[row],wrapperColor:wrapperColors[col],background:backgrounds[(i*7+row)%10],pattern:patterns[(i*3+row)%10],effect:['sparkles','glow','confetti','aura','none'][i%5],intensity:45+(i*9)%56,edition:100,totalSupply:100,remaining:100,createdAt:Date.now()};store.collectibleGifts.push(g);changed=true}
+  if(!g){g={id,name:'Chocolate · '+String(n).padStart(3,'0'),emoji:'🍫',price:5000,rarity:rarities[Math.min(9,Math.floor(i/6))],collectible:true,collection:'chocolate',variant:n,shape:Math.floor(i/10)%6+1,skin:skins[col],material:chocolateMaterials[row],wrapperColor:wrapperColors[col],background:backgrounds[(i*7+row)%10],pattern:patterns[(i*3+row)%10],effect:['sparkles','glow','confetti','aura','none'][i%5],intensity:45+(i*9)%56,edition:100,totalSupply:100,remaining:100,createdAt:Date.now()};store.collectibleGifts.push(g);changed=true}
   const vals={name:'Шоколадка · '+String(n).padStart(3,'0'),emoji:'🍫',rarity:rarities[Math.min(9,Math.floor(i/6))],collectible:true,collection:'chocolate',variant:n,shape:Math.floor(i/10)%6+1,skin:skins[col],material:chocolateMaterials[row],wrapperColor:wrapperColors[col],background:backgrounds[(i*7+row)%10],pattern:patterns[(i*3+row)%10],edition:100,totalSupply:100};
   for(const [k,v] of Object.entries(vals)){if(g[k]!==v){g[k]=v;changed=true}}
   if(!Number.isSafeInteger(g.remaining)||g.remaining<0){g.remaining=100;changed=true}
@@ -617,7 +683,7 @@ const server=http.createServer(async(req,res)=>{
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось восстановить аккаунт'})}
  }
  if(req.method==='POST'&&u.pathname==='/api/logout'){clearCookie(res);return json(res,200,{ok:true})}
- if(req.method==='GET'&&/^\/api\/users\/[^/]+\/profile$/.test(u.pathname)){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});const target=userById(decodeURIComponent(u.pathname.split('/')[3]||'')),viewer=userById(uid);if(!target)return json(res,404,{error:'Пользователь не найден'});const isAdmin=!!viewer?.admin,hasConversation=store.messages.some(m=>(m.from===target.id&&m.to===uid)||(m.from===uid&&m.to===target.id));if(target.hideFromUnmessaged&&!isAdmin&&!hasConversation&&target.id!==uid&&u.searchParams.get('viaUsername')!=='1')return json(res,404,{error:'Этот профиль скрыт от пользователей, которым владелец ещё не писал'});const gifts=(target.ownedGifts||[]).map(id=>allGiftCatalog().find(g=>g.id===id)).filter(Boolean);const giftHistory=(store.giftTransactions||[]).filter(t=>(t.type==='gift-send'&&t.targetId===target.id)||(t.type==='admin-gift-grant'&&t.userId===target.id)).slice(-100).reverse().map(t=>{const g=GIFT_CATALOG.find(x=>x.id===t.giftId);const giver=userById(t.adminId)||userById(t.userId);return g?{id:t.id,name:g.name,emoji:g.emoji,rarity:g.rarity,price:g.price,giverName:t.giverName||giver?.name||'Администратор',at:t.at}:null}).filter(Boolean);return json(res,200,{profile:{...publicUser(target),bio:target.bio||'',ownedGifts:target.ownedGifts||[],giftCount:gifts.length},gifts,giftHistory})}
+ if(req.method==='GET'&&/^\/api\/users\/[^/]+\/profile$/.test(u.pathname)){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});const target=userById(decodeURIComponent(u.pathname.split('/')[3]||'')),viewer=userById(uid);if(!target)return json(res,404,{error:'Пользователь не найден'});const isAdmin=!!viewer?.admin,hasConversation=store.messages.some(m=>(m.from===target.id&&m.to===uid)||(m.from===uid&&m.to===target.id));if(target.hideFromUnmessaged&&!isAdmin&&!hasConversation&&target.id!==uid&&u.searchParams.get('viaUsername')!=='1')return json(res,404,{error:'Этот профиль скрыт от пользователей, которым владелец ещё не писал'});const gifts=(target.ownedGifts||[]).map(id=>giftForUser(target,id)).filter(Boolean);const giftHistory=(store.giftTransactions||[]).filter(t=>(t.type==='gift-send'&&t.targetId===target.id)||(t.type==='admin-gift-grant'&&t.userId===target.id)).slice(-100).reverse().map(t=>{const g=giftForUser(target,t.giftId)||allGiftCatalog().find(x=>x.id===t.giftId);const giver=userById(t.adminId)||userById(t.userId);return g?{id:t.id,name:g.name,emoji:g.emoji,rarity:g.rarity,price:g.price,giverName:t.giverName||giver?.name||'Администратор',at:t.at}:null}).filter(Boolean);return json(res,200,{profile:{...publicUser(target),bio:target.bio||'',ownedGifts:target.ownedGifts||[],giftCount:gifts.length},gifts,giftHistory})}
  if(req.method==='POST'&&/^\/api\/posts\/[^/]+\/react$/.test(u.pathname)){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});
   try{const postId=decodeURIComponent(u.pathname.split('/')[3]||''),post=store.posts.find(p=>p.id===postId);if(!post)return json(res,404,{error:'Пост не найден'});const b=await parseBody(req),emoji=String(b.emoji||'');if(!['❤️','😂','🔥','👍','👏','😮'].includes(emoji))return json(res,400,{error:'Эта реакция не поддерживается'});if(!post.reactions||typeof post.reactions!=='object')post.reactions={};if(!Array.isArray(post.reactions[emoji]))post.reactions[emoji]=[];const list=post.reactions[emoji],i=list.indexOf(uid);if(i>=0)list.splice(i,1);else list.push(uid);save();broadcast({t:'news-post-updated',post});const author=post.authorId?userById(post.authorId):store.users.find(x=>x.name.toLowerCase()===String(post.author||'').toLowerCase());if(i<0&&author&&author.id!==uid)void sendPush(author.id,{title:'❤️ Реакция на твой пост',body:userById(uid).name+' поставил реакцию '+emoji,url:'/'});return json(res,200,{ok:true,post})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось поставить реакцию'})}
@@ -722,7 +788,7 @@ const server=http.createServer(async(req,res)=>{
    for(const c of store.channels)if(Array.isArray(c.members))c.members=c.members.filter(id=>id!==targetId);
    store.users=store.users.filter(u=>u.id!==targetId);
    delete store.pushSubscriptions[targetId];delete store.cookieClickers[targetId];
-   store.giftTransactions=store.giftTransactions.filter(t=>t.userId!==targetId&&t.adminId!==targetId);
+   purgeGiftRecordsForDeletedUser(targetId);
    delete store.messageHides[targetId];
    save();
    broadcast({t:'messages-deleted',ids:[...removedIds]});
@@ -856,7 +922,7 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
    order.status=decision==='full'?'approved':'partial_approved';order.reviewedAt=Date.now();order.reviewedBy=uid;order.granted=true;let referralBonus=null;if(target.referrerId&&!target.referralRewardedAt){const inviter=userById(target.referrerId);if(inviter&&inviter.id!==target.id){inviter.pulses=(Number(inviter.pulses)||0)+500;target.pulses=(Number(target.pulses)||0)+500;target.referralRewardedAt=Date.now();target.referralRewardOrderId=order.id;referralBonus={inviterId:inviter.id,inviteeId:target.id,amount:500};notifyUser(inviter.id,'🎉 Бонус за приглашение','Твой друг совершил первую подтверждённую покупку! Начислено 500 ϟ.',{referralBonus:true});notifyUser(target.id,'🎁 Бонус новичка','Спасибо за первый заказ! Начислено 500 ϟ бонусом за приглашение.',{referralBonus:true});}}save();notifyUser(order.uid,'✅ Оплата подтверждена',order.kind==='vlt'?'Начислено '+Number(order.grantedAmount).toLocaleString('ru-RU')+' ϟ по заказу '+order.title: 'VOLTRA VIP активирован по подтверждённой оплате.',{paymentOrderId:order.id});return json(res,200,{ok:true,status:order.status,grantedAmount:order.grantedAmount||null,paidRub:order.paidRub});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось обработать заказ'})}
  }
- if(req.method==='GET'&&u.pathname==='/api/gifts'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});const user=userById(uid);return json(res,200,{catalog:[...allGiftCatalog(),...store.giftInstances.filter(g=>g.ownerId===uid)],balance:user.pulses||0,catCoins:user.catCoins||0,owned:user.ownedGifts||[],equipped:user.equippedGifts||[],admin:!!user.admin})}
+ if(req.method==='GET'&&u.pathname==='/api/gifts'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});const user=userById(uid);return json(res,200,{catalog:giftCatalogForUser(uid),balance:user.pulses||0,catCoins:user.catCoins||0,owned:user.ownedGifts||[],equipped:user.equippedGifts||[],admin:!!user.admin})}
  if(req.method==='POST'&&u.pathname==='/api/gifts/admin/create-collectible'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   if(!isAdmin(userById(uid)))return json(res,403,{error:'Создавать коллекционные подарки может только администратор'});
@@ -903,7 +969,7 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
    return json(res,200,{ok:true,announced:true});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось обработать объявление'})}
  }
- if(req.method==='POST'&&u.pathname==='/api/gifts/buy'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});try{const b=await parseBody(req),user=userById(uid),gift=allGiftCatalog().find(g=>g.id===String(b.giftId||'')),currency=b.currency==='cat'?'cat':'vlt';if(!gift||gift.ownedInstance)return json(res,404,{error:'Подарок не найден'});if(!Array.isArray(user.ownedGifts))user.ownedGifts=[];if(!Number.isFinite(user.pulses)||user.pulses<0||user.pulses>Number.MAX_SAFE_INTEGER)user.pulses=0;if(!Number.isFinite(user.catCoins)||user.catCoins<0)user.catCoins=0;const price=currency==='cat'?Number(gift.recommendedPriceCat||0):Number(gift.price);if(!Number.isSafeInteger(price)||price<1||price>(currency==='cat'?999999:99999999))return json(res,400,{error:'Недопустимая цена коллекционного подарка'});if(gift.collectible&&gift.remaining<=0)return json(res,409,{error:'Тираж этого подарка закончился'});if(gift.collectible&&user.ownedGifts.includes(gift.id))return json(res,409,{error:'Этот коллекционный подарок уже есть'});if(currency==='cat'&&gift.collection!=='galaxy-heart')return json(res,400,{error:'Оплата CAT пока доступна только для коллекции «Сердце Галактики»'});if(currency==='cat'&&user.catCoins<price)return json(res,400,{error:'Не хватает CAT'});if(currency==='vlt'&&user.pulses<price)return json(res,400,{error:'Не хватает Вольтриксов'});if(gift.collectible&&!reserveCollectible(gift))return json(res,409,{error:'Тираж этого подарка закончился'});if(currency==='cat'){user.catCoins=Math.round((user.catCoins-price)*1000000)/1000000;if(!Array.isArray(store.catCoinTransactions))store.catCoinTransactions=[];store.catCoinTransactions.push({id:crypto.randomUUID(),type:'gift-purchase',fromId:uid,toId:uid,cat:price,vlt:0,giftId:gift.id,at:Date.now()})}else user.pulses-=price;const purchased=gift.collectible?gift:makeGiftInstance(gift,uid,b.variant);user.ownedGifts.push(purchased.id);store.giftTransactions.push({id:crypto.randomUUID(),type:'purchase',userId:uid,giftId:purchased.id,baseGiftId:gift.id,amount:-price,currency,priceVlt:Number(gift.price)||0,priceCat:Number(gift.recommendedPriceCat)||0,variant:purchased.variant||0,at:Date.now()});save();sendUser(uid,{t:'pulses-updated',pulses:user.pulses});sendUser(uid,{t:'catcoin-updated',catCoins:user.catCoins});notifyUser(uid,'🎁 Покупка подарка','Ты купил(а) '+purchased.emoji+' '+purchased.name+' за '+price.toLocaleString('ru-RU')+' '+(currency==='cat'?'CAT':'ϟ'),{giftId:purchased.id,price,currency});return json(res,200,{ok:true,balance:user.pulses,catCoins:user.catCoins,owned:user.ownedGifts,item:purchased,paid:price,currency})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось купить подарок'})}}
+ if(req.method==='POST'&&u.pathname==='/api/gifts/buy'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});try{const b=await parseBody(req),user=userById(uid),gift=allGiftCatalog().find(g=>g.id===String(b.giftId||'')),currency=b.currency==='cat'?'cat':'vlt';if(!gift||gift.ownedInstance)return json(res,404,{error:'Подарок не найден'});if(gift.collectible&&store.users.some(u=>Array.isArray(u.ownedGifts)&&u.ownedGifts.includes(gift.id)))return json(res,409,{error:'Этот уникальный подарок уже принадлежит игроку. Проверь маркет.'});if(!Array.isArray(user.ownedGifts))user.ownedGifts=[];if(!Number.isFinite(user.pulses)||user.pulses<0||user.pulses>Number.MAX_SAFE_INTEGER)user.pulses=0;if(!Number.isFinite(user.catCoins)||user.catCoins<0)user.catCoins=0;const price=currency==='cat'?Number(gift.recommendedPriceCat||0):Number(gift.price);if(!Number.isSafeInteger(price)||price<1||price>(currency==='cat'?999999:99999999))return json(res,400,{error:'Недопустимая цена коллекционного подарка'});if(gift.collectible&&gift.remaining<=0)return json(res,409,{error:'Тираж этого подарка закончился'});if(gift.collectible&&user.ownedGifts.includes(gift.id))return json(res,409,{error:'Этот коллекционный подарок уже есть'});if(gift.collectible&&giftHasAnotherOwner(gift.id,uid))return json(res,409,{error:'Этот уникальный подарок уже принадлежит другому игроку. Проверь маркет.'});if(currency==='cat'&&gift.collection!=='galaxy-heart')return json(res,400,{error:'Оплата CAT пока доступна только для коллекции «Сердце Галактики»'});if(currency==='cat'&&user.catCoins<price)return json(res,400,{error:'Не хватает CAT'});if(currency==='vlt'&&user.pulses<price)return json(res,400,{error:'Не хватает Вольтриксов'});if(gift.collectible&&!reserveCollectible(gift))return json(res,409,{error:'Тираж этого подарка закончился'});if(currency==='cat'){user.catCoins=Math.round((user.catCoins-price)*1000000)/1000000;if(!Array.isArray(store.catCoinTransactions))store.catCoinTransactions=[];store.catCoinTransactions.push({id:crypto.randomUUID(),type:'gift-purchase',fromId:uid,toId:uid,cat:price,vlt:0,giftId:gift.id,at:Date.now()})}else user.pulses-=price;const purchased=gift.collectible?gift:makeGiftInstance(gift,uid,b.variant);user.ownedGifts.push(purchased.id);store.giftTransactions.push({id:crypto.randomUUID(),type:'purchase',userId:uid,giftId:purchased.id,baseGiftId:gift.id,amount:-price,currency,priceVlt:Number(gift.price)||0,priceCat:Number(gift.recommendedPriceCat)||0,variant:purchased.variant||0,at:Date.now()});save();sendUser(uid,{t:'pulses-updated',pulses:user.pulses});sendUser(uid,{t:'catcoin-updated',catCoins:user.catCoins});notifyUser(uid,'🎁 Покупка подарка','Ты купил(а) '+purchased.emoji+' '+purchased.name+' за '+price.toLocaleString('ru-RU')+' '+(currency==='cat'?'CAT':'ϟ'),{giftId:purchased.id,price,currency});return json(res,200,{ok:true,balance:user.pulses,catCoins:user.catCoins,owned:user.ownedGifts,item:purchased,paid:price,currency})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось купить подарок'})}}
  if(req.method==='POST'&&u.pathname==='/api/gifts/transfer'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   try{
