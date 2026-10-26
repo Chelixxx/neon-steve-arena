@@ -382,8 +382,7 @@ const server=http.createServer(async(req,res)=>{
    if(password.length<8||password.length>200)return json(res,400,{error:'Пароль должен быть не короче 8 символов'});
    let user=userByName(name);
    if(u.pathname==='/api/register'){
-    return json(res,400,{error:'Регистрация теперь требует подтверждения номера по SMS. Используй форму регистрации в приложении.'});
-    if(user)return json(res,409,{error:'Этот ник уже занят'});
+     if(user)return json(res,409,{error:'Этот ник уже занят'});
     const salt=crypto.randomBytes(16).toString('hex');user={id:crypto.randomUUID(),name,username:makeUsername(),salt,hash:passwordHash(password,salt),createdAt:Date.now()};store.users.push(user);trackDevice(user,req);save();
    }else{
     if(!user)return json(res,401,{error:'Неверный ник или пароль'});
