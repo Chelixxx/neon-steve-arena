@@ -382,6 +382,7 @@ const server=http.createServer(async(req,res)=>{
    if(password.length<8||password.length>200)return json(res,400,{error:'Пароль должен быть не короче 8 символов'});
    let user=userByName(name);
    if(u.pathname==='/api/register'){
+    return json(res,400,{error:'Регистрация теперь требует подтверждения номера по SMS. Используй форму регистрации в приложении.'});
     if(user)return json(res,409,{error:'Этот ник уже занят'});
     const salt=crypto.randomBytes(16).toString('hex');user={id:crypto.randomUUID(),name,username:makeUsername(),salt,hash:passwordHash(password,salt),createdAt:Date.now()};store.users.push(user);trackDevice(user,req);save();
    }else{
@@ -394,7 +395,7 @@ const server=http.createServer(async(req,res)=>{
    setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,username:user.username||''}})
   }catch(e){return json(res,e.status||400,{error:e.message||'Ошибка запроса'})}
  }
- if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);if(!user)return json(res,401,{error:'Не авторизован'});return json(res,200,{user:{id:user.id,name:user.name,username:user.username||''}})}
+ if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);if(!user)return json(res,401,{error:'Не авторизован'});return json(res,200,{user:{id:user.id,name:user.name,username:user.username||'',phoneVerified:!!user.phoneVerified,phone:user.phone||''}})}
  if(req.method==='GET'&&u.pathname==='/api/catcoin'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   const user=userById(uid);if(!user)return json(res,401,{error:'Пользователь не найден'});
