@@ -138,7 +138,20 @@ async function authenticate(){
  }catch(e){$('loginError').textContent=e.message||'Ошибка соединения'}finally{$('authSubmit').disabled=false}
 }
 async function checkSession(){
- try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect()}catch{}
+ try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();setTimeout(()=>requestPushPermissionOnEntry(),900)}catch{}
+}
+async function requestPushPermissionOnEntry(){
+ if(!myId||!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window))return;
+ if(Notification.permission!=='default')return;
+ try{
+  const permission=await Notification.requestPermission();
+  if(permission!=='granted')return;
+  const reg=await navigator.serviceWorker.register('/sw.js');let sub=await reg.pushManager.getSubscription();
+  if(sub)return;
+  const kr=await fetch('/api/push/public-key',{credentials:'same-origin'}),kd=await kr.json();if(!kr.ok||!kd.publicKey)return;
+  sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToBytes(kd.publicKey)});
+  const r=await fetch('/api/push/subscribe',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({subscription:sub.toJSON()})});if(!r.ok)await sub.unsubscribe();else{updatePushButton();toast('Пуш-уведомления включены 🔔')}
+ }catch(e){console.warn('Push permission on entry:',e)}
 }
 async function logout(){
  if(!confirm('Выйти из аккаунта на этом устройстве?'))return;
