@@ -256,22 +256,11 @@ for(const user of store.users){
 if(legacyGiftInstancesMigrated)save();
 
 if(!store.giftCleanupAllUsersV1){
- let clearedEntries=0,clearedUsers=0;
- for(const user of store.users){
-  const count=(Array.isArray(user.ownedGifts)?user.ownedGifts.length:0)+(Array.isArray(user.equippedGifts)?user.equippedGifts.length:0);
-  if(count)clearedUsers++;
-  clearedEntries+=Array.isArray(user.ownedGifts)?user.ownedGifts.length:0;
-  user.ownedGifts=[];
-  user.equippedGifts=[];
- }
- store.giftInstances=[];
- for(const listing of store.giftResaleListings||[])if(listing.status==='active'){listing.status='cancelled';listing.cancelledAt=Date.now();listing.cancelReason='gift-inventory-cleanup'}
- for(const offer of store.giftResaleOffers||[])if(offer.status==='pending')offer.status='closed';
- for(const gift of store.collectibleGifts||[]){const total=Number(gift.totalSupply||gift.edition||100);if(Number.isSafeInteger(total)&&total>0)gift.remaining=total}
+ // Non-destructive migration marker: preserve all existing owned gifts, equipped gifts and resale listings.
+ const preservedOwnedEntries=store.users.reduce((n,u)=>n+(Array.isArray(u.ownedGifts)?u.ownedGifts.length:0),0);
  store.giftCleanupAllUsersV1=true;
- store.giftCleanupSummary={at:Date.now(),usersWithGifts:clearedUsers,ownedGiftEntries:clearedEntries};
+ store.giftCleanupSummary={at:Date.now(),preservationMode:true,preservedOwnedGiftEntries:preservedOwnedEntries};
  save();
- console.log('Gift inventory cleanup completed: '+clearedEntries+' owned gifts cleared across '+clearedUsers+' users; balances and messages preserved.');
 }
 
 
