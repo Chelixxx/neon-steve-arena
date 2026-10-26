@@ -197,3 +197,44 @@ body.volt-viewer-open{overflow:hidden}
 .bat-feature{border-color:#5485ff;background:linear-gradient(120deg,#10264a,#231439)}
 @media(max-width:900px){.bat-feature>.bat-svg{width:76px;height:76px;flex-basis:76px}}
 @media(max-width:520px){.gift-art:has(> .bat-svg){width:84px;height:84px;flex-basis:84px}.profile-gift:has(> .bat-svg){width:36px;height:36px;min-width:36px;flex-basis:36px}.bat-feature>.bat-svg{width:62px;height:62px;flex-basis:62px}.bat-large{width:min(270px,72vw)}}
+
+/* Unique sticker gifts, style picker and individualized 3D inspection */
+.gift-sticker-svg{display:block;width:100%;height:100%;object-fit:contain;overflow:visible;filter:drop-shadow(0 6px 10px #0007)}
+.gift-art:has(>.gift-sticker-svg){padding:0;overflow:hidden;border-radius:18px}
+.gift-art:has(>.gift-sticker-svg)>.gift-sticker-svg{width:100%;height:100%}
+.gift-variant-backdrop{display:none;position:fixed;inset:0;z-index:100010;background:#070711ef;backdrop-filter:blur(18px);padding:clamp(10px,3vw,28px);overflow:auto;color:#fff}
+.gift-variant-backdrop.show{display:grid;place-items:center}
+.gift-variant-panel{width:min(900px,100%);max-height:94dvh;overflow:auto;box-sizing:border-box;padding:clamp(14px,2.8vw,26px);border:1px solid #8270e566;border-radius:24px;background:radial-gradient(ellipse at 15% 0,#37245c,#171627 50%,#11121f);box-shadow:0 24px 90px #000c}
+.gift-variant-panel>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.gift-variant-panel header small{color:#a8f2f1;font-weight:800;letter-spacing:1.5px;font-size:10px}
+.gift-variant-panel header h2{margin:4px 0;font-size:22px}
+.gift-variant-panel header p{margin:3px 0;color:#bcb9d5;font-size:12px}
+.gift-variant-panel header>button{width:42px;height:42px;border:1px solid #fff3;border-radius:50%;background:#ffffff10;color:#fff;font-size:25px}
+.gift-variant-preview{display:flex;align-items:center;gap:15px;padding:12px;margin-bottom:14px;border:1px solid #ffffff18;border-radius:17px;background:#ffffff08}
+.gift-variant-preview>.gift-sticker-svg{width:112px;height:112px;flex:0 0 112px}
+.gift-variant-preview>div{display:grid;gap:6px}
+.gift-variant-preview>div b{font-size:17px}.gift-variant-preview small{font-size:12px;color:#bebcda}
+.gift-variant-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.gift-variant-option{min-width:0;padding:7px;border:1px solid #ffffff1c;border-radius:14px;background:#ffffff08;color:#fff;display:flex;align-items:center;flex-direction:column;gap:4px;cursor:pointer}
+.gift-variant-option.active{border-color:#70f1ed;box-shadow:0 0 0 2px #70f1ed2a,0 0 22px #70f1ed18;background:#4ed6d41a}
+.gift-variant-option>.gift-sticker-svg{width:100%;aspect-ratio:1}
+.gift-variant-option b{font-size:12px}.gift-variant-option small{font-size:10px;text-align:center;color:#bdbbd6}
+.gift-variant-actions{display:flex;gap:9px;margin-top:16px}.gift-variant-actions button{flex:1;min-height:44px}
+.send-gift-card{max-width:470px}
+.send-gift-preview{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:#ffffff0b;border:1px solid #ffffff20}
+.send-gift-preview>div{display:grid;gap:5px}.send-gift-preview b{font-size:14px}.send-gift-preview small{font-size:11px;color:#c4c3dc}
+.send-gift-variant-art{display:block;width:78px;height:78px;flex:0 0 78px}.send-gift-variant-art>.gift-sticker-svg,.send-gift-variant-art>.pumpkin-svg,.send-gift-variant-art>.bat-svg{width:100%;height:100%}
+.send-gift-variant-change{width:100%;margin:9px 0}
+#sendGiftMessage{resize:vertical;min-height:74px}
+.gift-purchase-card{overflow:hidden;position:relative;border-color:#a89bff8c;background:radial-gradient(ellipse at 15% 0,#45316c,#181c31 65%,#12323b);box-shadow:0 12px 32px #0004}
+.gift-purchase-art{gap:13px;align-items:center}
+.gift-purchase-emoji{display:grid;place-items:center;width:80px;height:80px;flex:0 0 80px;border-radius:18px;background:#ffffff08}
+.gift-purchase-emoji>.gift-sticker-svg,.gift-purchase-emoji>.pumpkin-svg,.gift-purchase-emoji>.bat-svg{width:100%;height:100%;filter:drop-shadow(0 5px 8px #0006)}
+.gift-purchase-note{margin-top:10px;padding:10px 12px;border:1px solid #ffffff22;border-radius:12px;background:#ffffff09;font-size:13px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.gift3d-object-face.gift3d-custom-face{display:grid;place-items:center;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;font-size:0!important;text-shadow:none!important;overflow:visible;filter:drop-shadow(0 3px 0 #0008) drop-shadow(0 7px 0 #0008) drop-shadow(0 15px 18px #0009)}
+.gift3d-object-face.gift3d-custom-face>svg{display:block;width:100%;height:100%;overflow:visible}
+.gift3d-object[data-kind="pumpkin"]{width:min(67vw,310px);height:min(67vw,310px)}
+.gift3d-object[data-kind="bat"]{width:min(68vw,320px);height:min(62vw,300px)}
+.gift3d-object[data-kind="sticker"]{width:min(65vw,290px);height:min(65vw,290px)}
+.gift3d-particle{color:var(--gift3d-accent,#cbb8ff)!important}
+@media(max-width:560px){.gift-variant-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.gift-variant-preview>.gift-sticker-svg{width:84px;height:84px;flex-basis:84px}.gift-variant-panel header h2{font-size:18px}.gift-purchase-emoji{width:64px;height:64px;flex-basis:64px}}
