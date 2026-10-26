@@ -95,7 +95,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('mediaViewer')){e
  document.querySelectorAll('[data-chat-bg]').forEach(b=>b.addEventListener('click',()=>{const bg=b.dataset.chatBg;applyChatBackground(bg,currentKey());hideModal('chatBackgroundModal');toast('Фон чата изменён 🎨');if(isDM())send({t:'message',kind:'background-invite',background:bg,text:'🎨 Предлагаю тебе такой же фон чата',to:activeId})}));
  $('formatToolbar').addEventListener('mousedown',e=>e.preventDefault());$('formatToolbar').addEventListener('click',e=>{const b=e.target.closest('[data-format]');if(!b)return;const input=$('messageInput'),mark=b.dataset.format,start=input.selectionStart,end=input.selectionEnd;if(start===end){toast('Сначала выдели текст');return}const selected=input.value.slice(start,end),replacement=mark+selected+mark;input.setRangeText(replacement,start,end,'select');input.focus();input.setSelectionRange(start+mark.length,start+mark.length+selected.length);showFormatToolbar()});$('messageInput').addEventListener('select',showFormatToolbar);$('messageInput').addEventListener('keyup',showFormatToolbar);document.addEventListener('selectionchange',()=>{if(document.activeElement===$('messageInput'))showFormatToolbar()});
  $('messageInput').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submitMessage()}else send({t:'typing',to:isDM()?activeId:null})};
- $('messageInput').oninput=()=>{const el=$('messageInput');el.style.height='auto';el.style.height=Math.min(el.scrollHeight,130)+'px'};
+ $('messageInput').oninput=()=>{const el=$('messageInput'),messages=$('messages'),before=messages?.scrollTop,atBottom=messages?messages.scrollHeight-messages.scrollTop-messages.clientHeight<100:false,windowY=window.scrollY;el.style.height='auto';el.style.height=Math.min(el.scrollHeight,130)+'px';requestAnimationFrame(()=>{if(messages){if(atBottom)messages.scrollTop=messages.scrollHeight;else if(Number.isFinite(before))messages.scrollTop=before}if(window.scrollY!==windowY)window.scrollTo({top:windowY,behavior:'instant'})})};
  $('attach').onclick=()=>showModal('attachChoiceModal');$('chooseGallery').onclick=()=>{hideModal('attachChoiceModal');$('galleryInput').click()};$('chooseFileManager').onclick=()=>{hideModal('attachChoiceModal');$('fileInput').click()};$('appIconFile').onchange=()=>{readPersonalAppIcon($('appIconFile').files?.[0]);$('appIconFile').value=''};$('resetAppIcon').onclick=()=>{localStorage.removeItem('voltraPersonalIcon');applyPersonalAppIcon();toast('Стандартная иконка восстановлена')};
  $('settingBiomeIcon')?.addEventListener('change',e=>applyBiomeIconTheme(e.target.value,true));
  $('composeFiles')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-compose-file]');if(b){pendingComposeFiles.splice(Number(b.dataset.removeComposeFile),1);renderComposeFiles()}});
@@ -473,6 +473,31 @@ async function togglePushNotifications(){const btn=$('pushNotifications'),status
 async function reactToPost(id,emoji){try{const r=await fetch('/api/posts/'+encodeURIComponent(id)+'/react',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify({emoji})}),d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось поставить реакцию');if(!d.post||d.post.id!==id)throw new Error('Сервер не подтвердил реакцию');const i=newsPosts.findIndex(p=>p.id===d.post.id);if(i>=0)newsPosts[i]=d.post;else newsPosts.unshift(d.post);renderList()}catch(e){toast(e.message||'Ошибка реакции')}}
 async function cookieRequest(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:body?{'content-type':'application/json'}:{},credentials:'same-origin',body:body?JSON.stringify(body):undefined}),d=await r.json();if(!r.ok)throw new Error(d.error||'Ошибка печеньки');return d}
 async function loadCookieStatus(){try{const d=await cookieRequest('/api/cookie/status');cookieStats={clicks:d.clicks||0,pulses:d.pulses||0};cookieCaptcha=d.captchaRequired?{question:d.question||'Реши пример'}:null;renderCookieBot()}catch(e){toast(e.message)}}
+let cookieActionBusy=false;
+async function clickCookie(){
+ if(cookieActionBusy)return;
+ const button=document.querySelector('[data-cookie-click]');
+ if(!button)return;
+ cookieActionBusy=true;button.disabled=true;button.classList.add('cookie-clicking');
+ try{
+  const d=await cookieRequest('/api/cookie/click',{});
+  cookieStats={clicks:Number(d.clicks)||0,pulses:Number(d.pulses)||0};
+  cookieCaptcha=d.captchaRequired?{question:d.question||'Solve the math question'}:null;
+  if(Number(d.awarded)>0)toast('🍪 +1 Volttrix! Keep going!');
+  renderCookieBot();
+ }catch(e){toast(e.message||'Cookie click failed')}
+ finally{cookieActionBusy=false;const next=document.querySelector('[data-cookie-click]');if(next)next.disabled=false}
+}
+async function submitCookieCaptcha(){
+ const input=$('cookieCaptchaAnswer');if(!input)return;
+ const answer=input.value.trim();if(!answer){input.focus();return}
+ const button=document.querySelector('[data-cookie-captcha-submit]');if(button)button.disabled=true;
+ try{
+  const d=await cookieRequest('/api/cookie/captcha',{answer});
+  cookieStats={clicks:Number(d.clicks)||cookieStats.clicks,pulses:Number(d.pulses)||cookieStats.pulses};
+  cookieCaptcha=null;toast('Verification passed ✓ You can keep earning Volttrix!');renderCookieBot();
+ }catch(e){toast(e.message||'Verification failed');if(button)button.disabled=false;input.focus();input.select()}
+}
 function renderCookieBot(){const el=$('messages');if(!el)return;const clicks=Number(cookieStats.clicks)||0,progress=clicks%30;el.innerHTML='<div class="cookie-game"><div class="cookie-game-kicker">VOLTRA MINI GAME</div><h2>🍪 Печенька</h2><p>Нажимай на печеньку: каждые <b>30 кликов</b> начисляется <b>1 Вольтрикс ϟ</b>.</p><button class="cookie-big" data-cookie-click aria-label="Кликнуть печеньку">🍪<span>КЛИК!</span></button><div class="cookie-stats"><div><small>Всего кликов</small><b>'+clicks.toLocaleString('ru-RU')+'</b></div><div><small>До Вольтрикса</small><b>'+(30-progress===30?30:30-progress)+'</b></div><div><small>Баланс</small><b>'+Number(cookieStats.pulses||0).toLocaleString('ru-RU')+' ϟ</b></div></div><div class="cookie-progress"><i style="width:'+(progress/30*100)+'%"></i></div>'+(cookieCaptcha?'<div class="cookie-captcha"><b>🛡️ Проверка каждые 300 кликов</b><p>'+esc(cookieCaptcha.question)+'</p><div><input id="cookieCaptchaAnswer" inputmode="numeric" placeholder="Ответ" maxlength="3"><button data-cookie-captcha-submit>Проверить</button></div><small>После проверки продолжишь зарабатывать Вольтриксы.</small></div>':'<small class="muted">Следующая проверка — на 300, 600, 900… кликах.</small>')+'</div>';el.scrollTop=el.scrollHeight}
 async function loadCryptoBot(target){const el=target||document.querySelector('.cat-miniapp-body')||$('messages');try{const r=await fetch('/api/catcoin',{cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось загрузить кошелёк');if(el.classList?.contains('cat-miniapp-body'))renderCatWallet(d,el);else renderCryptoBot(d,el)}catch(e){if(el)el.innerHTML='<div class="cookie-game"><h2>🐱 Крипто бот</h2><p>'+esc(e.message)+'</p><button data-crypto-action="refresh">Повторить</button></div>'}}
 function renderCryptoBot(d,target){const el=target||$('messages');if(!el)return;const w=d.wallet,security=d.security||{configured:false};el.innerHTML='<div class="cookie-game"><div class="cookie-game-kicker">VOLTRA BOT · CAT</div><div class="cat-bot-message"><div class="cat-bot-avatar">🐱</div><div class="cat-bot-bubble"><b>Добро пожаловать в CAT Crypto!</b><p>Здесь ты можешь управлять своими CAT, обменивать Вольтриксы и защищать кошелёк PIN-кодом.</p><p>Нажми <b>«Открыть»</b>, чтобы запустить мини-приложение CAT Wallet.</p></div></div><button type="button" class="cat-open-app" data-crypto-open>↗ Открыть CAT Wallet</button><div class="cat-bot-hint">Мини-приложение • безопасный доступ к функциям CAT</div></div>'}
