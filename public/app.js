@@ -553,7 +553,17 @@ async function refreshPaymentRequestBadge(){
   document.querySelectorAll('.payment-requests-nav').forEach(el=>el.title='Заявки на оплату: '+count);
  }catch{}
 }
-document.addEventListener('click',async e=>{const b=e.target.closest('[data-nav-action="referrals"]');if(!b)return;e.preventDefault();try{const r=await fetch('/api/referrals/me',{credentials:'same-origin',cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.error||'Не удалось загрузить ссылку');const text='Приглашай друзей в VOLTRA! После первой подтверждённой покупки вы оба получите 500 ϟ бонусом 💜 '+d.link; if(navigator.share){try{await navigator.share({title:'Приглашение в VOLTRA',text,url:d.link})}catch(err){if(err.name==='AbortError')return;}}else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(d.link);alert('Ссылка скопирована! 📋\n'+d.link+'\n\nПриглашено: '+d.invited+' · Бонус выдан: '+d.rewarded+'\nЗа первую подтверждённую покупку друга вы оба получите 500 ϟ.')}else{prompt('Скопируй ссылку-приглашение',d.link)}}catch(err){alert(err.message||'Сначала войди в VOLTRA')}});\ndocument.addEventListener('click',e=>{const b=e.target.closest('[data-nav-action="payment-requests"]');if(!b)return;e.preventDefault();location.href='/admin-payments.html'},true);
+document.addEventListener('click',async e=>{
+ const b=e.target.closest('[data-nav-action="referrals"]');if(!b)return;e.preventDefault();
+ try{
+  const r=await fetch('/api/referrals/me',{credentials:'same-origin',cache:'no-store'});const d=await r.json();
+  if(!r.ok)throw Error(d.error||'Не удалось загрузить ссылку');
+  if(navigator.share){try{await navigator.share({title:'Приглашение в VOLTRA',text:'После первой подтверждённой покупки вы оба получите 500 ϟ бонусом 💜',url:d.link});return}catch(err){if(err.name==='AbortError')return}}
+  if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(d.link);alert('Ссылка скопирована! Приглашено: '+d.invited+'. Бонус выдан: '+d.rewarded+'. За первую подтверждённую покупку друга вы оба получите 500 ϟ.');}
+  else prompt('Скопируй ссылку-приглашение',d.link);
+ }catch(err){alert(err.message||'Сначала войди в VOLTRA')}
+});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-nav-action="payment-requests"]');if(!b)return;e.preventDefault();location.href='/admin-payments.html'},true);
 setInterval(refreshPaymentRequestBadge,15000);
 
 // Reliable icon-dock actions: delegated outside init so a failed optional setup cannot disable navigation.
