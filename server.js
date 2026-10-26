@@ -387,6 +387,12 @@ const server=http.createServer(async(req,res)=>{
    store.users.push(user);trackDevice(user,req);save();pendingRegistrations.delete(id);setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,username:user.username||'',email:user.email||'',phone:user.phone||''}});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось подтвердить контакт'})}
  }
+ if(req.method==='GET'&&u.pathname==='/api/referrals/me'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  const user=userById(uid);const code=String(user.username||user.name||'').trim();
+  const referrals=store.users.filter(x=>x.referrerId===uid);
+  return json(res,200,{ok:true,code,link: 'https://'+String(req.headers.host||'').replace(/[^a-z0-9.:-]/ig,'')+'/?ref='+encodeURIComponent(code),invited:referrals.length,rewarded:referrals.filter(x=>x.referralRewardedAt).length,pending:referrals.filter(x=>x.referrerId===uid&&!x.referralRewardedAt).length,reward:500});
+ }
  if(req.method==='POST'&&['/api/register','/api/login'].includes(u.pathname)){
   try{const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||'');
    if(name.length<3||name.length>24)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'});
@@ -394,7 +400,7 @@ const server=http.createServer(async(req,res)=>{
    let user=userByName(name);
    if(u.pathname==='/api/register'){
      if(user)return json(res,409,{error:'Этот ник уже занят'});
-    const salt=crypto.randomBytes(16).toString('hex');user={id:crypto.randomUUID(),name,username:makeUsername(),salt,hash:passwordHash(password,salt),createdAt:Date.now()};store.users.push(user);trackDevice(user,req);save();
+    const salt=crypto.randomBytes(16).toString('hex');const refCode=String(b.ref||'').trim().slice(0,80);const referrer=refCode?userByName(refCode):null;user={id:crypto.randomUUID(),name,username:makeUsername(),salt,hash:passwordHash(password,salt),createdAt:Date.now(),...(referrer&&referrer.name.toLowerCase()!==name.toLowerCase()?{referrerId:referrer.id}:{})};store.users.push(user);trackDevice(user,req);save();
    }else{
     if(!user)return json(res,401,{error:'Неверный ник или пароль'});
     const actual=Buffer.from(passwordHash(password,user.salt),'hex'),expected=Buffer.from(user.hash,'hex');
@@ -826,7 +832,7 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
    const target=userById(order.uid);if(!target)return json(res,404,{error:'Аккаунт покупателя не найден'});
    if(order.kind==='vlt'){const grant=decision==='full'?order.amount:Math.floor(order.amount*paid/order.price);if(!Number.isSafeInteger(grant)||grant<1)return json(res,400,{error:'Сумма слишком мала для начисления валюты'});target.pulses=(Number(target.pulses)||0)+grant;order.grantedAmount=grant;order.paidRub=paid;}
    else {if(decision!=='full')return json(res,400,{error:'VIP нельзя выдать частичной оплатой'});target.vip=true;order.paidRub=paid;}
-   order.status=decision==='full'?'approved':'partial_approved';order.reviewedAt=Date.now();order.reviewedBy=uid;order.granted=true;save();notifyUser(order.uid,'✅ Оплата подтверждена',order.kind==='vlt'?'Начислено '+Number(order.grantedAmount).toLocaleString('ru-RU')+' ϟ по заказу '+order.title: 'VOLTRA VIP активирован по подтверждённой оплате.',{paymentOrderId:order.id});return json(res,200,{ok:true,status:order.status,grantedAmount:order.grantedAmount||null,paidRub:order.paidRub});
+   order.status=decision==='full'?'approved':'partial_approved';order.reviewedAt=Date.now();order.reviewedBy=uid;order.granted=true;let referralBonus=null;if(target.referrerId&&!target.referralRewardedAt){const inviter=userById(target.referrerId);if(inviter&&inviter.id!==target.id){inviter.pulses=(Number(inviter.pulses)||0)+500;target.pulses=(Number(target.pulses)||0)+500;target.referralRewardedAt=Date.now();target.referralRewardOrderId=order.id;referralBonus={inviterId:inviter.id,inviteeId:target.id,amount:500};notifyUser(inviter.id,'🎉 Бонус за приглашение','Твой друг совершил первую подтверждённую покупку! Начислено 500 ϟ.',{referralBonus:true});notifyUser(target.id,'🎁 Бонус новичка','Спасибо за первый заказ! Начислено 500 ϟ бонусом за приглашение.',{referralBonus:true});}}save();notifyUser(order.uid,'✅ Оплата подтверждена',order.kind==='vlt'?'Начислено '+Number(order.grantedAmount).toLocaleString('ru-RU')+' ϟ по заказу '+order.title: 'VOLTRA VIP активирован по подтверждённой оплате.',{paymentOrderId:order.id});return json(res,200,{ok:true,status:order.status,grantedAmount:order.grantedAmount||null,paidRub:order.paidRub});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось обработать заказ'})}
  }
  if(req.method==='GET'&&u.pathname==='/api/gifts'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});const user=userById(uid);return json(res,200,{catalog:[...allGiftCatalog(),...store.giftInstances.filter(g=>g.ownerId===uid)],balance:user.pulses||0,catCoins:user.catCoins||0,owned:user.ownedGifts||[],equipped:user.equippedGifts||[],admin:!!user.admin})}
