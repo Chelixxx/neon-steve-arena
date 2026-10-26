@@ -392,3 +392,7 @@ body.volt-viewer-open{overflow:hidden}
  .gift-variant-preview>.chocolate-svg{width:64px;height:64px;flex-basis:64px}
  .gift3d-object[data-kind="chocolate"]{width:min(60vw,190px);height:min(60vw,190px)}
 }
+
+/* Optional CAT resale guidance under collectible prices. */
+.gift-price-cat{display:block;margin-top:3px;font-size:10px;line-height:1.2;font-weight:700;color:#f8c66b;white-space:normal;overflow-wrap:anywhere}
+.gift-price{min-width:0;overflow-wrap:anywhere}

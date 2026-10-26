@@ -1,5 +1,6 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
+const coreOpenGiftSend=window.pulseOpenGiftSend;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let catalog=[],owned=[],pendingGift=null,pendingVariant=null,pendingMode='buy',pendingRecipientId=null;
 const skins=['classic','chrome','holographic','crystal','neon','ember','ice','shadow','royal','candy'];
@@ -146,6 +147,7 @@ let sendGift=null,sendVariant=null,sendRecipientId=null;
 function refreshSendPreview(){if(!sendGift)return;const art=sendGift.collectible?artForGift(sendGift):stickerSvg({...sendGift,...sendVariant});$('sendGiftPreview').innerHTML='<span class="send-gift-variant-art">'+art+'</span><div><b>'+esc(sendGift.name)+'</b><small>'+Number(sendGift.price).toLocaleString('ru-RU')+' ϟ · '+esc(sendVariant?.material||'Коллекционный')+'</small></div>';const b=$('sendGiftVariantBtn');if(b)b.classList.toggle('hidden',!!sendGift.collectible)}
 function openSendModal(g,v){
  sendGift=g;sendVariant=g.collectible?null:(v||variantsFor(g)[0]);sendRecipientId=window.pulseGiftRecipientId||null;window.pulseGiftRecipientId=null;
+ $('sendGiftModal').querySelector('h2').textContent='🎁 Купить и отправить';$('confirmSendGift').textContent='Купить и отправить';$('sendGiftModal').querySelector('.muted').textContent='Стоимость спишется с отправителя один раз после проверки получателя.';
  $('sendGiftRecipient').value=window.pulseGiftRecipient||'';window.pulseGiftRecipient='';$('sendGiftMessage').value='';$('sendGiftStatus').textContent='';refreshSendPreview();$('sendGiftModal').classList.remove('hidden')
 }
 async function sendSelectedGift(){
@@ -199,12 +201,15 @@ function onCapture(e){
  const card=t.closest('#giftCatalog .gift-card');if(!card)return;
  const tabInventory=$('giftInventoryTab')?.classList.contains('active'),button=t.closest('[data-gift-send]'),buy=t.closest('[data-gift]');if(tabInventory)return;
  const id=button?.dataset.giftSend||buy?.dataset.gift;if(!id)return;
- const g=giftInfo(id);if(!g||g.collectible)return;
+ const g=giftInfo(id);if(!g)return;
+ const receiving=!!(window.pulseGiftRecipientId||window.pulseGiftRecipient);
+ if(g.collectible){if(button||receiving){e.preventDefault();e.stopImmediatePropagation();openSendModal(g,null)}return}
  e.preventDefault();e.stopImmediatePropagation();
  if(button){openVariantModal(g,'send');return}
- if(window.pulseGiftRecipientId||window.pulseGiftRecipient)openVariantModal(g,'send');else openVariantModal(g,'buy')
+ if(receiving)openVariantModal(g,'send');else openVariantModal(g,'buy')
 }
 window.pulseOpenVariantPicker=(id,mode,current)=>{const g=giftInfo(id);if(g)openVariantModal(g,mode,current)};
+window.pulseOpenGiftSend=id=>{const g=giftInfo(id);if(g&&g.collectible){openSendModal(g,null);return}if(typeof coreOpenGiftSend==='function')coreOpenGiftSend(id)};
 document.addEventListener('click',onCapture,true);
 const catalogRoot=$('giftCatalog');if(catalogRoot)new MutationObserver(()=>enhanceCards()).observe(catalogRoot,{childList:true,subtree:true});
 document.addEventListener('DOMContentLoaded',()=>{reload();$('giftMarketOpen')?.addEventListener('click',openGiftResaleMarket);$('sendGiftVariantBtn')?.addEventListener('click',()=>{if(sendGift&&!sendGift.collectible)openVariantModal(sendGift,'update-send',sendVariant)});$('sendGiftModal')?.addEventListener('click',e=>{if(e.target.closest('[data-close="sendGiftModal"]')){sendGift=null;sendVariant=null;sendRecipientId=null}})});
