@@ -90,3 +90,9 @@
 .market-load-error{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:28px 16px;text-align:center;color:#ddd5ff}
 .market-load-error span{font-size:12px;color:#aaa2c9}
 .market-load-error button{border:1px solid #a77be7;border-radius:10px;padding:9px 16px;background:#382253;color:#fff;cursor:pointer}
+
+/* Galaxy Heart grid uses the same detailed SVG artwork as Lightning and Pumpkin collections. */
+.galaxy-heart-tile .galaxy-tile-art{display:grid;place-items:center;width:100%;min-height:100px;padding:8px;box-sizing:border-box}
+.galaxy-heart-tile .galaxy-tile-art svg{display:block!important;width:min(100%,150px)!important;height:auto!important;aspect-ratio:1/1;max-width:150px;object-fit:contain;border-radius:12px}
+.galaxy-heart-tile .galaxy-tile-art img{display:block;width:min(100%,150px);height:auto;aspect-ratio:1/1;object-fit:contain}
+.galaxy-heart-tile .galaxy-tile-art .galaxy-heart-svg{width:min(100%,150px)!important;height:auto!important}
