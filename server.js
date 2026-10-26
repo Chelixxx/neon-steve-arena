@@ -183,7 +183,7 @@ async function sendEmailCode(to,code){
  await transport.sendMail({from,to,subject:'Код подтверждения VOLTRA',text:'Твой код VOLTRA: '+code+'\nКод действует 10 минут. Никому его не сообщай.',html:'<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;background:#10121f;color:#f6f7ff;border-radius:18px"><h1 style="color:#8d7bff">VOLTRA</h1><p>Твой код подтверждения:</p><div style="font-size:32px;font-weight:bold;letter-spacing:8px;padding:18px;background:#1d2034;border-radius:12px;text-align:center">'+code+'</div><p>Код действует 10 минут. Никому его не сообщай.</p></div>'});
 }
 function userById(id){return store.users.find(u=>u.id===id)}
-function userByName(name){return store.users.find(u=>u.name.toLowerCase()===name.toLowerCase())}
+function userByName(name){const q=String(name||'').trim().replace(/^@/,'').toLocaleLowerCase();return store.users.find(u=>String(u.name||'').trim().toLocaleLowerCase()===q||String(u.username||'').trim().toLocaleLowerCase()===q)}
 function send(ws,m){if(ws?.readyState===1&&ws.bufferedAmount<1e6)ws.send(JSON.stringify(m))}
 function sendUser(uid,m){for(const ws of clients.get(uid)||[])send(ws,m)}
 async function sendPush(uid,payload){const list=store.pushSubscriptions?.[uid];if(!Array.isArray(list)||!list.length)return;await Promise.all(list.map(async sub=>{try{await webpush.sendNotification(sub,JSON.stringify(payload),{TTL:90,urgency:'high'})}catch(e){if(e.statusCode===404||e.statusCode===410){store.pushSubscriptions[uid]=(store.pushSubscriptions[uid]||[]).filter(x=>x.endpoint!==sub.endpoint);save()}else console.error('Push delivery failed:',e.statusCode||'',e.message||e)}}))}
