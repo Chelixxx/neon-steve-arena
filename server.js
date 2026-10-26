@@ -158,7 +158,7 @@ const GIFT_VARIANT_MATERIALS=['Глянцевая эмаль','Галактич�
   let g=store.collectibleGifts.find(v=>v.id===id);
   const price=Math.round(25000+Math.pow(x,4)*(99999999-25000));
   const catPrice=Math.min(999999,Math.round(100+Math.pow(x,4)*(999999-100)));
-  const vals={name:'Сердце Галактики · '+String(n).padStart(3,'0'),emoji:'💜',price,rarity:rarities[row],collectible:true,collection:'galaxy-heart',variant:n,shape:Math.floor(i/125)+1,skin:skins[i%skins.length],material:materials[Math.floor(i/25)%materials.length],background:backgrounds[Math.floor(i/10)%backgrounds.length],pattern:patterns[Math.floor(i/50)%patterns.length],ornament:ornaments[Math.floor(i/10)%ornaments.length],recommendedPriceCat:catPrice,effect:['sparkles','glow','confetti','aura','none'][i%5],intensity:45+(i*17)%56,edition:100,totalSupply:100};
+  const vals={name:'Galaxy Heart · '+String(n).padStart(3,'0'),emoji:'💜',price,rarity:rarities[row],collectible:true,collection:'galaxy-heart',variant:n,shape:Math.floor(i/125)+1,skin:skins[i%skins.length],material:materials[Math.floor(i/25)%materials.length],background:backgrounds[Math.floor(i/10)%backgrounds.length],pattern:patterns[Math.floor(i/50)%patterns.length],ornament:ornaments[Math.floor(i/10)%ornaments.length],recommendedPriceCat:catPrice,effect:['sparkles','glow','confetti','aura','none'][i%5],intensity:45+(i*17)%56,edition:100,totalSupply:100};
   if(!g){g={id,...vals,remaining:100,createdAt:Date.now()};store.collectibleGifts.push(g);changed=true}
   else{for(const [k,v] of Object.entries(vals)){if(g[k]!==v){g[k]=v;changed=true}}if(!Number.isSafeInteger(g.remaining)||g.remaining<0){g.remaining=100;changed=true}}
  }
@@ -179,7 +179,7 @@ if(!Array.isArray(store.galaxyHeartAnnouncements))store.galaxyHeartAnnouncements
   let g=store.collectibleGifts.find(v=>v.id===id);
   const rarity=rarities[Math.min(rarities.length-1,Math.floor(i/13))];
   const price=[1500,3500,7500,15000,35000,75000][Math.min(5,Math.floor(i/13))];
-  const vals={name:'Космический артефакт · '+String(n).padStart(2,'0'),emoji:'🎁',price,rarity,collectible:true,collection:'cosmic-artifact',variant:n,material:materials[(i*3)%materials.length],skin:skins[(i*7)%skins.length],background:backgrounds[(i*3+Math.floor(i/10))%backgrounds.length],pattern:patterns[(i*5)%patterns.length],ornament:['звезда','кристалл','орбита','комета'][i%4],effect:['sparkles','glow','aura','none'][i%4],intensity:35+(i*9)%56,edition:76,totalSupply:76};
+  const vals={name:'Cosmic Artifact · '+String(n).padStart(2,'0'),emoji:'🎁',price,rarity,collectible:true,collection:'cosmic-artifact',variant:n,material:materials[(i*3)%materials.length],skin:skins[(i*7)%skins.length],background:backgrounds[(i*3+Math.floor(i/10))%backgrounds.length],pattern:patterns[(i*5)%patterns.length],ornament:['звезда','кристалл','орбита','комета'][i%4],effect:['sparkles','glow','aura','none'][i%4],intensity:35+(i*9)%56,edition:76,totalSupply:76};
   if(!g){g={id,...vals,remaining:76,createdAt:Date.now()};store.collectibleGifts.push(g);changed=true}
   else{for(const [k,v] of Object.entries(vals)){if(g[k]!==v){g[k]=v;changed=true}}if(!Number.isSafeInteger(g.remaining)||g.remaining<0){g.remaining=76;changed=true}}
  }
