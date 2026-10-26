@@ -149,7 +149,33 @@ function giftForUser(user,id){return allGiftCatalog().find(g=>g.id===id)||store.
 function reserveCollectible(gift){if(!gift?.collectible)return true;if(!Number.isSafeInteger(gift.remaining)||gift.remaining<=0)return false;gift.remaining--;return true}
 if(!Array.isArray(store.games))store.games=[];
 if(!Array.isArray(store.catCoinTransactions))store.catCoinTransactions=[];
-for(const user of store.users){if(!Number.isSafeInteger(user.pulses)||user.pulses<0)user.pulses=0;if(!Number.isSafeInteger(user.catCoins)||user.catCoins<0)user.catCoins=0;if(!Array.isArray(user.ownedGifts))user.ownedGifts=[];if(!Array.isArray(user.equippedGifts))user.equippedGifts=[];}
+for(const user of store.users){
+ const pulses=Number(user.pulses),cat=Number(user.catCoins);
+ user.pulses=Number.isFinite(pulses)&&pulses>=0&&pulses<=Number.MAX_SAFE_INTEGER?pulses:0;
+ user.catCoins=Number.isFinite(cat)&&cat>=0&&cat<=Number.MAX_SAFE_INTEGER?(cat<=Number.MAX_SAFE_INTEGER/1e6?Math.round(cat*1e6)/1e6:cat):0;
+ if(!Array.isArray(user.ownedGifts))user.ownedGifts=[];
+ if(!Array.isArray(user.equippedGifts))user.equippedGifts=[];
+}
+if(!store.catCoinBalanceRepairV1){
+ let repaired=0;
+ const roundCat=n=>n<=Number.MAX_SAFE_INTEGER/1e6?Math.round(n*1e6)/1e6:n;
+ for(const user of store.users){
+  if(Number(user.catCoins)>0)continue;
+  let net=0;
+  for(const tx of store.catCoinTransactions){
+   const amount=Number(tx.cat);
+   if(!Number.isFinite(amount)||amount<=0)continue;
+   if(tx.type==='buy'&&tx.fromId===user.id)net+=amount;
+   else if(tx.type==='sell'&&tx.fromId===user.id)net-=amount;
+   else if(tx.type==='send'){if(tx.fromId===user.id)net-=amount;if(tx.toId===user.id)net+=amount}
+  }
+  net=roundCat(net);
+  if(Number.isFinite(net)&&net>0&&net<=Number.MAX_SAFE_INTEGER){user.catCoins=net;repaired++}
+ }
+ store.catCoinBalanceRepairV1={at:Date.now(),usersRestoredFromLedger:repaired};
+ if(repaired)console.log('CAT balances repaired from transaction ledger for '+repaired+' user(s).');
+ save();
+}
 
 let legacyGiftInstancesMigrated=false;
 for(const user of store.users){
@@ -339,7 +365,7 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='GET'&&u.pathname==='/api/catcoin'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   const user=userById(uid);if(!user)return json(res,401,{error:'Пользователь не найден'});
-  return json(res,200,{ok:true,security:{configured:!!(user.walletPinHash&&user.walletPinSalt&&user.walletPhrase1Hash&&user.walletPhrase2Hash)},wallet:{vlt:user.pulses||0,cat:Number.isSafeInteger(user.catCoins)?user.catCoins:0,referenceRubles:Number.isSafeInteger(user.catCoins)?user.catCoins:0,rate:'128 VLT = 1 CAT',note:'Внутренняя валюта мессенджера; стоимость в рублях расчётная.'},history:store.catCoinTransactions.filter(x=>x.fromId===uid||x.toId===uid).slice(-50).reverse()});
+  return json(res,200,{ok:true,security:{configured:!!(user.walletPinHash&&user.walletPinSalt&&user.walletPhrase1Hash&&user.walletPhrase2Hash)},wallet:{vlt:user.pulses||0,cat:Number.isFinite(user.catCoins)&&user.catCoins>=0?user.catCoins:0,referenceRubles:Number.isFinite(user.catCoins)&&user.catCoins>=0?user.catCoins:0,rate:'128 VLT = 1 CAT',note:'Внутренняя валюта мессенджера; стоимость в рублях расчётная.'},history:store.catCoinTransactions.filter(x=>x.fromId===uid||x.toId===uid).slice(-50).reverse()});
  }
  if(req.method==='POST'&&u.pathname==='/api/catcoin/security/setup'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
@@ -385,17 +411,22 @@ const server=http.createServer(async(req,res)=>{
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   try{
    const b=await parseBody(req),user=userById(uid),action=String(b.action||''),amount=Number(b.amount),pin=String(b.pin||'');
+   if(!user)return json(res,401,{error:'Пользователь не найден'});
    if(!user.walletPinHash)return json(res,403,{error:'Сначала создай защиту кошелька.'});
    if(!walletPinAllowed(uid))return json(res,429,{error:'Слишком много попыток PIN. Попробуй через 10 минут.'});
    if(!/^\d{4}$/.test(pin)||walletSecretHash(pin,user.walletPinSalt)!==user.walletPinHash){walletPinFailure(uid);return json(res,401,{error:'Неверный PIN кошелька.'});}
    walletPinSuccess(uid);
    if(!user)return json(res,401,{error:'Пользователь не найден'});
-   if(!Number.isFinite(amount)||amount<=0||amount>100000000||((action==='sell'||action==='send')&&!Number.isSafeInteger(amount))) return json(res,400,{error:action==='buy'?'Укажи положительное количество VLT (можно с десятыми).':'Укажи целое положительное количество CAT.'});
+   if(!Number.isFinite(amount)||amount<=0||amount>1000000000000||((action==='sell'||action==='send')&&!Number.isSafeInteger(amount))) return json(res,400,{error:action==='buy'?'Укажи положительное количество VLT (можно с десятыми).':'Укажи целое положительное количество CAT.'});
    const record=(type,fromId,toId,cat,vlt)=>({id:crypto.randomUUID(),type,fromId,toId,cat,vlt,at:Date.now()});
    if(action==='buy'){
     const vlt=Math.round(amount*10)/10;
-    if((user.pulses||0)<vlt)return json(res,400,{error:'Недостаточно вольтриксов.'});
-    const cat=Math.round((vlt/128)*1000000)/1000000;user.pulses=Math.round(((user.pulses||0)-vlt)*10)/10;user.catCoins=Math.round(((user.catCoins||0)+cat)*1000000)/1000000;
+    const balanceVlt=Number(user.pulses)||0,currentCat=Number(user.catCoins)||0;
+    if(!Number.isSafeInteger(Math.round(vlt*10)))return json(res,400,{error:'Сумма слишком большая для точного расчёта.'});
+    if(balanceVlt<vlt)return json(res,400,{error:'Недостаточно вольтриксов.'});
+    const cat=Math.round((vlt/128)*1000000)/1000000,nextCat=Math.round((currentCat+cat)*1000000)/1000000,nextVlt=Math.round((balanceVlt-vlt)*10)/10;
+    if(!Number.isFinite(nextCat)||nextCat<0||nextCat>Number.MAX_SAFE_INTEGER||!Number.isFinite(nextVlt)||nextVlt<0)return json(res,400,{error:'Сумма выходит за допустимый диапазон.'});
+    user.pulses=nextVlt;user.catCoins=nextCat;
     store.catCoinTransactions.push(record('buy',uid,uid,cat,vlt));
     save();return json(res,200,{ok:true,message:'Покупка CAT выполнена.',vlt:user.pulses,cat:user.catCoins});
    }
@@ -483,7 +514,7 @@ const server=http.createServer(async(req,res)=>{
   try{const postId=decodeURIComponent(u.pathname.split('/')[3]||''),post=store.posts.find(p=>p.id===postId);if(!post)return json(res,404,{error:'Пост не найден'});const b=await parseBody(req),emoji=String(b.emoji||'');if(!['❤️','😂','🔥','👍','👏','😮'].includes(emoji))return json(res,400,{error:'Эта реакция не поддерживается'});if(!post.reactions||typeof post.reactions!=='object')post.reactions={};if(!Array.isArray(post.reactions[emoji]))post.reactions[emoji]=[];const list=post.reactions[emoji],i=list.indexOf(uid);if(i>=0)list.splice(i,1);else list.push(uid);save();broadcast({t:'news-post-updated',post});const author=post.authorId?userById(post.authorId):store.users.find(x=>x.name.toLowerCase()===String(post.author||'').toLowerCase());if(i<0&&author&&author.id!==uid)void sendPush(author.id,{title:'❤️ Реакция на твой пост',body:userById(uid).name+' поставил реакцию '+emoji,url:'/'});return json(res,200,{ok:true,post})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось поставить реакцию'})}
  }
  if(req.method==='GET'&&u.pathname==='/api/cookie/status'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});const d=store.cookieClickers[uid]||{clicks:0};const pending=pendingCookieCaptchas.get(uid);return json(res,200,{clicks:Number(d.clicks)||0,pulses:userById(uid).pulses||0,captchaRequired:!!pending,question:pending?.question||''})}
- if(req.method==='POST'&&u.pathname==='/api/cookie/click'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});let d=store.cookieClickers[uid];if(!d)d=store.cookieClickers[uid]={clicks:0};const pending=pendingCookieCaptchas.get(uid);if(pending)return json(res,200,{captchaRequired:true,question:pending.question,clicks:d.clicks,pulses:userById(uid).pulses||0});d.clicks=(Number(d.clicks)||0)+1;let awarded=0;if(d.clicks%30===0){const user=userById(uid);user.pulses=(Number.isSafeInteger(user.pulses)?user.pulses:0)+1;awarded=1;store.giftTransactions.push({id:crypto.randomUUID(),type:'cookie-clicker',userId:uid,amount:1,at:Date.now()});}let captcha=null;if(d.clicks%300===0){const a=crypto.randomInt(2,10),b=crypto.randomInt(1,10),answer=String(a+b);captcha={question:a+' + '+b+' = ?'};pendingCookieCaptchas.set(uid,{question:captcha.question,answer,at:d.clicks,expires:Date.now()+5*60*1000});}save();if(awarded)sendUser(uid,{t:'pulses-updated',pulses:userById(uid).pulses});return json(res,200,{ok:true,clicks:d.clicks,awarded,pulses:userById(uid).pulses||0,captchaRequired:!!captcha,question:captcha?.question||''})}
+ if(req.method==='POST'&&u.pathname==='/api/cookie/click'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});let d=store.cookieClickers[uid];if(!d)d=store.cookieClickers[uid]={clicks:0};const pending=pendingCookieCaptchas.get(uid);if(pending)return json(res,200,{captchaRequired:true,question:pending.question,clicks:d.clicks,pulses:userById(uid).pulses||0});d.clicks=(Number(d.clicks)||0)+1;let awarded=0;if(d.clicks%30===0){const user=userById(uid);user.pulses=(Number.isFinite(user.pulses)&&user.pulses>=0?user.pulses:0)+1;awarded=1;store.giftTransactions.push({id:crypto.randomUUID(),type:'cookie-clicker',userId:uid,amount:1,at:Date.now()});}let captcha=null;if(d.clicks%300===0){const a=crypto.randomInt(2,10),b=crypto.randomInt(1,10),answer=String(a+b);captcha={question:a+' + '+b+' = ?'};pendingCookieCaptchas.set(uid,{question:captcha.question,answer,at:d.clicks,expires:Date.now()+5*60*1000});}save();if(awarded)sendUser(uid,{t:'pulses-updated',pulses:userById(uid).pulses});return json(res,200,{ok:true,clicks:d.clicks,awarded,pulses:userById(uid).pulses||0,captchaRequired:!!captcha,question:captcha?.question||''})}
  if(req.method==='POST'&&u.pathname==='/api/cookie/captcha'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});const pending=pendingCookieCaptchas.get(uid);if(!pending)return json(res,400,{error:'Капча сейчас не требуется'});if(pending.expires<Date.now()){pendingCookieCaptchas.delete(uid);return json(res,400,{error:'Капча истекла. Нажми печеньку, чтобы получить новую'});}try{const b=await parseBody(req);if(String(b.answer||'').trim()!==pending.answer)return json(res,400,{error:'Неправильный ответ. Попробуй ещё раз'});pendingCookieCaptchas.delete(uid);return json(res,200,{ok:true,clicks:store.cookieClickers[uid]?.clicks||0,pulses:userById(uid).pulses||0})}catch(e){return json(res,400,{error:e.message||'Не удалось проверить капчу'})}}
   if(req.method==='GET'&&u.pathname==='/api/calls/pending'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Войди в VOLTRA, чтобы принять звонок'});const id=String(u.searchParams.get('callId')||'').slice(0,100),call=store.pendingCalls?.[id];if(!call||call.expiresAt<Date.now()){if(call){delete store.pendingCalls[id];save()}return json(res,404,{error:'Вызов уже недоступен'})}if(call.to!==uid)return json(res,403,{error:'Этот вызов адресован другому пользователю'});return json(res,200,{call:{callId:call.callId,from:call.from,fromName:call.fromName,type:call.type,offer:call.offer}})}
  if(req.method==='POST'&&u.pathname==='/api/calls/respond'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Войди в VOLTRA, чтобы отклонить звонок'});try{const b=await parseBody(req),id=String(b.callId||'').slice(0,100),call=store.pendingCalls?.[id];if(!call||call.expiresAt<Date.now())return json(res,404,{error:'Вызов уже завершён'});if(call.to!==uid)return json(res,403,{error:'Этот вызов адресован другому пользователю'});if(b.action!=='decline')return json(res,400,{error:'Неизвестное действие'});delete store.pendingCalls[id];save();sendUser(call.from,{t:'call-reject',from:uid,callId:id,reason:'declined'});return json(res,200,{ok:true})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось обработать вызов'})}}
@@ -686,7 +717,7 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
    const gift={id:'collectible-'+crypto.randomUUID(),name,emoji,image,price,rarity:'Коллекционный',collectible:true,edition:quantity,totalSupply:quantity,remaining:quantity,effect:['sparkles','glow','confetti','aura','none'].includes(b.effect)?b.effect:'sparkles',intensity,background:['midnight','aurora','gold','rose','ice','custom'].includes(b.background)?b.background:'midnight',skin:['classic','chrome','holographic','crystal','neon'].includes(b.skin)?b.skin:'classic',pattern:['none','stars','waves','grid','diamonds','runes'].includes(b.pattern)?b.pattern:'none',createdBy:uid,createdAt:Date.now()};
    store.collectibleGifts.push(gift);save();return json(res,200,{ok:true,gift})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось выпустить подарок'})}
  }
- if(req.method==='POST'&&u.pathname==='/api/gifts/buy'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});try{const b=await parseBody(req),user=userById(uid),gift=allGiftCatalog().find(g=>g.id===String(b.giftId||''));if(!gift||gift.ownedInstance)return json(res,404,{error:'Подарок не найден'});if(!Array.isArray(user.ownedGifts))user.ownedGifts=[];if(!Number.isSafeInteger(user.pulses)||user.pulses<0)user.pulses=0;if(gift.collectible&&gift.remaining<=0)return json(res,409,{error:'Тираж этого подарка закончился'});if(gift.collectible&&user.ownedGifts.includes(gift.id))return json(res,409,{error:'Этот коллекционный подарок уже есть'});if(user.pulses<gift.price)return json(res,400,{error:'Не хватает Вольтриксов'});if(gift.collectible&&!reserveCollectible(gift))return json(res,409,{error:'Тираж этого подарка закончился'});user.pulses-=gift.price;const purchased=gift.collectible?gift:makeGiftInstance(gift,uid,b.variant);user.ownedGifts.push(purchased.id);store.giftTransactions.push({id:crypto.randomUUID(),type:'purchase',userId:uid,giftId:purchased.id,baseGiftId:gift.id,amount:-gift.price,variant:purchased.variant||0,at:Date.now()});save();sendUser(uid,{t:'pulses-updated',pulses:user.pulses});notifyUser(uid,'🎁 Покупка подарка','Ты купил(а) '+purchased.emoji+' '+purchased.name+' стоимостью '+purchased.price.toLocaleString('ru-RU')+' ϟ',{giftId:purchased.id,price:purchased.price});return json(res,200,{ok:true,balance:user.pulses,owned:user.ownedGifts,item:purchased})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось купить подарок'})}}
+ if(req.method==='POST'&&u.pathname==='/api/gifts/buy'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});try{const b=await parseBody(req),user=userById(uid),gift=allGiftCatalog().find(g=>g.id===String(b.giftId||''));if(!gift||gift.ownedInstance)return json(res,404,{error:'Подарок не найден'});if(!Array.isArray(user.ownedGifts))user.ownedGifts=[];if(!Number.isFinite(user.pulses)||user.pulses<0||user.pulses>Number.MAX_SAFE_INTEGER)user.pulses=0;if(gift.collectible&&gift.remaining<=0)return json(res,409,{error:'Тираж этого подарка закончился'});if(gift.collectible&&user.ownedGifts.includes(gift.id))return json(res,409,{error:'Этот коллекционный подарок уже есть'});if(user.pulses<gift.price)return json(res,400,{error:'Не хватает Вольтриксов'});if(gift.collectible&&!reserveCollectible(gift))return json(res,409,{error:'Тираж этого подарка закончился'});user.pulses-=gift.price;const purchased=gift.collectible?gift:makeGiftInstance(gift,uid,b.variant);user.ownedGifts.push(purchased.id);store.giftTransactions.push({id:crypto.randomUUID(),type:'purchase',userId:uid,giftId:purchased.id,baseGiftId:gift.id,amount:-gift.price,variant:purchased.variant||0,at:Date.now()});save();sendUser(uid,{t:'pulses-updated',pulses:user.pulses});notifyUser(uid,'🎁 Покупка подарка','Ты купил(а) '+purchased.emoji+' '+purchased.name+' стоимостью '+purchased.price.toLocaleString('ru-RU')+' ϟ',{giftId:purchased.id,price:purchased.price});return json(res,200,{ok:true,balance:user.pulses,owned:user.ownedGifts,item:purchased})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось купить подарок'})}}
  if(req.method==='POST'&&u.pathname==='/api/gifts/transfer'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   try{
@@ -792,7 +823,7 @@ wss.on('connection',(ws,req)=>{
    if(matches.length!==1){send(ws,{t:'error',message:matches.length?'Нашлось несколько подарков: '+matches.slice(0,6).map(g=>g.name).join(', ')+'. Напиши точное название.':'Подарок не найден. Проверь название в каталоге подарков.'});return}
    const gift=matches[0];
    if(target.hideFromUnmessaged&&!isRootAdmin(user)&&!store.messages.some(x=>x.from===target.id&&x.to===uid)){send(ws,{t:'error',message:'Этот профиль скрыт. Пользователь должен первым написать тебе'});return}
-   if(!Number.isSafeInteger(user.pulses)||user.pulses<gift.price){send(ws,{t:'error',message:'Не хватает Вольтриксов. Подарок «'+gift.name+'» стоит '+gift.price.toLocaleString('ru-RU')+' ϟ'});return}
+   if(!Number.isFinite(user.pulses)||user.pulses<gift.price){send(ws,{t:'error',message:'Не хватает Вольтриксов. Подарок «'+gift.name+'» стоит '+gift.price.toLocaleString('ru-RU')+' ϟ'});return}
    if(!Array.isArray(target.ownedGifts))target.ownedGifts=[];
    if(target.ownedGifts.includes(gift.id)){send(ws,{t:'error',message:'У получателя уже есть этот подарок'});return}
    user.pulses-=gift.price;target.ownedGifts.push(gift.id);
