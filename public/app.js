@@ -540,6 +540,22 @@ window.addEventListener('online',()=>{if(myId&&!manualDisconnect&&(!ws||ws.ready
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&myId&&!manualDisconnect){if(!ws||ws.readyState===WebSocket.CLOSED||ws.readyState===WebSocket.CLOSING)connect();else if(ws.readyState===WebSocket.OPEN)send({t:'ping'})}});
 window.addEventListener('pageshow',()=>{if(myId&&!manualDisconnect&&document.visibilityState==='visible'&&(!ws||ws.readyState===WebSocket.CLOSED||ws.readyState===WebSocket.CLOSING))connect()});
 
+// Payment request badge: fetched from the server so desktop and mobile share the same queue.
+async function refreshPaymentRequestBadge(){
+ const isAdmin=String(myName||'').trim().toLowerCase()==='chelixxx';
+ document.querySelectorAll('.payment-requests-nav').forEach(el=>el.classList.toggle('hidden',!isAdmin));
+ if(!isAdmin)return;
+ try{
+  const r=await fetch('/api/payments/manual/admin',{credentials:'same-origin',cache:'no-store'});
+  if(!r.ok)return;
+  const d=await r.json(),count=Array.isArray(d.orders)?d.orders.length:0;
+  document.querySelectorAll('.payment-requests-count').forEach(el=>{el.textContent=String(count);el.style.display=count?'inline-flex':'none'});
+  document.querySelectorAll('.payment-requests-nav').forEach(el=>el.title='Заявки на оплату: '+count);
+ }catch{}
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-nav-action="payment-requests"]');if(!b)return;e.preventDefault();location.href='/admin-payments.html'},true);
+setInterval(refreshPaymentRequestBadge,15000);
+
 // Reliable icon-dock actions: delegated outside init so a failed optional setup cannot disable navigation.
 document.addEventListener('click',e=>{
  const button=e.target.closest('[data-nav-action]');
