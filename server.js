@@ -469,7 +469,7 @@ function publicAchievements(uid){
 const VOLTRA_TIP_COUNTS=Object.freeze({common:35,uncommon:30,rare:25,epic:20,legendary:15,mythic:10});
 const VOLTRA_TIP_TOTAL=Object.values(VOLTRA_TIP_COUNTS).reduce((a,b)=>a+b,0);
 function validVoltraTipId(value){
- const m=/^(common|uncommon|rare|epic|legendary|mythic)-(\\d+)$/.exec(String(value||''));
+ const m=/^(common|uncommon|rare|epic|legendary|mythic)-(\d+)$/.exec(String(value||''));
  return !!m&&Number(m[2])>=0&&Number(m[2])<VOLTRA_TIP_COUNTS[m[1]];
 }
 function voltraQuestStats(uid){
