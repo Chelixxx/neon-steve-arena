@@ -111,7 +111,7 @@ async function startRoomOffer(peerId){
  try{const p=ensurePeer(peerId);if(p.pc.localDescription)return;const offer=await p.pc.createOffer();await p.pc.setLocalDescription(offer);sendRoom({t:'voice-room-offer',to:peerId,offer:p.pc.localDescription})}catch(e){setRoomStatus('Не удалось вызвать участника: '+(e.message||'ошибка'))}
 }
 async function handleRoomSignal(m){
- if(m.t==='voice-room-error'){toast(m.message||'Ошибка голосовой комнаты');if(room.id&&!room.members.size)cleanupRoom(false);return}
+ if(m.t==='voice-room-error'){const message=m.message||'Ошибка голосовой комнаты';cleanupRoom(false);toast(message);return}
  if(!room.id||m.roomId!==room.id)return;
  if(m.t==='voice-room-state'){room.members.clear();for(const x of m.members||[])room.members.set(x.id,x);renderRoomMembers();for(const x of m.members||[]){if(x.id!==myId){ensurePeer(x.id);if(String(myId).localeCompare(String(x.id))<0)void startRoomOffer(x.id)}}return}
  if(m.t==='voice-room-joined'){if(!m.user?.id)return;room.members.set(m.user.id,m.user);renderRoomMembers();ensurePeer(m.user.id);if(String(myId).localeCompare(String(m.user.id))<0)void startRoomOffer(m.user.id);return}
