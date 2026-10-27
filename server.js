@@ -485,7 +485,7 @@ function voltraQuestStats(uid){
  const comments=(store.comments||[]).filter(c=>c.authorId===uid).length;
  const marketListings=(store.marketListings||[]).filter(x=>x.sellerId===uid&&x.status!=='deleted').length;
  const marketPurchases=(store.marketTransactions||[]).filter(x=>x.buyerId===uid).length;
- const stickerPacks=(store.stickerPacks||[]).filter(x=>x.ownerId===uid||x.authorId===uid||x.userId===uid).length;
+ const stickerPacks=(store.stickerPacks||[]).filter(x=>x.ownerId===uid||x.authorId===uid||x.userId===uid||x.creatorId===uid||x.creator===user.name).length;
  const miniApps=(store.miniApps||[]).filter(x=>x.authorId===uid||x.ownerId===uid).length;
  const cookies=Number(store.cookieClickers?.[uid]?.clicks)||0;
  const ageDays=Math.max(0,Math.floor((Date.now()-(Number(user.createdAt)||Date.now()))/86400000));
