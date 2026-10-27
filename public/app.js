@@ -202,42 +202,53 @@ function beginAuthRestore(title,subtitle){
  },9000);
 }
 async function checkSession(){
- beginAuthRestore('Возвращаем тебя в VOLTRA','Проверяем сохранённую сессию и подключаем чаты…');
+ // Keep the animated VOLTRA splash visible while Chrome finishes password autofill.
+ window.__voltraAutoLoginWaiting=true;
+ window.__voltraManualLoginReady=false;
+ showAuthSplash('Возвращаем тебя в VOLTRA','Проверяем сохранённую сессию и подключаем чаты…');
  try{
-  const authCheckController=new AbortController();const authCheckTimer=setTimeout(()=>authCheckController.abort(),4500);let r;try{r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store',signal:authCheckController.signal})}finally{clearTimeout(authCheckTimer)}
+  const authCheckController=new AbortController();
+  const authCheckTimer=setTimeout(()=>authCheckController.abort(),4500);
+  let r;
+  try{r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store',signal:authCheckController.signal})}
+  finally{clearTimeout(authCheckTimer)}
   if(r.ok){
    const d=await r.json();
    myName=d.user.name;myUsername=d.user.username||'';wsAuthTicket=d.wsTicket||'';
    try{localStorage.setItem('pulseLastAccount',myName)}catch{}
+   window.__voltraAutoLoginWaiting=false;
+   beginAuthRestore('Возвращаем тебя в VOLTRA','Проверяем сохранённую сессию и подключаем чаты…');
    connect();
    return;
   }
  }catch{}
- // Chrome can fill the username/password after the page has rendered. Check repeatedly,
- // but show the real form quickly if it has nothing saved for this site.
+ // Password managers may autofill noticeably later than the first page render.
+ // Poll long enough, without exposing the form over the animated splash.
  let tries=0,started=false;
  const revealForm=()=>{
   if(started||myId)return;
+  window.__voltraAutoLoginWaiting=false;
+  window.__voltraManualLoginReady=true;
   finishAuthSplash();
   $('login')?.classList.remove('hidden');
  };
  const tryAutoLogin=()=>{
-  if(started||myId||authMode!=='login')return;
+  if(started||myId)return;
   tries++;
   const name=$('nickname')?.value.trim()||'',password=$('password')?.value||'';
-  if(name.length>=3&&password.length>=8){
+  if(authMode==='login'&&name.length>=3&&password.length>=8){
    started=true;autoLoginAttempted=true;
+   window.__voltraAutoLoginWaiting=false;
+   window.__voltraManualLoginReady=false;
    beginAuthRestore('Входим автоматически','Используем сохранённые данные браузера…');
-   // Нажимаем настоящую кнопку входа под экраном загрузки.
-   const submit=$('authSubmit');
-   if(submit&&!submit.disabled)submit.click();else authenticate();
+   // Use the same auth handler as the button, keeping the splash above the form.
+   authenticate();
    return;
   }
-  if(tries<14)setTimeout(tryAutoLogin,250);
+  if(tries<40)setTimeout(tryAutoLogin,500);
   else revealForm();
  };
- setTimeout(tryAutoLogin,150);
- setTimeout(()=>{if(!started&&!myId)revealForm()},3600);
+ setTimeout(tryAutoLogin,250);
 }
 async function requestPushPermissionOnEntry(){
  if(!myId||!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window))return;
