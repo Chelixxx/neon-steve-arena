@@ -77,10 +77,11 @@ function init(){
  const syncVoltraViewport=()=>{
   const viewport=window.visualViewport,height=Math.max(1,Math.round(viewport?.height||window.innerHeight||document.documentElement.clientHeight));
   document.documentElement.style.setProperty('--voltra-viewport-height',height+'px');
-  const input=$('messageInput'),messages=$('messages');
-  if(!input||!messages||document.activeElement!==input)return;
-  const atBottom=messages.dataset.pulseStickToBottom==='1',before=messages.scrollTop;
-  requestAnimationFrame(()=>{if(document.activeElement!==input||!messages.isConnected)return;if(atBottom)messages.scrollTop=messages.scrollHeight;else messages.scrollTop=Math.min(before,Math.max(0,messages.scrollHeight-messages.clientHeight))});
+  // Do not modify scrollTop during visualViewport resize: mobile keyboards
+  // trigger this event repeatedly and the old correction caused chat jumps.
+  const input=$('messageInput');
+  if(input&&document.activeElement===input)document.documentElement.classList.add('voltra-keyboard-open');
+  else document.documentElement.classList.remove('voltra-keyboard-open');
  };
  syncVoltraViewport();
  window.visualViewport?.addEventListener('resize',syncVoltraViewport,{passive:true});
@@ -115,12 +116,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('mediaViewer')){e
   const before=messages?.scrollTop;
   el.style.height='auto';
   el.style.height=Math.min(el.scrollHeight,130)+'px';
-  // Mobile browsers move the visual viewport when the keyboard opens. Do not
-  // fight that movement with window.scrollTo or per-keystroke anchor correction.
-  if(mobile){
-   if(messages&&wasAtBottom)requestAnimationFrame(()=>{if(document.activeElement===el&&messages.isConnected)messages.scrollTop=messages.scrollHeight});
-   return;
-  }
+  // On phones let the browser manage the visual viewport and scroll anchoring.
+  if(mobile)return;
   const windowY=window.scrollY;
   const anchor=[...(messages?.querySelectorAll('.message[data-message-id]')||[])].find(n=>n.getBoundingClientRect().bottom>messages.getBoundingClientRect().top);
   const anchorId=anchor?.dataset.messageId,anchorOffset=anchor?anchor.getBoundingClientRect().top-messages.getBoundingClientRect().top:0;
