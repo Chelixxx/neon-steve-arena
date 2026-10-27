@@ -173,9 +173,10 @@ async function authenticate(){
 }
 async function checkSession(){
  let remembered='';try{remembered=localStorage.getItem('pulseLastAccount')||''}catch{}
- if(remembered){$('login')?.classList.add('hidden');$('app')?.classList.add('hidden')}
- const restoreWithSavedPassword=()=>new Promise(resolve=>setTimeout(()=>{const savedName=$('nickname')?.value.trim(),savedPassword=$('password')?.value||'';if(remembered&&savedName&&savedName.toLowerCase()===remembered.toLowerCase()&&savedPassword.length>=8){authenticate().finally(resolve)}else{if(remembered)$('login')?.classList.remove('hidden');resolve()}},900));
- try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok){await restoreWithSavedPassword();return}const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();setTimeout(()=>requestPushPermissionOnEntry(),900)}catch{await restoreWithSavedPassword()}
+ try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(r.ok){const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();setTimeout(()=>requestPushPermissionOnEntry(),900);return}}catch{}
+ // Chrome may autofill saved credentials after the first paint. Try those credentials once automatically.
+ $('login')?.classList.remove('hidden');
+ setTimeout(()=>{const savedName=$('nickname')?.value.trim(),savedPassword=$('password')?.value||'';if(savedName&&savedPassword.length>=8&&authMode==='login'){ $('login')?.classList.add('hidden');$('loginError').textContent='Входим автоматически…';authenticate().then(()=>{if(!myId)$('login')?.classList.remove('hidden')}).catch(()=>{$('login')?.classList.remove('hidden')})}},1400);
 }
 async function requestPushPermissionOnEntry(){
  if(!myId||!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window))return;
