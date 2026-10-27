@@ -382,6 +382,25 @@ function deviceLabel(ua){ua=String(ua||'');const platform=/Android/i.test(ua)?'A
 function trackDevice(user,req){const id=deviceIdFrom(req);if(!id)return null;if(!Array.isArray(user.devices))user.devices=[];if(Array.isArray(user.revokedDevices))user.revokedDevices=user.revokedDevices.filter(x=>x!==id);let d=user.devices.find(x=>x.id===id);if(!d){d={id,firstSeen:Date.now(),lastSeen:Date.now(),label:deviceLabel(req.headers['user-agent'])};user.devices.push(d);if(user.devices.length>30)user.devices=user.devices.slice(-30)}else{d.lastSeen=Date.now();d.label=deviceLabel(req.headers['user-agent'])}return d}
 function signUploadToken(uid){const payload=Buffer.from(JSON.stringify({uid,exp:Date.now()+5*60*1000,purpose:'upload',nonce:crypto.randomBytes(12).toString('hex')})).toString('base64url');return payload+'.'+crypto.createHmac('sha256',SECRET).update('upload:'+payload).digest('base64url')}
 function verifyUploadToken(token){try{const [p,s]=String(token||'').split('.');if(!p||!s)return null;const expected=crypto.createHmac('sha256',SECRET).update('upload:'+p).digest('base64url'),a=Buffer.from(expected),b=Buffer.from(s);if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return null;const d=JSON.parse(Buffer.from(p,'base64url').toString());return d.purpose==='upload'&&d.exp>Date.now()&&store.users.some(u=>u.id===d.uid)?d.uid:null}catch{return null}}
+const wsAuthTickets=new Map();
+function issueWsTicket(uid){
+ const now=Date.now();
+ if(wsAuthTickets.size>2000)for(const [key,item] of wsAuthTickets)if(item.expires<=now)wsAuthTickets.delete(key);
+ const ticket=crypto.randomBytes(24).toString('hex');
+ wsAuthTickets.set(ticket,{uid,expires:now+60_000});
+ return ticket;
+}
+function consumeWsTicket(req){
+ const offered=String(req.headers['sec-websocket-protocol']||'').split(',').map(x=>x.trim());
+ for(const token of offered){
+  if(token==='voltra')continue;
+  const item=wsAuthTickets.get(token);
+  if(!item)continue;
+  wsAuthTickets.delete(token);
+  if(item.expires>Date.now()&&store.users.some(u=>u.id===item.uid&&!u.bannedAt))return item.uid;
+ }
+ return null;
+}
 function setCookie(res,uid){const current=res.getHeader('set-cookie'),cookies=Array.isArray(current)?current.slice():current?[current]:[];cookies.push('pulse_session='+encodeURIComponent(sign(uid))+'; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=2592000');res.setHeader('set-cookie',cookies)}
 function clearCookie(res){res.setHeader('set-cookie','pulse_session=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0')}
 const pendingRegistrations=new Map();
@@ -530,7 +549,7 @@ const server=http.createServer(async(req,res)=>{
     if(user.bannedAt)return json(res,403,{error:'Аккаунт заблокирован'+(user.banReason?': '+String(user.banReason).slice(0,240):'. Если считаешь это ошибкой, обратись к администратору.')});
     trackDevice(user,req);save();
    }
-   setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,username:user.username||''}})
+   setCookie(res,user.id);return json(res,200,{user:{id:user.id,name:user.name,username:user.username||''},wsTicket:issueWsTicket(user.id)})
   }catch(e){return json(res,e.status||400,{error:e.message||'Ошибка запроса'})}
  }
  if(req.method==='GET'&&u.pathname==='/api/security/sessions'){
@@ -1115,7 +1134,7 @@ const wss=new WebSocketServer({server,path:'/ws',perMessageDeflate:false,maxPayl
 const wsHeartbeat=setInterval(()=>{for(const socket of wss.clients){if(socket.isAlive===false){socket.terminate();continue}socket.isAlive=false;try{socket.ping()}catch{socket.terminate()}}},25000);wsHeartbeat.unref?.();
 wss.on('connection',(ws,req)=>{
  const wsDeviceId=deviceIdFrom(req),wsDeviceBan=wsDeviceId&&store.deviceBans[wsDeviceId];if(wsDeviceBan){send(ws,{t:'banned',reason:'Устройство заблокировано'+(wsDeviceBan.reason?': '+wsDeviceBan.reason:'')});ws.close(1008,'Device banned');return}
- const uid=verifyToken(cookieToken(req)),user=uid&&userById(uid);if(user&&wsDeviceId&&Array.isArray(user.revokedDevices)&&user.revokedDevices.includes(wsDeviceId)){send(ws,{t:'session-revoked',message:'Эта сессия отозвана. Войди заново.'});ws.close(1008,'Session revoked');return}if(!user){send(ws,{t:'auth-required'});ws.close(1008,'Login required');return}
+ const cookieUid=verifyToken(cookieToken(req)),ticketUid=consumeWsTicket(req),uid=cookieUid||ticketUid,user=uid&&userById(uid);if(user&&wsDeviceId&&Array.isArray(user.revokedDevices)&&user.revokedDevices.includes(wsDeviceId)){send(ws,{t:'session-revoked',message:'Эта сессия отозвана. Войди заново.'});ws.close(1008,'Session revoked');return}if(!user){send(ws,{t:'auth-required'});ws.close(1008,'Login required');return}
  ws.uid=uid;ws.deviceId=wsDeviceId;ws.isAlive=true;ws.on('pong',()=>{ws.isAlive=true});let set=clients.get(uid);if(!set){set=new Set();clients.set(uid,set)}set.add(ws);
  send(ws,{t:'welcome',id:uid,user:{id:uid,name:user.name},users:onlineUsers(uid),history:chatHistory(uid,null),unread:unreadFor(uid)});
  for(const [pendingId,pendingCall] of Object.entries(store.pendingCalls||{})){if(pendingCall.expiresAt<Date.now()){delete store.pendingCalls[pendingId];continue}if(pendingCall.to===uid&&!pendingCall.deliveredAt){send(ws,{t:'call-offer',from:pendingCall.from,fromName:pendingCall.fromName,to:uid,type:pendingCall.type,callId:pendingId,offer:pendingCall.offer});pendingCall.deliveredAt=Date.now();save()}}const queuedSignals=(store.pendingCallSignals||[]).filter(x=>x.to===uid&&x.expiresAt>Date.now());store.pendingCallSignals=(store.pendingCallSignals||[]).filter(x=>x.to!==uid&&x.expiresAt>Date.now());for(const item of queuedSignals)send(ws,item.signal);if(queuedSignals.length)save();
