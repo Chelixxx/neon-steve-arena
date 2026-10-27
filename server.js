@@ -447,6 +447,7 @@ function publicAchievements(uid){
  const channels=store.channels.filter(c=>c.owner===uid).length;
  const apps=store.miniApps.filter(a=>a.authorId===uid).length;
  const posts=store.posts.filter(p=>p.authorId===uid||p.ownerId===uid||p.userId===uid).length;
+ const hintsSeen=new Set((Array.isArray(user.seenVoltraTips)?user.seenVoltraTips:[]).filter(validVoltraTipId)).size;
  const ageDays=Math.max(0,Math.floor((Date.now()-(Number(user.createdAt)||Date.now()))/86400000));
  const defs=[
   ['first-message','💬','Первый контакт','Отправить первое сообщение',ownMessages.length,1],
@@ -459,7 +460,8 @@ function publicAchievements(uid){
   ['creator','🛠️','Создатель','Создать канал или группу',channels,1],
   ['miniapp-maker','🧩','Мастер MiniApps','Создать MiniApp',apps,1],
   ['publisher','📰','Автор','Опубликовать 3 поста',posts,3],
-  ['veteran','🌟','Старожил VOLTRA','Быть с VOLTRA 30 дней',ageDays,30]
+  ['veteran','🌟','Старожил VOLTRA','Быть с VOLTRA 30 дней',ageDays,30],
+  ['voltra-tip-master','🔎','Мастер подсказок','Увидеть все 135 подсказок загрузки',hintsSeen,VOLTRA_TIP_TOTAL]
  ];
  return defs.map(([id,emoji,title,description,current,target])=>({id,emoji,title,description,current,target,unlocked:current>=target,progress:Math.min(100,Math.round(current/target*100))}));
 }
