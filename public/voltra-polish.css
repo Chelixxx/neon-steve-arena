@@ -97,3 +97,31 @@ body{background:radial-gradient(ellipse at 8% 0%,color-mix(in srgb,var(--accent)
  #profileModal .vip-perk-list{columns:1}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Finish: quieter separators, accessible dropdown state, true compact density */
+.vp-suite-divider{height:1px;margin:12px 0;background:linear-gradient(90deg,transparent,var(--voltra-line),color-mix(in srgb,var(--cyan) 55%,var(--accent)),transparent)}
+.vp-suite-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.vp-suite-actions button{min-height:31px;padding:6px 9px;border:1px solid var(--voltra-line);border-radius:9px;background:var(--voltra-grad-surface);color:var(--text);font-size:11px}
+.vp-suite-content .muted{margin:5px 0 10px}
+.vp-session-list,.vp-achievement-grid{min-width:0}
+.vp-session-row{background:linear-gradient(120deg,color-mix(in srgb,var(--panel) 90%,var(--accent) 10%),color-mix(in srgb,var(--panel) 91%,var(--cyan) 9%))}
+.vp-achievement.is-unlocked{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 20%,var(--panel2)),color-mix(in srgb,var(--cyan) 11%,var(--panel)))}
+#settingsModal .vp-settings-toolbar input{background:linear-gradient(110deg,color-mix(in srgb,var(--panel2) 84%,var(--accent) 16%),color-mix(in srgb,var(--panel2) 88%,var(--cyan) 12%))}
+#settingsModal .vp-settings-accordion-content .font-settings,#settingsModal .vp-settings-accordion-content .pulse-sound-settings,#settingsModal .vp-settings-accordion-content .customize-settings{background:transparent;box-shadow:none;border:0;padding:8px 0 0}
+.compact-mode .chat-item{padding:8px 10px;gap:8px}
+.compact-mode .chat-item .avatar{width:36px;height:36px;border-radius:12px}
+.compact-mode .chat-preview b{margin-bottom:3px}
+.compact-mode .me-row{padding:11px 14px 8px}
+.compact-mode .search{margin-bottom:10px}
+.compact-mode .tabs{padding-bottom:8px}
+.compact-mode .messages{gap:8px;padding-block:16px}
+.compact-mode .bubble{padding:8px 10px;font-size:12px}
+.compact-mode .side-bottom{padding:10px 14px}
+.compact-mode .settings-list{gap:6px}
+.compact-mode .modal-card{padding:14px}
+@media(max-width:640px){
+ .vp-suite-actions{gap:5px}
+ .vp-suite-head{align-items:flex-start}
+ .vp-suite-actions button{min-height:30px;padding:5px 7px}
+ .vp-settings-accordion>summary{padding:9px 10px}
+}
