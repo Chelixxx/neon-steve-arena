@@ -1027,3 +1027,62 @@ body{overflow:hidden}
 .cookie-game .cookie-captcha input{flex:1;min-width:0;min-height:42px;padding:10px;border:1px solid #75669c;border-radius:11px;background:#111628;color:#fff}
 .cookie-game .cookie-captcha button{min-height:42px;border:0;border-radius:11px;padding:10px 14px;background:linear-gradient(110deg,#7958e9,#b365e8,#37becb);color:#fff;font-weight:800;touch-action:manipulation}
 @media(max-width:520px){.cookie-game .cookie-stats{grid-template-columns:1fr}.cookie-game .cookie-stats>div{grid-template-columns:1fr auto;align-items:center;text-align:left}.cookie-game .cookie-big{width:155px;height:155px}}
+
+
+/* VOLTRA: loading-tip collection and one-time quest rewards */
+.profile-panel-tabs{display:flex;gap:8px;position:sticky;top:0;z-index:3;padding:8px 0 12px;margin:0 0 14px;background:var(--panel,#171624);overflow-x:auto}
+.profile-panel-tab{flex:1 0 auto;min-width:90px;border:1px solid rgba(190,145,255,.24);border-radius:12px;padding:10px 13px;background:rgba(255,255,255,.035);color:var(--text,#f7f4ff);font:inherit;font-weight:800;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+.profile-panel-tab:hover{transform:translateY(-1px);border-color:rgba(220,150,255,.6)}
+.profile-panel-tab.active{background:linear-gradient(120deg,rgba(255,75,202,.23),rgba(110,110,255,.23));border-color:rgba(222,129,255,.7);box-shadow:0 0 20px rgba(174,88,255,.12)}
+.profile-content-panel{min-width:0}
+.profile-panel-hero{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px;margin:3px 0 14px;border:1px solid rgba(187,140,255,.26);border-radius:16px;background:linear-gradient(135deg,rgba(255,79,200,.09),rgba(110,104,255,.08))}
+.profile-panel-hero h3,.tip-achievement-card h3{margin:0 0 6px;font-size:17px}
+.profile-panel-hero p,.tip-achievement-card p{margin:0;color:var(--muted,#b8b0cb);font-size:13px;line-height:1.45}
+.profile-panel-hero>strong{white-space:nowrap;font-size:19px;color:#f7d8ff}
+.tip-achievement-card{padding:16px;margin:0 0 18px;border:1px solid rgba(255,207,96,.38);border-radius:17px;background:linear-gradient(130deg,rgba(255,195,80,.09),rgba(168,108,255,.07))}
+.tip-achievement-top{display:flex;gap:12px;align-items:center}
+.tip-achievement-icon{display:grid;place-items:center;flex:0 0 44px;height:44px;border-radius:14px;background:rgba(255,203,82,.13);font-size:25px}
+.tip-achievement-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
+.tip-claim-button{white-space:nowrap!important}
+.profile-progress-track{height:7px;margin:12px 0 7px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}
+.profile-progress-track>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff59c8,#a18bff,#64e6ff);transition:width .25s}
+.tip-rarity-section{margin:20px 0}
+.tip-rarity-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
+.tip-rarity-heading h4{margin:0}
+.tip-rarity-heading>small{color:var(--muted,#b8b0cb)}
+.profile-tip-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.profile-tip-card{min-width:0;padding:12px;border:1px solid rgba(165,145,205,.23);border-left:3px solid #a7a0b9;border-radius:13px;background:rgba(255,255,255,.025)}
+.profile-tip-card.rarity-common{border-left-color:#aaa7b6}
+.profile-tip-card.rarity-uncommon{border-left-color:#58d6a3}
+.profile-tip-card.rarity-rare{border-left-color:#5da8ff}
+.profile-tip-card.rarity-epic{border-left-color:#bb81ff}
+.profile-tip-card.rarity-legendary{border-left-color:#ffc95f}
+.profile-tip-card.rarity-mythic{border-left-color:#ff6fc9;box-shadow:inset 0 0 16px rgba(255,105,210,.045)}
+.profile-tip-card-meta{display:flex;justify-content:space-between;gap:8px;color:var(--muted,#b8b0cb);font-size:10px;font-weight:800;letter-spacing:.045em;text-transform:uppercase}
+.profile-tip-card p{margin:9px 0 0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.quest-summary-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px;color:var(--muted,#b8b0cb);font-size:12px}
+.profile-task-grid{display:grid;grid-template-columns:1fr;gap:9px}
+.profile-task-card{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:11px;align-items:start;padding:13px;border:1px solid rgba(165,145,205,.2);border-radius:14px;background:rgba(255,255,255,.025)}
+.profile-task-card.is-ready{border-color:rgba(91,224,174,.45);background:rgba(65,202,151,.055)}
+.profile-task-card.is-claimed{opacity:.72}
+.profile-task-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:rgba(163,128,255,.13);font-size:21px}
+.profile-task-body{min-width:0}
+.profile-task-body h4{margin:1px 0 5px;font-size:14px}
+.profile-task-body p{margin:0;color:var(--muted,#b8b0cb);font-size:12px;line-height:1.4}
+.profile-task-body .profile-progress-track{margin:9px 0 4px;height:5px}
+.profile-task-body>small{color:var(--muted,#b8b0cb);font-size:10px}
+.profile-task-reward{display:flex;align-items:flex-end;flex-direction:column;gap:9px;min-width:85px}
+.profile-task-reward>b{font-size:13px;color:#8ff0c8;white-space:nowrap}
+.quest-claim-button{padding:9px 12px!important;min-width:92px}
+.quest-claimed{font-size:11px;font-weight:800;color:#79e8b6;white-space:nowrap}
+.quest-locked{font-size:11px;color:var(--muted,#b8b0cb);white-space:nowrap}
+@media(max-width:580px){
+ .profile-panel-tabs{gap:6px}
+ .profile-panel-tab{padding:9px 10px;font-size:12px}
+ .profile-tip-grid{grid-template-columns:1fr}
+ .profile-panel-hero{padding:13px}
+ .profile-task-card{grid-template-columns:34px minmax(0,1fr);gap:9px;padding:11px}
+ .profile-task-icon{width:34px;height:34px;font-size:18px}
+ .profile-task-reward{grid-column:2;align-items:center;flex-direction:row;justify-content:space-between;min-width:0;flex-wrap:wrap}
+ .profile-task-reward>b{font-size:12px}
+}
