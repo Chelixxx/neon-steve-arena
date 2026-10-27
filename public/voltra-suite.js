@@ -56,14 +56,17 @@ function compactSettingsLayout(){
  for(const id of ['settingSounds','previewNotificationSound','clearNotificationSound','notificationSoundFile','callSoundFile','previewCallSound','clearCallSound'])tag($(id)?.closest('label')||$(id)?.closest('.pulse-sound-row'),'notifications');
  for(const id of ['settingAlwaysOnline','settingGhostMode']){const label=parentLabel(id);tag(label,'security');const next=label?.nextElementSibling;if(next?.classList.contains('muted'))tag(next,'security')}
  tag($('profilePrivacySetting'),'security');tag($('moderationPanel'),'admin');tag($('adminGlobalChatPanel'),'admin');tag($('adminBanPanel'),'admin');
- card.querySelectorAll('.settings-list > *').forEach(node=>{
-  if(node.dataset.vpSettingsCategory)return;
-  const t=String(node.innerText||node.textContent||'').toLocaleLowerCase('ru-RU');
-  if(/модерац|админ|бан |заблокир|жалоб|доступ к общему|изменить свою надпись/.test(t))tag(node,'admin');
-  else if(/безопас|приват|скрывать мой профиль|устройств|сесси|восстанов|контакт|email|телефон|онлайн|призрак/.test(t))tag(node,'security');
-  else if(/звук|уведомлен|мелод|микрофон/.test(t))tag(node,'notifications');
-  else if(/компакт|интерфейс|цвет|тема|шрифт|иконк|анимац|дизайн|скруглен|размер текста|плотность/.test(t))tag(node,'appearance');
-  else tag(node,'general');
+ const guessCategory=t=>{
+  if(/модерац|админ|бан |заблокир|жалоб|доступ к общему|изменить свою надпись/.test(t))return 'admin';
+  if(/безопас|приват|скрывать мой профиль|устройств|сесси|восстанов|контакт|email|телефон|онлайн|призрак|парол/.test(t))return 'security';
+  if(/звук|уведомлен|мелод|микрофон/.test(t))return 'notifications';
+  if(/компакт|интерфейс|цвет|тема|шрифт|иконк|анимац|дизайн|скруглен|размер текста|плотность|оформлен/.test(t))return 'appearance';
+  return 'general';
+ };
+ card.querySelectorAll('.settings-list > *').forEach(node=>{if(!node.dataset.vpSettingsCategory)tag(node,guessCategory(String(node.innerText||node.textContent||'').toLocaleLowerCase('ru-RU')))});
+ [...card.children].forEach(node=>{
+  if(node.matches('h2,.modal-close,.settings-list,#vpSettingsToolbar'))return;
+  if(!node.dataset.vpSettingsCategory)tag(node,guessCategory(String(node.innerText||node.textContent||'').toLocaleLowerCase('ru-RU')));
  });
  const fold=(selector,label,category,caption)=>{
   const source=card.querySelector(selector);if(!source||source.closest('.vp-settings-accordion'))return;
