@@ -152,3 +152,16 @@ body{background:radial-gradient(ellipse at 8% 0%,color-mix(in srgb,var(--accent)
   -webkit-overflow-scrolling:touch;
  }
 }
+
+/* Upload progress: visible, readable status and animated gradient track */
+#uploadProgress:not(.hidden){display:block!important;position:relative;margin:8px 0 10px;padding:12px 13px 14px;border:1px solid color-mix(in srgb,var(--accent,#8b73ff) 45%,transparent);border-radius:14px;background:linear-gradient(115deg,color-mix(in srgb,var(--panel,#141526) 88%,var(--accent,#8b73ff) 12%),color-mix(in srgb,var(--panel,#141526) 86%,var(--cyan,#45d7ff) 14%));box-shadow:0 8px 24px #0002;overflow:hidden}
+#uploadProgress #uploadStatus,#uploadProgress .upload-status{display:block;font-size:12px;line-height:1.4;overflow-wrap:anywhere;color:var(--text,#f6f5ff)}
+#uploadProgress progress,#uploadProgress .progress-track,#uploadProgress .upload-progress-track{display:block;width:100%;height:6px;margin-top:8px;border:0;border-radius:999px;overflow:hidden;accent-color:var(--accent,#8b73ff);background:#ffffff18}
+#uploadProgress progress::-webkit-progress-bar{background:#ffffff18;border-radius:999px}
+#uploadProgress progress::-webkit-progress-value{background:linear-gradient(90deg,var(--accent,#8b73ff),var(--cyan,#45d7ff));border-radius:999px;transition:width .18s ease}
+#uploadProgress progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent,#8b73ff),var(--cyan,#45d7ff));border-radius:999px}
+#uploadProgress .upload-progress-percent{font-size:11px;color:var(--muted,#aaa)}
+@media(max-width:700px){
+ html.voltra-keyboard-open,html.voltra-keyboard-open body{overscroll-behavior-y:none}
+ html.voltra-keyboard-open .app{height:var(--voltra-viewport-height,100dvh)!important;max-height:var(--voltra-viewport-height,100dvh)!important}
+}
