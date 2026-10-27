@@ -173,9 +173,9 @@ async function authenticate(){
 }
 async function checkSession(){
  let remembered='';try{remembered=localStorage.getItem('pulseLastAccount')||''}catch{}
- // If this browser has used VOLTRA before, hide the login card while checking its secure server session.
  if(remembered){$('login')?.classList.add('hidden');$('app')?.classList.add('hidden')}
- try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok){if(remembered)$('login')?.classList.remove('hidden');return}const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();setTimeout(()=>requestPushPermissionOnEntry(),900)}catch{if(remembered)$('login')?.classList.remove('hidden')}
+ const restoreWithSavedPassword=()=>new Promise(resolve=>setTimeout(()=>{const savedName=$('nickname')?.value.trim(),savedPassword=$('password')?.value||'';if(remembered&&savedName&&savedName.toLowerCase()===remembered.toLowerCase()&&savedPassword.length>=8){authenticate().finally(resolve)}else{if(remembered)$('login')?.classList.remove('hidden');resolve()}},900));
+ try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok){await restoreWithSavedPassword();return}const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();setTimeout(()=>requestPushPermissionOnEntry(),900)}catch{await restoreWithSavedPassword()}
 }
 async function requestPushPermissionOnEntry(){
  if(!myId||!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window))return;
