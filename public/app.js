@@ -186,6 +186,18 @@ function showAuthSplash(title,subtitle){
 function finishAuthSplash(){
  clearTimeout(authRestoreWatchdog);
  authRestoreWatchdog=null;
+ // Once authenticated, keep the premium splash visible long enough to read two tips.
+ if(window.__voltraAuthed===true){
+  const started=Number(window.__voltraLoaderStartedAt)||Date.now();
+  const minimumUntil=started+8500;
+  const shown=Number(window.__voltraTipsShownThisLoad)||0;
+  if(Date.now()<minimumUntil||shown<2){
+   if(!window.__voltraLoaderFinishTimer)window.__voltraLoaderFinishTimer=setTimeout(()=>{window.__voltraLoaderFinishTimer=null;finishAuthSplash()},Math.max(250,Math.min(900,minimumUntil-Date.now()>0?minimumUntil-Date.now():500)));
+   return;
+  }
+ }
+ clearTimeout(window.__voltraLoaderFinishTimer);
+ window.__voltraLoaderFinishTimer=null;
  $('bootLoader')?.classList.add('hidden');
 }
 function beginAuthRestore(title,subtitle){
@@ -297,7 +309,7 @@ function handle(m){
  if(!$('loginError')?.textContent)$('loginError').textContent='Сессию восстановить не удалось. Проверь данные и войди ещё раз.';
  return;
 }
- if(m.t==='welcome'){window.__voltraAuthed=true;window.__voltraAuthAttempting=false;window.__voltraFinishSplash?.();authRestoreInProgress=false;finishAuthSplash();myId=m.id;users=m.users||[];myUsername=users.find(u=>u.id===myId)?.username||myUsername;unreadCounts=new Map(Object.entries(m.unread||{}));$('login').classList.add('hidden');$('app').classList.remove('hidden');const self=users.find(u=>u.id===myId);$('myName').innerHTML=esc(myName)+easterEggDecor({...self,name:myName,username:myUsername})+adminBadge(self)+giftDecor(self);updateVipBrand();$('myAvatar').innerHTML=avatarContent(myName,self?.avatar);$('profileBtn').innerHTML=avatarContent(myName,self?.avatar);$('connection').textContent='подключено';(m.history||[]).forEach(x=>pushMessage(globalKey,x,false));try{localStorage.removeItem('pulseActiveChat')}catch{}activeId=null;if(self?.globalChatDisabled){$('welcome').classList.remove('hidden');$('messages').classList.add('hidden');$('composer').classList.add('hidden');$('peerName').textContent='Выбери чат';$('peerStatus').textContent='Доступ к общему чату отключён';renderList();loadCommunity();return}showEmpty();$('app').classList.remove('chat-open');loadCommunity();renderList();void processCallActionFromUrl();return}
+ if(m.t==='welcome'){window.__voltraAuthed=true;window.__voltraAuthAttempting=false;window.__voltraFinishSplash?.();authRestoreInProgress=false;finishAuthSplash();myId=m.id;void syncVoltraTipProgress();users=m.users||[];myUsername=users.find(u=>u.id===myId)?.username||myUsername;unreadCounts=new Map(Object.entries(m.unread||{}));$('login').classList.add('hidden');$('app').classList.remove('hidden');const self=users.find(u=>u.id===myId);$('myName').innerHTML=esc(myName)+easterEggDecor({...self,name:myName,username:myUsername})+adminBadge(self)+giftDecor(self);updateVipBrand();$('myAvatar').innerHTML=avatarContent(myName,self?.avatar);$('profileBtn').innerHTML=avatarContent(myName,self?.avatar);$('connection').textContent='подключено';(m.history||[]).forEach(x=>pushMessage(globalKey,x,false));try{localStorage.removeItem('pulseActiveChat')}catch{}activeId=null;if(self?.globalChatDisabled){$('welcome').classList.remove('hidden');$('messages').classList.add('hidden');$('composer').classList.add('hidden');$('peerName').textContent='Выбери чат';$('peerStatus').textContent='Доступ к общему чату отключён';renderList();loadCommunity();return}showEmpty();$('app').classList.remove('chat-open');loadCommunity();renderList();void processCallActionFromUrl();return}
  if(m.t==='presence'){users=m.users||[];$('peopleCount').textContent=users.filter(u=>u.id!==myId).length;$('connection').textContent='подключено';const self=users.find(u=>u.id===myId);if(self){myName=self.name||myName;myUsername=self.username||myUsername;$('myName').innerHTML=esc(myName)+easterEggDecor({...self,name:myName,username:myUsername})+adminBadge(self)+giftDecor(self);updateVipBrand();$('myAvatar').innerHTML=avatarContent(myName,self.avatar);$('profileBtn').innerHTML=avatarContent(myName,self.avatar)}if(self?.globalChatDisabled&&activeId===globalKey){activeId=globalKey;$('welcome').classList.remove('hidden');$('messages').classList.add('hidden');$('composer').classList.add('hidden');$('peerName').textContent='Выбери чат';$('peerStatus').textContent='Доступ к общему чату отключён'}if(isDM()){const peer=users.find(u=>u.id===activeId);$('peerName').innerHTML=esc(labelFor(activeId))+adminBadge(peer)+giftDecor(peer);$('peerAvatar').innerHTML=avatarContent(labelFor(activeId),peer?.avatar);$('peerStatus').textContent=formatLastSeen(peer)}renderList();if(isDM())return}
  if(m.t==='reward-notice'){if(m.paymentOrderId){let overlay=document.getElementById('voltraPaymentAlert');if(!overlay){overlay=document.createElement('div');overlay.id='voltraPaymentAlert';overlay.style.cssText='position:fixed;inset:0;z-index:999999;background:rgba(5,4,15,.96);display:grid;place-items:center;padding:20px;color:white;font-family:system-ui,Arial';overlay.innerHTML='<section style="width:min(760px,100%);padding:clamp(24px,6vw,56px);border-radius:28px;background:linear-gradient(145deg,#2b1645,#111326);border:2px solid #a18aff;box-shadow:0 0 80px #8064ff55;text-align:center"><div style="font-size:clamp(48px,10vw,92px)">💸</div><div style="font-size:clamp(28px,6vw,56px);font-weight:1000;line-height:1.05;margin:18px 0">ПРОВЕРЬ ПОСТУПЛЕНИЕ!</div><p id="voltraPaymentAlertText" style="font-size:clamp(17px,3vw,25px);line-height:1.45"></p><button id="voltraPaymentAlertOpen" style="width:100%;padding:17px;border:0;border-radius:14px;background:#8b75ff;color:white;font-weight:900;font-size:18px;cursor:pointer">ОТКРЫТЬ ЗАЯВКИ</button><button id="voltraPaymentAlertClose" style="margin-top:10px;padding:12px;border:1px solid #ffffff33;border-radius:12px;background:transparent;color:white;font-weight:700;cursor:pointer">Позже</button></section>';document.body.appendChild(overlay);overlay.querySelector('#voltraPaymentAlertOpen').onclick=()=>{location.href='/admin-payments.html'};overlay.querySelector('#voltraPaymentAlertClose').onclick=()=>overlay.remove()}const text=overlay.querySelector('#voltraPaymentAlertText');if(text)text.textContent=(m.title?m.title+' — ':'')+(m.body||'Поступила заявка. Проверь банковское приложение.');return}toast((m.title?m.title+' — ':'')+(m.body||'Новое уведомление'));return}if(m.t==='game-state'){for(const list of messagesByChat.values())for(const item of list)if(item.gameInvite?.gameId===m.game?.id)item.gameInvite.game=m.game;renderMessages();return}if(m.t==='pulses-updated'){window.dispatchEvent(new CustomEvent('pulsePulsesUpdated',{detail:m}));return}if(m.t==='gift-inventory-updated'){window.dispatchEvent(new CustomEvent('pulseGiftInventoryUpdated'));return}if(m.t==='presence-refresh'){return}if(m.t==='message'){const msg=m.message,key=msg.channelId?channelKey(msg.channelId):(msg.to?dmKey(msg.from===myId?msg.to:msg.from):globalKey);if(msg.from!==myId&&(document.hidden||key!==currentKey())&&!msg.silent&&!isChatMuted(msg.channelId?'channel:'+msg.channelId:(msg.to?(msg.from===myId?msg.to:msg.from):globalKey)))playPulseSound('notification');pushMessage(key,msg,false);if(msg.from!==myId){if(key===currentKey()){send({t:'read',ids:[msg.id]});}else unreadCounts.set(key,(unreadCounts.get(key)||0)+1)}renderList();if(key===currentKey())renderMessages(msg.from===myId,true);return}
  if(m.t==='message-hidden'){for(const [key,list] of messagesByChat)messagesByChat.set(key,list.filter(x=>x.id!==m.id));renderList();renderMessages();return}if(m.t==='message-delete-result'){toast(m.scope==='everyone'?'Сообщение удалено у всех 🗑':'Сообщение удалено у тебя 🗑');return}
@@ -683,7 +695,79 @@ function readAdminAvatar(){const input=$('adminAvatarFile'),f=input.files?.[0];a
 async function setUserAvatar(){const username=$('adminAvatarUser').value.trim();if(!username||!adminAvatarData){toast('Укажи ник и выбери картинку');return}const btn=$('adminSetAvatar');btn.disabled=true;try{const r=await fetch('/api/admin/avatar',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({username,avatar:adminAvatarData})}),d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось изменить аватар');const target=users.find(u=>u.name.toLowerCase()===d.username.toLowerCase());if(target)target.avatar=d.avatar;$('adminAvatarStatus').textContent='Аватар пользователя '+d.username+' изменён ✓';adminAvatarData='';$('adminAvatarFile').value='';toast('Аватар обновлён для '+d.username);renderList()}catch(e){$('adminAvatarStatus').textContent=e.message||'Ошибка'}finally{btn.disabled=false}}
 function paintProfileAvatar(data,name){const target=$('profileAvatarPreview');if(data){target.innerHTML='<img alt="Аватар" src="'+data+'">'}else target.textContent=avatar(name)}
 async function openPublicProfile(id){if(!id||id===myId||String(id).startsWith('channel:'))return;publicProfileId=id;try{const viaUsername=!!window.pulseUsernameFoundIds?.has(id)||readAddedDirectoryContacts().some(u=>u.id===id),r=await fetch('/api/users/'+encodeURIComponent(id)+'/profile'+(viaUsername?'?viaUsername=1':''),{credentials:'same-origin'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось открыть профиль');const p=d.profile||{};if($('publicProfileAchievements'))$('publicProfileAchievementList').innerHTML=(p.achievements||[]).length?'<div class="vp-achievement-grid">'+p.achievements.map(a=>'<article class="vp-achievement '+(a.unlocked?'is-unlocked':'')+'"><span class="vp-ach-icon">'+esc(a.emoji||'🏅')+'</span><b>'+esc(a.title||'Достижение')+'</b><small>'+esc(a.unlocked?'Получено ✓':(a.current||0)+' / '+(a.target||1))+'</small><div class="vp-ach-progress"><span style="width:'+Math.max(0,Math.min(100,Number(a.progress)||0))+'%"></span></div></article>').join('')+'</div>':'<p class="muted">Пока нет достижений.</p>';$('publicProfileHeader').innerHTML='<div class="avatar">'+avatarContent(p.name,p.avatar)+'</div><div><h2>'+esc(p.name)+adminBadge(p)+giftDecor(p)+'</h2><small class="profile-username">@'+esc(p.username||'user')+'</small><br><small class="muted">'+(p.online?'● В сети':'○ Не в сети')+'</small></div>';$('publicProfileBio').textContent=p.bio||'Пользователь пока ничего не рассказал о себе.';$('publicProfileGifts').innerHTML=(d.gifts||[]).map(g=>'<div class="public-gift-card">'+(/^halloween-pumpkin-\d+$/.test(String(g.id||''))&&typeof window.pulsePumpkinSvg==='function'?window.pulsePumpkinSvg(g):'<span class="gift-layer-main">'+esc(g.emoji)+'</span>')+'<b>'+esc(g.name)+'</b><small>'+esc(g.rarity)+'</small><small>'+Number(g.price||0).toLocaleString('ru-RU')+' ϟ</small>'+(Number(g.serialNumber||g.variant||0)>0?'<small>№ '+Number(g.serialNumber||g.variant)+(Number(g.edition||g.totalSupply)>0?'/'+Number(g.edition||g.totalSupply):'')+'</small>':'')+(Array.isArray(g.ownerHistory)&&g.ownerHistory.length?'<details class="gift-owner-history"><summary>История владельцев · '+g.ownerHistory.length+'</summary>'+g.ownerHistory.map(o=>'<small>'+esc(o.userName||'Пользователь')+' · '+esc(o.action||'передача')+' · '+new Date(o.at||Date.now()).toLocaleDateString()+'</small>').join('')+'</details>':'')+'</div>').join('')||'<p class="muted">Пока нет подарков в коллекции.</p>';$('publicProfileGifts').insertAdjacentHTML('beforeend',(d.giftHistory||[]).length?'<h4>🎁 Кто дарил</h4>'+d.giftHistory.map(g=>'<div class="gift-history-row"><span>'+esc(g.emoji)+' '+esc(g.name)+'</span><small>От '+esc(g.giverName)+' · '+Number(g.price||0).toLocaleString('ru-RU')+' ϟ · '+new Date(g.at).toLocaleDateString()+'</small></div>').join(''):'');$('publicLocalName').value=localNick(id);showModal('publicProfileModal')}catch(e){toast(e.message||'Ошибка профиля')}}
-function openProfile(){try{history.replaceState({voltraDeepLink:true},'',location.origin+'/'+encodeURIComponent(myUsername||voltraSlug(myName)))}catch{}showModal('profileModal');const self=users.find(u=>u.id===myId);$('premiumStatus').textContent=self?.vip?'VIP уже активирован навсегда 👑':'VIP за 399 ₽ навсегда. Покупка оформляется только у указанных продавцов.';$('vipSellerTools').classList.toggle('hidden',!self?.vipSeller);$('vipGrantStatus').textContent='';$('vipTargetUsername').value='';updateVipBrand();$('profileName').value=myName;$('profileUsername').value=myUsername;paintProfileAvatar(profileAvatarData,myName);const isAdmin=!!self?.admin&&String(self.name||'').toLowerCase()==='chelixxx';$('adminAvatarPanel').classList.toggle('hidden',!isAdmin);$('adminAvatarStatus').textContent='';$('adminAvatarPreview').innerHTML='';$('adminAvatarUser').value='';$('adminAvatarFile').value='';adminAvatarData='';loadCommunity()}
+
+function safeLocalTipIds(){
+ try{const ids=JSON.parse(localStorage.getItem('voltraSeenTips')||'[]');return Array.isArray(ids)?ids.filter(x=>typeof x==='string').slice(-300):[]}catch{return []}
+}
+async function syncVoltraTipProgress(){
+ const ids=safeLocalTipIds();
+ try{
+  const r=await fetch('/api/tips/seen',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({ids})});
+  if(!r.ok)return;
+  const d=await r.json();
+  if(Array.isArray(d.seenIds))try{localStorage.setItem('voltraSeenTips',JSON.stringify(d.seenIds))}catch{}
+ }catch{}
+}
+function switchProfilePanel(panel){
+ const allowed=['info','collection','tasks'];if(!allowed.includes(panel))panel='info';
+ document.querySelectorAll('[data-profile-panel]').forEach(b=>b.classList.toggle('active',b.dataset.profilePanel===panel));
+ $('profileInfoPanel')?.classList.toggle('hidden',panel!=='info');
+ $('profileCollectionPanel')?.classList.toggle('hidden',panel!=='collection');
+ $('profileTasksPanel')?.classList.toggle('hidden',panel!=='tasks');
+ if(panel==='collection')void loadTipCollection();
+ if(panel==='tasks')void loadVoltraQuests();
+}
+const VOLTRA_RARITY_ORDER=['common','uncommon','rare','epic','legendary','mythic'];
+async function loadTipCollection(){
+ const root=$('profileCollectionContent');if(!root)return;
+ root.innerHTML='<p class="muted">Собираем твои подсказки…</p>';
+ try{
+  await syncVoltraTipProgress();
+  const r=await fetch('/api/tips/collection',{credentials:'same-origin',cache:'no-store'}),d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Не удалось загрузить коллекцию');
+  const catalog=Array.isArray(window.VOLTRA_TIP_CATALOG)?window.VOLTRA_TIP_CATALOG:[];
+  const seen=new Set(d.seenIds||[]),meta=window.VOLTRA_TIP_META||{};
+  const groups=VOLTRA_RARITY_ORDER.map(rarity=>({rarity,items:catalog.filter(t=>t.rarity===rarity&&seen.has(t.id))})).filter(g=>g.items.length);
+  const heading='<div class="profile-panel-hero"><div><h3>📚 Коллекция подсказок</h3><p>Подсказки, которые появлялись на экране загрузки VOLTRA.</p></div><strong>'+seen.size+' / '+Number(d.total||catalog.length)+'</strong></div>';
+  const achievement='<article class="tip-achievement-card"><div class="tip-achievement-top"><span class="tip-achievement-icon">🏆</span><div><h3>Мастер подсказок</h3><p>Увидь все '+Number(d.total||catalog.length)+' подсказок и забери награду 2000 ϟ.</p></div></div><div class="profile-progress-track"><span style="width:'+Math.max(0,Math.min(100,seen.size/Math.max(1,Number(d.total)||catalog.length)*100))+'%"></span></div><div class="tip-achievement-bottom"><small>'+seen.size+' / '+Number(d.total||catalog.length)+' найдено</small>'+(d.rewardClaimed?'<span class="quest-claimed">Награда получена ✓</span>':d.rewardAvailable?'<button type="button" class="primary tip-claim-button" data-tip-claim>Получить 2000 ϟ</button>':'<small class="muted">Собери полную коллекцию</small>')+'</div></article>';
+  const content=groups.map(g=>{
+   const info=meta[g.rarity]||{label:g.rarity,color:g.rarity};
+   return '<section class="tip-rarity-section"><div class="tip-rarity-heading"><h4><span class="voltra-tip-rarity rarity-'+esc(info.color)+'">'+esc(info.label)+'</span></h4><small>'+g.items.length+' найдено</small></div><div class="profile-tip-grid">'+g.items.map(t=>'<article class="profile-tip-card rarity-'+esc(t.rarity)+'"><div class="profile-tip-card-meta"><span>'+esc(t.category||'ПОДСКАЗКА')+'</span><span>✓ Найдена</span></div><p>'+esc(t.text)+'</p></article>').join('')+'</div></section>';
+  }).join('');
+  root.innerHTML=heading+achievement+(content||'<p class="muted">Пока пусто — следующая подсказка появится при загрузке VOLTRA.</p>');
+ }catch(e){root.innerHTML='<p class="muted">'+esc(e.message||'Не удалось загрузить коллекцию')+'</p><button class="secondary" type="button" data-reload-tip-collection>Повторить</button>'}
+}
+async function loadVoltraQuests(){
+ const root=$('profileTasksContent');if(!root)return;
+ root.innerHTML='<p class="muted">Загружаем 50 заданий…</p>';
+ try{
+  const r=await fetch('/api/quests',{credentials:'same-origin',cache:'no-store'}),d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Не удалось загрузить задания');
+  const items=Array.isArray(d.items)?d.items:[];
+  root.innerHTML='<div class="profile-panel-hero"><div><h3>🎯 Обычные задания</h3><p>Выполняй задачи в VOLTRA и забирай Вольтриксы. Каждую награду можно получить один раз.</p></div><strong>'+(d.claimed||0)+' / '+(d.total||50)+'</strong></div><div class="quest-summary-row"><span>Готово к получению: <b>'+(d.ready||0)+'</b></span><span>Получено: <b>'+(d.claimed||0)+'</b></span></div><div class="profile-task-grid">'+items.map(q=>'<article class="profile-task-card '+(q.claimed?'is-claimed':q.unlocked?'is-ready':'')+'"><div class="profile-task-icon">'+esc(q.emoji||'🎯')+'</div><div class="profile-task-body"><h4>'+esc(q.title)+'</h4><p>'+esc(q.description)+'</p><div class="profile-progress-track"><span style="width:'+Math.max(0,Math.min(100,Number(q.progress)||0))+'%"></span></div><small>'+Number(q.current||0).toLocaleString('ru-RU')+' / '+Number(q.target||1).toLocaleString('ru-RU')+'</small></div><div class="profile-task-reward"><b>+'+Number(q.reward||0).toLocaleString('ru-RU')+' ϟ</b>'+(q.claimed?'<span class="quest-claimed">Получено ✓</span>':q.unlocked?'<button type="button" class="primary quest-claim-button" data-quest-claim="'+esc(q.id)+'">Получить</button>':'<span class="quest-locked">Выполнить</span>')+'</div></article>').join('')+'</div>';
+ }catch(e){root.innerHTML='<p class="muted">'+esc(e.message||'Не удалось загрузить задания')+'</p><button class="secondary" type="button" data-reload-voltra-quests>Повторить</button>'}
+}
+async function claimTipCollectionReward(button){
+ if(button)button.disabled=true;
+ try{
+  const r=await fetch('/api/tips/claim',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:'{}'}),d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Не удалось получить награду');
+  toast('Полная коллекция! +'+Number(d.reward||2000).toLocaleString('ru-RU')+' ϟ 🏆');
+  window.dispatchEvent(new CustomEvent('pulsePulsesUpdated',{detail:{pulses:d.balance}}));
+  await loadTipCollection();
+ }catch(e){toast(e.message||'Ошибка награды');if(button)button.disabled=false}
+}
+async function claimVoltraQuest(id,button){
+ if(button)button.disabled=true;
+ try{
+  const r=await fetch('/api/quests/claim',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({id})}),d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Не удалось получить награду');
+  toast('Задание выполнено: +'+Number(d.reward||0).toLocaleString('ru-RU')+' ϟ ✨');
+  window.dispatchEvent(new CustomEvent('pulsePulsesUpdated',{detail:{pulses:d.balance}}));
+  await loadVoltraQuests();
+ }catch(e){toast(e.message||'Ошибка награды');if(button)button.disabled=false}
+}
+function openProfile(){switchProfilePanel('info');try{history.replaceState({voltraDeepLink:true},'',location.origin+'/'+encodeURIComponent(myUsername||voltraSlug(myName)))}catch{}showModal('profileModal');const self=users.find(u=>u.id===myId);$('premiumStatus').textContent=self?.vip?'VIP уже активирован навсегда 👑':'VIP за 399 ₽ навсегда. Покупка оформляется только у указанных продавцов.';$('vipSellerTools').classList.toggle('hidden',!self?.vipSeller);$('vipGrantStatus').textContent='';$('vipTargetUsername').value='';updateVipBrand();$('profileName').value=myName;$('profileUsername').value=myUsername;paintProfileAvatar(profileAvatarData,myName);const isAdmin=!!self?.admin&&String(self.name||'').toLowerCase()==='chelixxx';$('adminAvatarPanel').classList.toggle('hidden',!isAdmin);$('adminAvatarStatus').textContent='';$('adminAvatarPreview').innerHTML='';$('adminAvatarUser').value='';$('adminAvatarFile').value='';adminAvatarData='';loadCommunity()}
 function readAvatar(){const f=$('avatarFile').files?.[0];if(!f)return;if(!/^image\/(png|jpeg|webp|gif)$/.test(f.type)||f.size>800*1024){toast('Выбери PNG/JPEG/WEBP/GIF до 800 КБ');return}const rd=new FileReader();rd.onload=()=>{profileAvatarData=String(rd.result||'');paintProfileAvatar(profileAvatarData,$('profileName').value||myName)};rd.readAsDataURL(f)}
 async function savePresenceSettings(){const always=$('settingAlwaysOnline').checked,ghost=$('settingGhostMode').checked;try{const r=await fetch('/api/presence-settings',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({alwaysOnline:always&&!ghost,ghostMode:ghost})}),d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось сохранить статус');$('settingAlwaysOnline').checked=!!d.alwaysOnline;$('settingGhostMode').checked=!!d.ghostMode;toast(d.ghostMode?'Режим призрака включён 👻':d.alwaysOnline?'Статус «всегда в сети» включён 🟢':'Статус обновлён')}catch(e){toast(e.message||'Ошибка статуса');loadCommunity()}}
 async function uploadCustomFont(){const file=$('customFontFile').files?.[0];if(!file){toast('Выбери файл шрифта');return}if(!/\.(ttf|otf|woff|woff2)$/i.test(file.name)||file.size>10*1024*1024){toast('Нужен TTF/OTF/WOFF/WOFF2 до 10 МБ');return}const btn=$('applyCustomFont');btn.disabled=true;try{const ticket=await getUploadTicket(),r=await fetch('/upload?name='+encodeURIComponent(file.name),{method:'POST',headers:{'content-type':file.type||'application/octet-stream','authorization':'Bearer '+ticket},body:file,credentials:'same-origin'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось загрузить шрифт');if(!/^\/uploads\/[a-f0-9]{32}\.(ttf|otf|woff|woff2)$/i.test(d.url||''))throw new Error('Сервер вернул некорректный файл шрифта');localStorage.setItem('pulseFontUrl',d.url);applyCustomFont(d.url);$('customFontStatus').textContent='Шрифт загружен и применён ✓';toast('Шрифт применён ✨')}catch(e){$('customFontStatus').textContent=e.message;toast(e.message||'Ошибка шрифта')}finally{btn.disabled=false}}
@@ -751,6 +835,13 @@ document.addEventListener('click',e=>{
 document.addEventListener('click',e=>{if(e.target.closest('#launchClassicStrike')){const modal=$('classicStrikeModal'),frame=$('classicStrikeFrame');if(modal&&frame){showModal('classicStrikeModal');if(frame.src==='about:blank'||!frame.src.endsWith('/classic-strike/'))frame.src='/classic-strike/';}}if(e.target.closest('#closeClassicStrike')){const frame=$('classicStrikeFrame');if(frame)frame.src='about:blank';hideModal('classicStrikeModal');}});
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('classicStrikeModal')&&!$('classicStrikeModal').classList.contains('hidden')){const frame=$('classicStrikeFrame');if(frame)frame.src='about:blank';hideModal('classicStrikeModal');}});
 
+document.addEventListener('click',e=>{
+ const profileTab=e.target.closest('[data-profile-panel]');if(profileTab){e.preventDefault();switchProfilePanel(profileTab.dataset.profilePanel);return}
+ if(e.target.closest('[data-tip-claim]')){e.preventDefault();void claimTipCollectionReward(e.target.closest('[data-tip-claim]'));return}
+ const quest=e.target.closest('[data-quest-claim]');if(quest){e.preventDefault();void claimVoltraQuest(quest.dataset.questClaim,quest);return}
+ if(e.target.closest('[data-reload-tip-collection]')){void loadTipCollection();return}
+ if(e.target.closest('[data-reload-voltra-quests]')){void loadVoltraQuests();return}
+});
 document.addEventListener('submit',e=>{if(e.target&&e.target.id==='loginForm'){e.preventDefault();authenticate()}},true);
 window.voltraAuthenticate=authenticate;
 window.addEventListener('DOMContentLoaded',()=>{checkSession()});
