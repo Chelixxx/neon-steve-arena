@@ -463,6 +463,99 @@ function publicAchievements(uid){
  ];
  return defs.map(([id,emoji,title,description,current,target])=>({id,emoji,title,description,current,target,unlocked:current>=target,progress:Math.min(100,Math.round(current/target*100))}));
 }
+
+const VOLTRA_TIP_COUNTS=Object.freeze({common:35,uncommon:30,rare:25,epic:20,legendary:15,mythic:10});
+const VOLTRA_TIP_TOTAL=Object.values(VOLTRA_TIP_COUNTS).reduce((a,b)=>a+b,0);
+function validVoltraTipId(value){
+ const m=/^(common|uncommon|rare|epic|legendary|mythic)-(\\d+)$/.exec(String(value||''));
+ return !!m&&Number(m[2])>=0&&Number(m[2])<VOLTRA_TIP_COUNTS[m[1]];
+}
+function voltraQuestStats(uid){
+ const user=userById(uid);if(!user)return {};
+ const own=store.messages.filter(m=>m.from===uid&&!m.deletedForEveryone);
+ const contacts=new Set(own.filter(m=>m.to&&!m.channelId).map(m=>m.to));
+ const ownedGifts=new Set([...(Array.isArray(user.ownedGifts)?user.ownedGifts.map(String):[]),...(store.giftInstances||[]).filter(g=>g.ownerId===uid).map(g=>String(g.id))]);
+ const sentGifts=own.filter(m=>m.kind==='gift'||m.kind==='gift-purchase').length;
+ const receivedGifts=store.messages.filter(m=>m.to===uid&&(m.kind==='gift'||m.kind==='gift-purchase')).length;
+ const groups=store.channels.filter(c=>c.type==='group'&&(c.owner===uid||(Array.isArray(c.members)&&c.members.includes(uid)))).length;
+ const ownedChannels=store.channels.filter(c=>c.owner===uid&&c.type!=='group').length;
+ const posts=store.posts.filter(p=>p.authorId===uid||p.ownerId===uid||p.userId===uid).length;
+ const comments=(store.comments||[]).filter(c=>c.authorId===uid).length;
+ const marketListings=(store.marketListings||[]).filter(x=>x.sellerId===uid&&x.status!=='deleted').length;
+ const marketPurchases=(store.marketTransactions||[]).filter(x=>x.buyerId===uid).length;
+ const stickerPacks=(store.stickerPacks||[]).filter(x=>x.ownerId===uid||x.authorId===uid||x.userId===uid).length;
+ const miniApps=(store.miniApps||[]).filter(x=>x.authorId===uid||x.ownerId===uid).length;
+ const cookies=Number(store.cookieClickers?.[uid]?.clicks)||0;
+ const ageDays=Math.max(0,Math.floor((Date.now()-(Number(user.createdAt)||Date.now()))/86400000));
+ const profileFields=Number(!!user.avatar)+Number(!!String(user.bio||'').trim())+Number(!!user.username&&!/^user[0-9a-f]{4,}$/i.test(String(user.username)))+Number(!!user.phoneVerified);
+ const referred=store.users.filter(x=>x.referrerId===uid).length;
+ const postReactions=store.posts.filter(p=>Object.values(p.reactions||{}).some(list=>Array.isArray(list)&&list.includes(uid))).length;
+ return {
+  messages:own.length,contacts:contacts.size,dmMessages:own.filter(m=>m.to&&!m.channelId).length,
+  globalMessages:own.filter(m=>!m.to&&!m.channelId).length,channelMessages:own.filter(m=>!!m.channelId).length,
+  groups,ownedChannels,posts,comments,ownedGifts:ownedGifts.size,sentGifts,receivedGifts,
+  marketListings,marketPurchases,stickerPacks,miniApps,cookieClicks:cookies,profileFields,
+  phoneVerified:Number(!!user.phoneVerified),ageDays,referred,postReactions
+ };
+}
+const VOLTRA_QUESTS=[
+ {id:'msg-1',emoji:'💬',title:'Первое сообщение',description:'Отправь первое сообщение.',metric:'messages',target:1,reward:20},
+ {id:'msg-5',emoji:'💬',title:'Разговор пошёл',description:'Отправь 5 сообщений.',metric:'messages',target:5,reward:25},
+ {id:'msg-10',emoji:'🔥',title:'На связи',description:'Отправь 10 сообщений.',metric:'messages',target:10,reward:30},
+ {id:'msg-25',emoji:'🔥',title:'Разговорчивый',description:'Отправь 25 сообщений.',metric:'messages',target:25,reward:40},
+ {id:'msg-50',emoji:'⚡',title:'Активный участник',description:'Отправь 50 сообщений.',metric:'messages',target:50,reward:60},
+ {id:'msg-100',emoji:'🚀',title:'Легенда чата',description:'Отправь 100 сообщений.',metric:'messages',target:100,reward:100},
+ {id:'contacts-1',emoji:'🫂',title:'Новый контакт',description:'Напиши одному человеку в личные сообщения.',metric:'contacts',target:1,reward:20},
+ {id:'contacts-3',emoji:'🫂',title:'Своя команда',description:'Пообщайся с 3 людьми.',metric:'contacts',target:3,reward:30},
+ {id:'contacts-5',emoji:'🤝',title:'На короткой связи',description:'Пообщайся с 5 людьми.',metric:'contacts',target:5,reward:50},
+ {id:'contacts-10',emoji:'🌐',title:'Широкий круг',description:'Пообщайся с 10 людьми.',metric:'contacts',target:10,reward:75},
+ {id:'dm-1',emoji:'✉️',title:'Личное дело',description:'Отправь личное сообщение.',metric:'dmMessages',target:1,reward:20},
+ {id:'dm-10',emoji:'✉️',title:'Личная переписка',description:'Отправь 10 личных сообщений.',metric:'dmMessages',target:10,reward:40},
+ {id:'dm-25',emoji:'💌',title:'Постоянный собеседник',description:'Отправь 25 личных сообщений.',metric:'dmMessages',target:25,reward:60},
+ {id:'global-1',emoji:'🌍',title:'Голос сообщества',description:'Напиши в общий чат.',metric:'globalMessages',target:1,reward:15},
+ {id:'global-10',emoji:'🌍',title:'Знакомство с чатом',description:'Отправь 10 сообщений в общий чат.',metric:'globalMessages',target:10,reward:30},
+ {id:'global-25',emoji:'📣',title:'Активный голос',description:'Отправь 25 сообщений в общий чат.',metric:'globalMessages',target:25,reward:45},
+ {id:'channel-1',emoji:'📢',title:'Первый пост в канале',description:'Отправь сообщение в канале.',metric:'channelMessages',target:1,reward:20},
+ {id:'channel-10',emoji:'📢',title:'Автор канала',description:'Отправь 10 сообщений в каналах.',metric:'channelMessages',target:10,reward:50},
+ {id:'group-1',emoji:'👥',title:'Командный игрок',description:'Вступи в группу или создай её.',metric:'groups',target:1,reward:25},
+ {id:'group-3',emoji:'👥',title:'Везде свои',description:'Участвуй в 3 группах.',metric:'groups',target:3,reward:50},
+ {id:'owned-channel-1',emoji:'🛠️',title:'Собственный канал',description:'Создай канал.',metric:'ownedChannels',target:1,reward:50},
+ {id:'owned-channel-3',emoji:'🛠️',title:'Медиа-магнат',description:'Создай 3 канала.',metric:'ownedChannels',target:3,reward:100},
+ {id:'post-1',emoji:'📰',title:'Первая публикация',description:'Опубликуй пост в новостях.',metric:'posts',target:1,reward:25},
+ {id:'post-3',emoji:'📰',title:'Автор новостей',description:'Опубликуй 3 поста.',metric:'posts',target:3,reward:50},
+ {id:'post-10',emoji:'✍️',title:'Летописец VOLTRA',description:'Опубликуй 10 постов.',metric:'posts',target:10,reward:100},
+ {id:'comment-1',emoji:'💭',title:'Есть что сказать',description:'Оставь комментарий в канале.',metric:'comments',target:1,reward:20},
+ {id:'comment-5',emoji:'💭',title:'Обсуждение пошло',description:'Оставь 5 комментариев.',metric:'comments',target:5,reward:40},
+ {id:'gift-owned-1',emoji:'🎁',title:'Первый подарок',description:'Получи или собери первый подарок.',metric:'ownedGifts',target:1,reward:25},
+ {id:'gift-owned-5',emoji:'🎁',title:'Коллекция растёт',description:'Собери 5 подарков.',metric:'ownedGifts',target:5,reward:50},
+ {id:'gift-owned-10',emoji:'💎',title:'Хранитель подарков',description:'Собери 10 подарков.',metric:'ownedGifts',target:10,reward:75},
+ {id:'gift-sent-1',emoji:'💌',title:'Добрый жест',description:'Отправь подарок.',metric:'sentGifts',target:1,reward:40},
+ {id:'gift-sent-5',emoji:'💌',title:'Щедрый друг',description:'Отправь 5 подарков.',metric:'sentGifts',target:5,reward:80},
+ {id:'gift-sent-10',emoji:'🎉',title:'Праздник для друзей',description:'Отправь 10 подарков.',metric:'sentGifts',target:10,reward:120},
+ {id:'gift-received-1',emoji:'🎀',title:'Приятный сюрприз',description:'Получи подарок от другого пользователя.',metric:'receivedGifts',target:1,reward:30},
+ {id:'gift-received-5',emoji:'🎀',title:'Любимец коллекции',description:'Получи 5 подарков.',metric:'receivedGifts',target:5,reward:60},
+ {id:'market-listing-1',emoji:'🛍️',title:'Первый лот',description:'Выставь предмет на маркет.',metric:'marketListings',target:1,reward:30},
+ {id:'market-listing-3',emoji:'🛍️',title:'Витрина открыта',description:'Выставь 3 лота на маркет.',metric:'marketListings',target:3,reward:60},
+ {id:'market-buy-1',emoji:'🧾',title:'Первая покупка',description:'Купи предмет на маркете.',metric:'marketPurchases',target:1,reward:30},
+ {id:'market-buy-5',emoji:'🧾',title:'Опытный покупатель',description:'Соверши 5 покупок на маркете.',metric:'marketPurchases',target:5,reward:70},
+ {id:'sticker-pack-1',emoji:'☺️',title:'Свой стикерпак',description:'Создай стикерпак.',metric:'stickerPacks',target:1,reward:50},
+ {id:'miniapp-1',emoji:'🧩',title:'Первая MiniApp',description:'Создай MiniApp.',metric:'miniApps',target:1,reward:60},
+ {id:'miniapp-3',emoji:'🧩',title:'Мастер мини-приложений',description:'Создай 3 MiniApp.',metric:'miniApps',target:3,reward:120},
+ {id:'cookie-30',emoji:'🍪',title:'Печенька к чаю',description:'Нажми на печеньку 30 раз.',metric:'cookieClicks',target:30,reward:15},
+ {id:'cookie-100',emoji:'🍪',title:'Любитель печенек',description:'Нажми на печеньку 100 раз.',metric:'cookieClicks',target:100,reward:30},
+ {id:'cookie-300',emoji:'🍪',title:'Печеньковый мастер',description:'Нажми на печеньку 300 раз.',metric:'cookieClicks',target:300,reward:60},
+ {id:'profile-2',emoji:'🪪',title:'Профиль обжит',description:'Заполни два поля профиля: аватар, био, свой юзернейм или подтверждённый номер.',metric:'profileFields',target:2,reward:30},
+ {id:'profile-4',emoji:'✨',title:'Профиль полностью оформлен',description:'Заполни все четыре поля профиля.',metric:'profileFields',target:4,reward:50},
+ {id:'phone-verified',emoji:'📱',title:'Аккаунт под защитой',description:'Подтверди номер телефона.',metric:'phoneVerified',target:1,reward:50},
+ {id:'veteran-7',emoji:'🌟',title:'Неделя в VOLTRA',description:'Будь с VOLTRA не менее 7 дней.',metric:'ageDays',target:7,reward:40},
+ {id:'referral-1',emoji:'🤝',title:'Пригласи друга',description:'Пригласи друга по своей ссылке.',metric:'referred',target:1,reward:100}
+];
+function publicVoltraQuests(uid){
+ const stats=voltraQuestStats(uid),user=userById(uid);if(!user)return [];
+ const claimed=new Set(Array.isArray(user.claimedVoltraQuests)?user.claimedVoltraQuests:[]);
+ return VOLTRA_QUESTS.map(q=>{const current=Math.max(0,Number(stats[q.metric])||0);return {...q,current,unlocked:current>=q.target,claimed:claimed.has(q.id),progress:Math.min(100,Math.round(current/q.target*100))}});
+}
+
 async function sendPush(uid,payload){const list=store.pushSubscriptions?.[uid];if(!Array.isArray(list)||!list.length)return;await Promise.all(list.map(async sub=>{try{await webpush.sendNotification(sub,JSON.stringify(payload),{TTL:90,urgency:'high'})}catch(e){if(e.statusCode===404||e.statusCode===410){store.pushSubscriptions[uid]=(store.pushSubscriptions[uid]||[]).filter(x=>x.endpoint!==sub.endpoint);save()}else console.error('Push delivery failed:',e.statusCode||'',e.message||e)}}))}
 function broadcast(m){for(const set of clients.values())for(const ws of set)send(ws,m)}
 function isVipSeller(u){return !!u?.admin&&['chelixxx','chelixxx2'].includes(String(u.name||'').replace(/^@/,'').toLowerCase())}
