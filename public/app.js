@@ -189,7 +189,7 @@ function finishAuthSplash(){
  // Once authenticated, keep the premium splash visible long enough to read two tips.
  if(window.__voltraAuthed===true){
   const started=Number(window.__voltraLoaderStartedAt)||Date.now();
-  const minimumUntil=started+8500;
+  const minimumUntil=started+8300;
   const shown=Number(window.__voltraTipsShownThisLoad)||0;
   if(Date.now()<minimumUntil||shown<2){
    if(!window.__voltraLoaderFinishTimer)window.__voltraLoaderFinishTimer=setTimeout(()=>{window.__voltraLoaderFinishTimer=null;finishAuthSplash()},Math.max(250,Math.min(900,minimumUntil-Date.now()>0?minimumUntil-Date.now():500)));
