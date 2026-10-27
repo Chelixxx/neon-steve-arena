@@ -76,12 +76,12 @@ function init(){
  // the chat pane instead of causing the page/composer to be auto-scrolled.
  const syncVoltraViewport=()=>{
   const viewport=window.visualViewport,height=Math.max(1,Math.round(viewport?.height||window.innerHeight||document.documentElement.clientHeight));
-  document.documentElement.style.setProperty('--voltra-viewport-height',height+'px');
-  // Do not modify scrollTop during visualViewport resize: mobile keyboards
-  // trigger this event repeatedly and the old correction caused chat jumps.
-  const input=$('messageInput');
-  if(input&&document.activeElement===input)document.documentElement.classList.add('voltra-keyboard-open');
-  else document.documentElement.classList.remove('voltra-keyboard-open');
+  const root=document.documentElement;
+  root.style.setProperty('--voltra-viewport-height',height+'px');
+  // Avoid viewport/keyboard resize loops on mobile Chrome. Only toggle the
+  // keyboard class when focus state actually changes; never move the page.
+  const input=$('messageInput'),keyboardOpen=!!(input&&document.activeElement===input&&viewport&&height<(window.innerHeight-120));
+  if(keyboardOpen!==root.classList.contains('voltra-keyboard-open'))root.classList.toggle('voltra-keyboard-open',keyboardOpen);
  };
  syncVoltraViewport();
  window.visualViewport?.addEventListener('resize',syncVoltraViewport,{passive:true});
@@ -110,14 +110,17 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('mediaViewer')){e
  $('formatToolbar').addEventListener('mousedown',e=>e.preventDefault());$('formatToolbar').addEventListener('click',e=>{const b=e.target.closest('[data-format]');if(!b)return;const input=$('messageInput'),mark=b.dataset.format,start=input.selectionStart,end=input.selectionEnd;if(start===end){toast('Сначала выдели текст');return}const selected=input.value.slice(start,end),replacement=mark+selected+mark;input.setRangeText(replacement,start,end,'select');input.focus();input.setSelectionRange(start+mark.length,start+mark.length+selected.length);showFormatToolbar()});$('messageInput').addEventListener('select',showFormatToolbar);$('messageInput').addEventListener('keyup',showFormatToolbar);document.addEventListener('selectionchange',()=>{if(document.activeElement===$('messageInput'))showFormatToolbar()});
  $('messageInput').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submitMessage()}else send({t:'typing',to:isDM()?activeId:null})};
  $('messageInput').oninput=()=>{
-  const el=$('messageInput'),messages=$('messages');
+  const el=$('messageInput');
   const mobile=window.matchMedia('(max-width: 700px)').matches;
+  // Keep the composer at a stable height while typing on mobile Chrome.
+  // Growing the textarea on every keystroke changes the visual viewport and
+  // can make Chrome scroll the entire chat/page unexpectedly.
+  if(mobile){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,96)+'px';return;}
+  const messages=$('messages');
   const wasAtBottom=!!messages&&messages.dataset.pulseStickToBottom==='1';
   const before=messages?.scrollTop;
   el.style.height='auto';
   el.style.height=Math.min(el.scrollHeight,130)+'px';
-  // On phones let the browser manage the visual viewport and scroll anchoring.
-  if(mobile)return;
   const windowY=window.scrollY;
   const anchor=[...(messages?.querySelectorAll('.message[data-message-id]')||[])].find(n=>n.getBoundingClientRect().bottom>messages.getBoundingClientRect().top);
   const anchorId=anchor?.dataset.messageId,anchorOffset=anchor?anchor.getBoundingClientRect().top-messages.getBoundingClientRect().top:0;
