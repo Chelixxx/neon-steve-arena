@@ -198,9 +198,9 @@ function beginAuthRestore(title,subtitle){
  },9000);
 }
 async function checkSession(){
- showAuthSplash('Возвращаем тебя в VOLTRA','Проверяем сохранённую сессию и подключаем чаты…');
+ beginAuthRestore('Возвращаем тебя в VOLTRA','Проверяем сохранённую сессию и подключаем чаты…');
  try{
-  const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});
+  const authCheckController=new AbortController();const authCheckTimer=setTimeout(()=>authCheckController.abort(),4500);let r;try{r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store',signal:authCheckController.signal})}finally{clearTimeout(authCheckTimer)}
   if(r.ok){
    const d=await r.json();
    myName=d.user.name;myUsername=d.user.username||'';
