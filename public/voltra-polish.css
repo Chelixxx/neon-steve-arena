@@ -165,3 +165,7 @@ body{background:radial-gradient(ellipse at 8% 0%,color-mix(in srgb,var(--accent)
  html.voltra-keyboard-open,html.voltra-keyboard-open body{overscroll-behavior-y:none}
  html.voltra-keyboard-open .app{height:var(--voltra-viewport-height,100dvh)!important;max-height:var(--voltra-viewport-height,100dvh)!important}
 }
+
+#uploadProgress.upload-progress{display:block;min-width:0;height:7px;margin:7px 0 3px;padding:0;border:0;border-radius:999px;background:#ffffff18;overflow:hidden}
+#uploadProgressFill.upload-progress-fill{display:block;width:0;height:100%;min-width:0;border-radius:999px;background:linear-gradient(90deg,var(--accent,#8b73ff),var(--cyan,#45d7ff));transition:width .18s ease;box-shadow:0 0 12px color-mix(in srgb,var(--accent,#8b73ff) 45%,transparent)}
+#uploadStatus{display:inline-block;max-width:100%;font-size:11px;line-height:1.45;overflow-wrap:anywhere;color:var(--muted,#aaa)}
