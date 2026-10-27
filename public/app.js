@@ -172,7 +172,10 @@ async function authenticate(){
  }catch(e){$('loginError').textContent=e.message||'Ошибка соединения'}finally{$('authSubmit').disabled=false}
 }
 async function checkSession(){
- try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();setTimeout(()=>requestPushPermissionOnEntry(),900)}catch{}
+ let remembered='';try{remembered=localStorage.getItem('pulseLastAccount')||''}catch{}
+ // If this browser has used VOLTRA before, hide the login card while checking its secure server session.
+ if(remembered){$('login')?.classList.add('hidden');$('app')?.classList.add('hidden')}
+ try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok){if(remembered)$('login')?.classList.remove('hidden');return}const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();setTimeout(()=>requestPushPermissionOnEntry(),900)}catch{if(remembered)$('login')?.classList.remove('hidden')}
 }
 async function requestPushPermissionOnEntry(){
  if(!myId||!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window))return;
