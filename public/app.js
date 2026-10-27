@@ -228,7 +228,9 @@ async function checkSession(){
   if(name.length>=3&&password.length>=8){
    started=true;autoLoginAttempted=true;
    beginAuthRestore('Входим автоматически','Используем сохранённые данные браузера…');
-   authenticate();
+   // Нажимаем настоящую кнопку входа под экраном загрузки.
+   const submit=$('authSubmit');
+   if(submit&&!submit.disabled)submit.click();else authenticate();
    return;
   }
   if(tries<14)setTimeout(tryAutoLogin,250);
