@@ -1100,6 +1100,15 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
  if(!file.startsWith(ROOT+path.sep))return res.writeHead(403).end('Forbidden');
  fs.stat(file,(e,st)=>{if(!e&&st.isDirectory())file=path.join(file,'index.html');fs.stat(file,(e2,st2)=>{if(e2||!st2.isFile()){const cleanPath=u.pathname.split('/').filter(Boolean);const isAppRoute=cleanPath.length>0&&!u.pathname.startsWith('/api/')&&!u.pathname.startsWith('/uploads/')&&!u.pathname.startsWith('/assets/')&&!path.extname(u.pathname)&&['settings','chat','bot','channel','gift'].includes(cleanPath[0])||cleanPath.length===1&&!path.extname(u.pathname)&&!u.pathname.startsWith('/api/');if(isAppRoute){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-cache'});return fs.createReadStream(path.join(ROOT,'index.html')).pipe(res)}return res.writeHead(404).end('Not found')}const ext=path.extname(file).toLowerCase(),etag='W/\"'+st2.size.toString(16)+'-'+Math.trunc(st2.mtimeMs).toString(16)+'\"',headers={'content-type':mime[ext]||'application/octet-stream','cache-control':ext==='.html'?'no-cache':'public, max-age=3600, must-revalidate','etag':etag,'last-modified':st2.mtime.toUTCString(),'x-content-type-options':'nosniff'};if(req.headers['if-none-match']===etag){res.writeHead(304,headers);return res.end()}res.writeHead(200,headers);fs.createReadStream(file).pipe(res)})})
 });
+function validatePublicScripts(){
+ const vm=require('vm');let failures=0;
+ for(const name of ['app.js','miniapps.js','voltra-suite.js']){
+  try{new vm.Script(fs.readFileSync(path.join(ROOT,name),'utf8'),{filename:name});console.log('[VOLTRA script-check] '+name+' OK')}
+  catch(error){failures++;console.error('[VOLTRA script-check] '+name+' ERROR: '+String(error&&error.message||error))}
+ }
+ if(failures)console.error('[VOLTRA script-check] '+failures+' client script(s) need attention');
+}
+validatePublicScripts();
 const wss=new WebSocketServer({server,path:'/ws',perMessageDeflate:false,maxPayload:2*1024*1024});
 const wsHeartbeat=setInterval(()=>{for(const socket of wss.clients){if(socket.isAlive===false){socket.terminate();continue}socket.isAlive=false;try{socket.ping()}catch{socket.terminate()}}},25000);wsHeartbeat.unref?.();
 wss.on('connection',(ws,req)=>{
