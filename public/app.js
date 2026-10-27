@@ -259,7 +259,7 @@ async function checkSession(){
    authenticate();
    return;
   }
-  if(tries<40)setTimeout(tryAutoLogin,500);
+  if(tries<20)setTimeout(tryAutoLogin,500);
   else revealForm();
  };
  setTimeout(tryAutoLogin,250);
