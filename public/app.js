@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const $=id=>document.getElementById(id);let ws=null,myId=null,myName='',myUsername='',activeId=null,tab='chats',users=[],messagesByChat=new Map(),unreadCounts=new Map(),typingTimer=null,authMode='login',toastTimer=null,reconnectTimer=null,registrationId=null,smsStep=false,mediaRecorder=null,recordChunks=[],localStream=null,pc=null,callPeer=null,callType='audio',callInitiator=false,micMuted=false,cameraOff=false,pendingCandidates=[],pendingUploadTickets=new Map(),uploadInProgress=false,replyingTo=null,callId=null,callStartedAt=0,cookieStats={clicks:0,pulses:0},cookieCaptcha=null,reconnectDelay=1000,reconnectNoticeShown=false,manualDisconnect=false,messageSearchQuery='',messageSearchResults=[],silentNextMessage=false;
+const $=id=>document.getElementById(id);let wsAuthTicket='',ws=null,myId=null,myName='',myUsername='',activeId=null,tab='chats',users=[],messagesByChat=new Map(),unreadCounts=new Map(),typingTimer=null,authMode='login',toastTimer=null,reconnectTimer=null,registrationId=null,smsStep=false,mediaRecorder=null,recordChunks=[],localStream=null,pc=null,callPeer=null,callType='audio',callInitiator=false,micMuted=false,cameraOff=false,pendingCandidates=[],pendingUploadTickets=new Map(),uploadInProgress=false,replyingTo=null,callId=null,callStartedAt=0,cookieStats={clicks:0,pulses:0},cookieCaptcha=null,reconnectDelay=1000,reconnectNoticeShown=false,manualDisconnect=false,messageSearchQuery='',messageSearchResults=[],silentNextMessage=false;
 const globalKey='global',dmKey=id=>'dm:'+id,channelKey=id=>'channel:'+id;let channels=[],newsPosts=[],profileAvatarData='',channelComments=[],publicProfileId=null;
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function avatar(name){return esc((name||'?').trim().slice(0,1).toUpperCase())}
@@ -164,11 +164,11 @@ async function authenticate(){
   if(authMode==='register'){
    const r=await fetch('/api/register',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({name,password,ref:new URLSearchParams(location.search).get('ref')||''})});
    const d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось создать аккаунт');
-   myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();return;
+   myName=d.user.name;myUsername=d.user.username||'';wsAuthTicket=d.wsTicket||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();return;
   }
   const r=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({name,password})});
   const data=await r.json();if(!r.ok)throw new Error(data.error||'Не удалось выполнить запрос');
-  myName=data.user.name;myUsername=data.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();
+  myName=data.user.name;myUsername=data.user.username||'';wsAuthTicket=data.wsTicket||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();
  }catch(e){$('loginError').textContent=e.message||'Ошибка соединения'}finally{$('authSubmit').disabled=false}
 }
 async function checkSession(){
@@ -200,7 +200,7 @@ function connect(){
  if(manualDisconnect)return;
  if(ws&&(ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING))return;
  $('loginError').textContent='Подключаемся…';/* Keep the app shell visible; don't block entry with a full-screen loader. */
- const proto=location.protocol==='https:'?'wss:':'ws:';ws=new WebSocket(proto+'//'+location.host+'/ws');
+ const proto=location.protocol==='https:'?'wss:':'ws:';const wsUrl=proto+'//'+location.host+'/ws';if(wsAuthTicket){const ticket=wsAuthTicket;wsAuthTicket='';ws=new WebSocket(wsUrl,['voltra',ticket])}else ws=new WebSocket(wsUrl);
  ws.onopen=()=>{reconnectDelay=1000;manualDisconnect=false;$('connection').textContent='подключено';send({t:'join',name:myName})};
  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}handle(m)};
  ws.onerror=()=>{if(!myId){$('loginError').textContent='Не удалось подключиться. Проверь интернет и попробуй снова.';$('bootLoader')?.classList.add('hidden')}};
