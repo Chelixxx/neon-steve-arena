@@ -1,0 +1,99 @@
+/* VOLTRA Gradient System v1 — shared surfaces, controls and compact settings */
+:root{
+ --voltra-grad-main:linear-gradient(115deg,color-mix(in srgb,var(--accent) 95%,#fff 5%),color-mix(in srgb,var(--pink,#e77cff) 72%,var(--accent) 28%) 52%,color-mix(in srgb,var(--cyan) 85%,#fff 15%));
+ --voltra-grad-surface:linear-gradient(135deg,color-mix(in srgb,var(--panel2) 90%,var(--accent) 10%),color-mix(in srgb,var(--panel) 88%,var(--cyan) 12%));
+ --voltra-grad-active:linear-gradient(110deg,color-mix(in srgb,var(--accent) 27%,var(--panel2)),color-mix(in srgb,var(--cyan) 12%,var(--panel2)));
+ --voltra-line:color-mix(in srgb,var(--accent) 34%,var(--line));
+ --voltra-glow:0 10px 30px color-mix(in srgb,var(--accent) 12%,transparent);
+}
+body{background:radial-gradient(ellipse at 8% 0%,color-mix(in srgb,var(--accent) 12%,transparent),transparent 31%),radial-gradient(ellipse at 100% 100%,color-mix(in srgb,var(--cyan) 8%,transparent),transparent 35%),var(--bg)}
+#login{background:radial-gradient(ellipse at 8% 0%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 52%),radial-gradient(ellipse at 100% 100%,color-mix(in srgb,var(--cyan) 13%,transparent),transparent 48%),linear-gradient(145deg,var(--panel2),var(--bg));border-color:var(--voltra-line)}
+.sidebar{background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 88%,var(--accent) 12%),var(--bg));border-right-color:var(--voltra-line)}
+.side-head,.tabs,.side-bottom,.chat-head{border-color:color-mix(in srgb,var(--line) 78%,var(--accent) 22%)}
+.chat-head{background:linear-gradient(100deg,color-mix(in srgb,var(--panel) 86%,var(--accent) 14%),color-mix(in srgb,var(--panel) 90%,var(--cyan) 10%))}
+.main{background:radial-gradient(ellipse at 68% 0%,color-mix(in srgb,var(--accent) 11%,transparent),transparent 46%),radial-gradient(ellipse at 100% 92%,color-mix(in srgb,var(--cyan) 6%,transparent),transparent 36%),var(--bg)}
+.me-row,.chat-item,.directory-result,.bot-card,.miniapp-entry,.public-gift-card,.market-item,.market-card,.gift-card,.sticker-pack-card{transition:background .16s ease,border-color .16s ease,transform .16s ease,box-shadow .16s ease}
+.chat-item.active,.tab.active,.chat-folder.active,.bottom-nav-btn.active,.rail-btn.active{background:var(--voltra-grad-active)!important;border-color:var(--voltra-line)!important;box-shadow:inset 0 1px #ffffff0b,0 5px 18px color-mix(in srgb,var(--accent) 9%,transparent)}
+.chat-item:hover,.directory-result:hover,.miniapp-entry:hover,.public-gift-card:hover,.market-item:hover,.market-card:hover,.gift-card:hover{background:var(--voltra-grad-surface);border-color:var(--voltra-line);box-shadow:var(--voltra-glow)}
+.avatar,.brand-icon,.welcome-orb,.boot-loader-orb{background:var(--voltra-grad-main)!important;color:#fff!important;box-shadow:0 8px 24px color-mix(in srgb,var(--accent) 20%,transparent)}
+.primary,.send-btn,.wallet-security-submit,.cat-open-app,.market-create-toggle{background:var(--voltra-grad-main)!important;color:#fff!important;border:1px solid color-mix(in srgb,var(--cyan) 36%,var(--accent))!important;box-shadow:0 7px 22px color-mix(in srgb,var(--accent) 18%,transparent);transition:filter .16s ease,transform .16s ease,box-shadow .16s ease}
+.primary:hover:not(:disabled),.send-btn:hover:not(:disabled),.wallet-security-submit:hover:not(:disabled),.cat-open-app:hover:not(:disabled){filter:brightness(1.09);transform:translateY(-1px);box-shadow:0 10px 28px color-mix(in srgb,var(--accent) 25%,transparent)}
+.secondary,.tool-btn,.icon-btn,.call-control,.modal-close,.background-presets button,.miniapp-entry-actions button,.market-filters button,.gift-tab,.sticker-pack-select{background:linear-gradient(125deg,color-mix(in srgb,var(--panel2) 76%,var(--accent) 24%),color-mix(in srgb,var(--panel) 82%,var(--cyan) 18%));border-color:var(--voltra-line);color:var(--text);transition:filter .16s ease,border-color .16s ease,transform .16s ease}
+.secondary:hover:not(:disabled),.tool-btn:hover:not(:disabled),.icon-btn:hover:not(:disabled),.call-control:hover:not(:disabled){filter:brightness(1.12);border-color:color-mix(in srgb,var(--cyan) 55%,var(--accent));}
+.search,.composer,.format-toolbar,.pinned-message-bar,.chat-folder-bar{background:linear-gradient(115deg,color-mix(in srgb,var(--panel) 92%,var(--accent) 8%),color-mix(in srgb,var(--panel) 91%,var(--cyan) 9%));border-color:var(--voltra-line)}
+#messageInput,.search input,.modal-card input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=color]),.modal-card textarea,.modal-card select{background:linear-gradient(135deg,color-mix(in srgb,var(--bg) 88%,var(--accent) 12%),color-mix(in srgb,var(--bg) 90%,var(--cyan) 10%));border-color:color-mix(in srgb,var(--line) 68%,var(--accent) 32%);color:var(--text)}
+#messageInput:focus,.modal-card input:focus,.modal-card textarea:focus,.modal-card select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent),0 0 18px color-mix(in srgb,var(--cyan) 9%,transparent);outline:none}
+.bubble{background:linear-gradient(145deg,color-mix(in srgb,var(--panel2) 82%,var(--accent) 18%),color-mix(in srgb,var(--panel) 88%,var(--cyan) 12%));border-color:color-mix(in srgb,var(--line) 70%,var(--accent) 30%)}
+.mine .bubble{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 87%,#37305b),color-mix(in srgb,var(--cyan) 36%,var(--accent) 64%))!important;border-color:color-mix(in srgb,var(--cyan) 40%,var(--accent))!important;color:#fff}
+.modal-card,.market-modal,.gifts-modal,.gift-modal,.pulses-wallet,.sticker-modal,.comments-card,.public-profile-card,.send-gift-card{background:radial-gradient(ellipse at 6% 0%,color-mix(in srgb,var(--accent) 15%,transparent),transparent 39%),radial-gradient(ellipse at 100% 100%,color-mix(in srgb,var(--cyan) 10%,transparent),transparent 38%),linear-gradient(145deg,var(--panel2),var(--bg))!important;border-color:var(--voltra-line)!important;box-shadow:0 24px 80px #0006,inset 0 1px #ffffff0b}
+.modal-card h2,.modal-card .market-kicker,.modal-card .premium-price{background:linear-gradient(95deg,var(--text),color-mix(in srgb,var(--accent) 82%,#fff),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.toast{background:linear-gradient(110deg,color-mix(in srgb,var(--accent) 82%,#33234f),color-mix(in srgb,var(--cyan) 45%,#25233b))!important;border:1px solid color-mix(in srgb,var(--cyan) 38%,var(--accent))!important;box-shadow:0 12px 36px #0006,0 0 20px color-mix(in srgb,var(--accent) 18%,transparent)}
+.market-heading,.market-wallet,.market-history-panel,.market-create-form,.market-grid .market-item,.market-empty,.gift-card,.gift-collection-card,.unified-collection-detail,.unified-collection-meta-item,.pulse-sound-row,.font-settings,.customize-settings,.app-icon-customizer,.admin-chat-user,.moderation-item,.miniapp-entry,.bot-card,.wallet-security-card,.cookie-game .cookie-stats>div{background:var(--voltra-grad-surface);border-color:var(--voltra-line)}
+.market-wallet,.market-history-panel,.market-create-form,.market-empty,.gift-card,.gift-collection-card,.unified-collection-meta-item,.admin-chat-user,.moderation-item,.miniapp-entry,.bot-card{border-radius:15px}
+.market-filters button.active,.gift-tabs button.active,.market-filters [aria-pressed=true]{background:var(--voltra-grad-main)!important;color:white!important;border-color:transparent!important}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 85%,white),color-mix(in srgb,var(--cyan) 75%,var(--accent)));border-radius:99px}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+@media(hover:none){.primary:hover:not(:disabled),.icon-btn:hover:not(:disabled){transform:none}}
+/* Compact, searchable settings */
+#settingsModal .modal-card{width:min(820px,95vw);max-height:min(92dvh,860px);padding:clamp(12px,2vw,20px);gap:10px}
+#settingsModal .modal-card>h2{position:relative;margin:0 38px 8px 0;font-size:clamp(19px,2.7vw,25px);line-height:1.18;letter-spacing:-.45px}
+#settingsModal .settings-list{gap:7px;margin:7px 0;grid-template-columns:repeat(2,minmax(0,1fr))}
+#settingsModal .settings-list>label,#settingsModal .settings-list>div,#settingsModal .settings-list>section{padding:9px 11px;border-radius:12px}
+#settingsModal .settings-list>label{display:flex;align-items:center;gap:9px;min-height:38px;font-size:12px;line-height:1.35}
+#settingsModal .settings-list>label p,#settingsModal .settings-list>div>p{margin:5px 0 0}
+#settingsModal .settings-list>p{font-size:11px}
+#settingsModal .interface-setting-card{grid-template-columns:minmax(0,1fr) minmax(160px,.65fr);gap:10px;padding:10px;margin:4px 0}
+#settingsModal .interface-setting-card .muted{font-size:11px;line-height:1.4}
+#settingsModal .theme-setting{padding:8px 10px;gap:5px;font-size:11px}
+#settingsModal input:not([type=checkbox]):not([type=color]):not([type=file]),#settingsModal select{min-height:37px;padding:8px 10px;font-size:12px}
+#settingsModal .modal-card button:not(.modal-close){min-height:35px;padding:8px 10px;border-radius:10px}
+#settingsModal .modal-card>h3{margin:12px 0 5px;padding-top:10px}
+#settingsModal .font-settings,#settingsModal .pulse-sound-settings,#settingsModal .customize-settings{gap:8px;margin:6px 0;padding:10px}
+#settingsModal .pulse-sound-row{gap:6px;padding:9px;border-radius:11px}
+#settingsModal .muted{line-height:1.4}
+.vp-settings-toolbar{position:sticky;top:-1px;z-index:9;display:grid;grid-template-columns:minmax(0,1fr);gap:7px;padding:9px;margin:0 0 8px;border:1px solid var(--voltra-line);border-radius:14px;background:linear-gradient(115deg,color-mix(in srgb,var(--panel) 94%,var(--accent) 6%),color-mix(in srgb,var(--panel) 91%,var(--cyan) 9%));box-shadow:0 8px 22px #0002;backdrop-filter:blur(16px)}
+.vp-settings-toolbar input{width:100%;min-width:0;height:36px;padding:8px 11px;border:1px solid var(--voltra-line);border-radius:10px;background:var(--voltra-grad-surface);color:var(--text);outline:none;font-size:13px}
+.vp-settings-filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:1px;scrollbar-width:none}
+.vp-settings-filters button{flex:0 0 auto;min-height:31px;padding:6px 10px;border:1px solid var(--voltra-line);border-radius:999px;background:var(--voltra-grad-surface);color:var(--text);font-size:11px;font-weight:750;white-space:nowrap}
+.vp-settings-filters button[aria-pressed=true]{background:var(--voltra-grad-main);border-color:transparent;color:#fff}
+.vp-filtered-out{display:none!important}
+.vp-settings-accordion{min-width:0;margin:7px 0;border:1px solid var(--voltra-line);border-radius:14px;overflow:clip;background:linear-gradient(135deg,color-mix(in srgb,var(--panel2) 80%,var(--accent) 20%),color-mix(in srgb,var(--panel) 88%,var(--cyan) 12%));box-shadow:inset 0 1px #ffffff06}
+.vp-settings-accordion>summary{display:flex;align-items:center;gap:10px;min-height:42px;padding:10px 12px;cursor:pointer;list-style:none;color:var(--text);font-weight:800;font-size:12px}
+.vp-settings-accordion>summary::-webkit-details-marker{display:none}
+.vp-settings-accordion>summary::after{content:'＋';display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;margin-left:auto;border:1px solid var(--voltra-line);border-radius:8px;background:var(--voltra-grad-surface);font-size:15px}
+.vp-settings-accordion[open]>summary::after{content:'−'}
+.vp-settings-accordion>summary .vp-accordion-caption{color:var(--muted);font-size:10px;font-weight:500;margin-left:auto;text-align:right}
+.vp-settings-accordion-content{padding:0 10px 10px;border-top:1px solid color-mix(in srgb,var(--line) 70%,var(--accent) 30%)}
+.vp-settings-accordion-content>.font-settings>h3,.vp-settings-accordion-content>.pulse-sound-settings>h3,.vp-settings-accordion-content>.customize-settings>h3{display:none}
+.vp-suite-section{padding:11px;margin:8px 0;border:1px solid var(--voltra-line);border-radius:15px;background:linear-gradient(135deg,color-mix(in srgb,var(--panel2) 84%,var(--accent) 16%),color-mix(in srgb,var(--panel) 86%,var(--cyan) 14%));box-shadow:var(--voltra-glow)}
+.vp-suite-head{align-items:center}
+.vp-suite-head h3{font-size:13px;letter-spacing:-.2px}
+.vp-suite-head .vp-suite-subtitle{display:block;margin-top:4px;color:var(--muted);font-size:10px;line-height:1.3}
+.vp-suite-head [data-vp-suite-toggle]{min-height:31px;padding:6px 10px;border:1px solid var(--voltra-line);border-radius:10px;background:var(--voltra-grad-main);color:white;font-size:11px;font-weight:800}
+.vp-suite-content{padding-top:10px}
+.vp-session-row{padding:9px;border-radius:11px}
+.vp-achievement-grid{grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:7px}
+.vp-achievement{padding:9px;border-radius:11px}
+.vp-achievement .vp-ach-icon{font-size:21px;margin-bottom:4px}
+.vp-achievement b{font-size:12px}
+.vp-achievement small{font-size:10px;line-height:1.35}
+.vp-mini-favorites-bar{position:sticky;top:0;z-index:2;padding:8px 10px;border:1px solid var(--voltra-line);border-radius:12px;background:linear-gradient(110deg,color-mix(in srgb,var(--panel2) 84%,var(--accent) 16%),color-mix(in srgb,var(--panel2) 85%,var(--cyan) 15%));}
+.vp-mini-favorites-bar input{accent-color:var(--accent)}
+.miniapp-entry{padding:11px;gap:10px}
+.miniapp-entry-actions{display:flex;gap:6px;flex-wrap:wrap}
+.miniapp-entry-actions button{flex:1 1 auto}
+#profileModal .modal-card{max-width:700px}
+#profileModal .vip-perk-list{margin:8px 0;padding-left:20px;columns:2;column-gap:24px}
+#profileModal .vip-perk-list li{break-inside:avoid;margin:0 0 6px;font-size:12px;line-height:1.35}
+@media(max-width:640px){
+ #settingsModal .modal-card{width:calc(100vw - 16px);max-height:calc(100dvh - max(12px,env(safe-area-inset-top)) - env(safe-area-inset-bottom));padding:10px;gap:8px}
+ #settingsModal .settings-list,#settingsModal .font-settings,#settingsModal .pulse-sound-settings,#settingsModal .customize-settings{grid-template-columns:minmax(0,1fr)}
+ #settingsModal .interface-setting-card{grid-template-columns:minmax(0,1fr)}
+ #settingsModal .settings-list>label{min-height:36px}
+ #settingsModal .modal-card button:not(.modal-close){min-height:38px}
+ .vp-settings-toolbar{padding:7px}
+ .vp-settings-filters button{min-height:29px;padding:5px 9px}
+ .vp-achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #profileModal .vip-perk-list{columns:1}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
