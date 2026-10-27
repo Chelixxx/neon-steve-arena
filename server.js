@@ -1266,7 +1266,7 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
 });
 function validatePublicScripts(){
  const vm=require('vm');let failures=0;
- for(const name of ['app.js','miniapps.js','voltra-suite.js']){
+ for(const name of ['app.js','tips-data.js','miniapps.js','voltra-suite.js']){
   try{new vm.Script(fs.readFileSync(path.join(ROOT,name),'utf8'),{filename:name});console.log('[VOLTRA script-check] '+name+' OK')}
   catch(error){failures++;console.error('[VOLTRA script-check] '+name+' ERROR: '+String(error&&error.message||error))}
  }
