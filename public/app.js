@@ -255,7 +255,7 @@ function connect(){
  if(manualDisconnect)return;
  if(ws&&(ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING))return;
  $('loginError').textContent='Подключаемся…';/* Keep the app shell visible; don't block entry with a full-screen loader. */
- const proto=location.protocol==='https:'?'wss:':'ws:';const wsUrl=proto+'//'+location.host+'/ws';if(wsAuthTicket){const ticket=wsAuthTicket;wsAuthTicket='';ws=new WebSocket(wsUrl,['voltra',ticket])}else ws=new WebSocket(wsUrl);
+ const proto=location.protocol==='https:'?'wss:':'ws:';let wsUrl=proto+'//'+location.host+'/ws';if(wsAuthTicket){wsUrl+='?ticket='+encodeURIComponent(wsAuthTicket);wsAuthTicket=''}ws=new WebSocket(wsUrl);
  ws.onopen=()=>{reconnectDelay=1000;manualDisconnect=false;$('connection').textContent='подключено';send({t:'join',name:myName})};
  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}handle(m)};
  ws.onerror=()=>{if(!myId&&!authRestoreInProgress){finishAuthSplash();$('login')?.classList.remove('hidden');$('loginError').textContent='Не удалось подключиться. Проверь интернет и попробуй снова.'}};
