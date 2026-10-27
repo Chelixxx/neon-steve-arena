@@ -173,7 +173,7 @@ async function authenticate(){
   const r=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({name,password})});
   const data=await r.json();if(!r.ok)throw new Error(data.error||'Не удалось выполнить запрос');
   myName=data.user.name;myUsername=data.user.username||'';wsAuthTicket=data.wsTicket||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();
- }catch(e){window.__voltraAuthAttempting=false;authRestoreInProgress=false;finishAuthSplash();$('login')?.classList.remove('hidden');$('loginError').textContent=e.message||'Ошибка соединения'}finally{$('authSubmit').disabled=false}
+ }catch(e){window.__voltraAuthAttempting=false;window.__voltraAutoLoginWaiting=false;window.__voltraManualLoginReady=true;authRestoreInProgress=false;finishAuthSplash();$('login')?.classList.remove('hidden');$('loginError').textContent=e.message||'Ошибка соединения'}finally{$('authSubmit').disabled=false}
 }
 function showAuthSplash(title,subtitle){
  const splash=$('bootLoader');
@@ -190,6 +190,8 @@ function finishAuthSplash(){
 }
 function beginAuthRestore(title,subtitle){
  authRestoreInProgress=true;
+ window.__voltraAuthAttempting=true;
+ window.__voltraManualLoginReady=false;
  showAuthSplash(title,subtitle);
  clearTimeout(authRestoreWatchdog);
  authRestoreWatchdog=setTimeout(()=>{
