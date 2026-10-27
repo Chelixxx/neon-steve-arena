@@ -42,12 +42,12 @@
  const total=catalog.length;
  let sequence=0,lastId='';
  function pick(){
-  const weights={common:48,uncommon:28,rare:15,epic:6.5,legendary:2,mythic:.5};
-  const sum=Object.values(weights).reduce((a,b)=>a+b,0);
-  let roll=Math.random()*sum,rarity='common';
-  for(const [key,weight] of Object.entries(weights)){roll-=weight;if(roll<=0){rarity=key;break}}
-  const options=catalog.filter(x=>x.rarity===rarity);
-  let tip=options[Math.floor(Math.random()*options.length)]||catalog[Math.floor(Math.random()*catalog.length)];
+  let seen=[];
+  try{seen=JSON.parse(localStorage.getItem('voltraSeenTips')||'[]');if(!Array.isArray(seen))seen=[]}catch{}
+  const seenSet=new Set(seen);
+  const unseen=catalog.filter(x=>!seenSet.has(x.id)&&x.id!==lastId);
+  const options=unseen.length?unseen:catalog;
+  let tip=options[Math.floor(Math.random()*options.length)]||null;
   if(tip&&tip.id===lastId&&options.length>1)tip=options[(options.findIndex(x=>x.id===tip.id)+1)%options.length];
   if(tip)lastId=tip.id;
   return tip;
@@ -70,6 +70,12 @@
   if(count)count.textContent='ПОДСКАЗКА '+String(sequence).padStart(2,'0')+' / '+total;
   saveSeenTip(tip.id);
  }
+ fetch('/api/tips/collection',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+  if(!d||!Array.isArray(d.seenIds))return;
+  let local=[];try{local=JSON.parse(localStorage.getItem('voltraSeenTips')||'[]');if(!Array.isArray(local))local=[]}catch{}
+  const merged=[...new Set([...local,...d.seenIds])];
+  try{localStorage.setItem('voltraSeenTips',JSON.stringify(merged))}catch{}
+ }).catch(()=>{});
  showTip();
  const rotation=setInterval(showTip,4200);
  const rescue=()=>{
