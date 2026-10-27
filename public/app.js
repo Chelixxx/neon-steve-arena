@@ -195,7 +195,7 @@ async function logout(){
 function connect(){
  if(manualDisconnect)return;
  if(ws&&(ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING))return;
- $('loginError').textContent='Подключаемся…';if(!myId)$('bootLoader')?.classList.remove('hidden');
+ $('loginError').textContent='Подключаемся…';/* Keep the app shell visible; don't block entry with a full-screen loader. */
  const proto=location.protocol==='https:'?'wss:':'ws:';ws=new WebSocket(proto+'//'+location.host+'/ws');
  ws.onopen=()=>{reconnectDelay=1000;manualDisconnect=false;$('connection').textContent='подключено';send({t:'join',name:myName})};
  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}handle(m)};
