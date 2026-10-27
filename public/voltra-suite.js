@@ -36,6 +36,68 @@ function addSuitePanels(){
   $('publicProfileGifts').before(section);
  }
 }
+function compactSettingsLayout(){
+ const card=document.querySelector('#settingsModal .modal-card');if(!card)return;
+ const title=card.querySelector(':scope > h2');
+ if(title&&!$('vpSettingsToolbar')){
+  const toolbar=document.createElement('div');toolbar.id='vpSettingsToolbar';toolbar.className='vp-settings-toolbar';
+  toolbar.innerHTML='<input id="vpSettingsSearch" type="search" maxlength="80" placeholder="⌕ Найти настройку…" aria-label="Найти настройку"><div class="vp-settings-filters" role="group" aria-label="Фильтр настроек"><button type="button" data-vp-settings-filter="all" aria-pressed="true">Все</button><button type="button" data-vp-settings-filter="general" aria-pressed="false">Основное</button><button type="button" data-vp-settings-filter="appearance" aria-pressed="false">Дизайн</button><button type="button" data-vp-settings-filter="notifications" aria-pressed="false">Звуки</button><button type="button" data-vp-settings-filter="security" aria-pressed="false">Безопасность</button><button type="button" data-vp-settings-filter="admin" aria-pressed="false">Админ</button></div>';
+  title.after(toolbar);
+ }
+ const tag=(node,category)=>{if(node&&!node.dataset.vpSettingsCategory)node.dataset.vpSettingsCategory=category};
+ const parentLabel=id=>$(id)?.closest('label');
+ tag(card.querySelector('.interface-setting-card'),'appearance');
+ tag(card.querySelector('.font-settings'),'appearance');
+ tag(card.querySelector('.pulse-sound-settings'),'notifications');
+ tag(card.querySelector('.customize-settings'),'appearance');
+ tag($('vpSuiteSettings'),'security');
+ tag($('settingTheme')?.closest('.theme-setting'),'appearance');
+ for(const id of ['settingCompact','settingAnimations','settingAccent','settingChatBg','settingTextSize','settingBubbleStyle','settingRadius','settingFont','settingDensity','settingBiomeIcon','appIconFile','resetAppIcon'])tag($(id)?.closest('label')||$(id)?.closest('.app-icon-customizer'),'appearance');
+ for(const id of ['settingSounds','previewNotificationSound','clearNotificationSound','notificationSoundFile','callSoundFile','previewCallSound','clearCallSound'])tag($(id)?.closest('label')||$(id)?.closest('.pulse-sound-row'),'notifications');
+ for(const id of ['settingAlwaysOnline','settingGhostMode']){const label=parentLabel(id);tag(label,'security');const next=label?.nextElementSibling;if(next?.classList.contains('muted'))tag(next,'security')}
+ tag($('profilePrivacySetting'),'security');tag($('moderationPanel'),'admin');tag($('adminGlobalChatPanel'),'admin');tag($('adminBanPanel'),'admin');
+ card.querySelectorAll('.settings-list > *').forEach(node=>{
+  if(node.dataset.vpSettingsCategory)return;
+  const t=String(node.innerText||node.textContent||'').toLocaleLowerCase('ru-RU');
+  if(/модерац|админ|бан |заблокир|жалоб|доступ к общему|изменить свою надпись/.test(t))tag(node,'admin');
+  else if(/безопас|приват|скрывать мой профиль|устройств|сесси|восстанов|контакт|email|телефон|онлайн|призрак/.test(t))tag(node,'security');
+  else if(/звук|уведомлен|мелод|микрофон/.test(t))tag(node,'notifications');
+  else if(/компакт|интерфейс|цвет|тема|шрифт|иконк|анимац|дизайн|скруглен|размер текста|плотность/.test(t))tag(node,'appearance');
+  else tag(node,'general');
+ });
+ const fold=(selector,label,category,caption)=>{
+  const source=card.querySelector(selector);if(!source||source.closest('.vp-settings-accordion'))return;
+  const parent=source.parentElement;if(!parent)return;
+  const details=document.createElement('details');details.className='vp-settings-accordion';details.dataset.vpSettingsCategory=category;details.open=false;
+  const summary=document.createElement('summary');summary.textContent=label;
+  if(caption){const small=document.createElement('span');small.className='vp-accordion-caption';small.textContent=caption;summary.append(small)}
+  const inner=document.createElement('div');inner.className='vp-settings-accordion-content';
+  parent.insertBefore(details,source);details.append(summary,inner);inner.append(source);
+ };
+ fold('.font-settings','🔤 Шрифты','appearance','Локально');
+ fold('.pulse-sound-settings','🔔 Свои звуки','notifications','2 звука');
+ fold('.customize-settings','🎨 Внешний вид и иконки','appearance','Цвета · шрифт · фон');
+ const profile=$('profileModal');
+ if(profile){
+  const perks=profile.querySelector('.vip-perk-list');
+  if(perks&&!perks.dataset.vpCompact){perks.dataset.vpCompact='1';const details=document.createElement('details');details.className='vp-settings-accordion';const summary=document.createElement('summary');summary.textContent='✨ Что входит в VIP';const inner=document.createElement('div');inner.className='vp-settings-accordion-content';perks.before(details);details.append(summary,inner);inner.append(perks)}
+ }
+ const compact=$('settingCompact');if(compact){compact.checked=localStorage.getItem('pulseCompact')==='1';document.body.classList.toggle('compact-mode',compact.checked)}
+ applySettingsFilter();
+}
+function applySettingsFilter(){
+ const card=document.querySelector('#settingsModal .modal-card');if(!card)return;
+ const mode=$('vpSettingsToolbar')?.dataset.filter||'all',query=String($('vpSettingsSearch')?.value||'').trim().toLocaleLowerCase('ru-RU');
+ const nodes=new Set([...card.querySelectorAll('[data-vp-settings-category]'),...card.querySelectorAll('.settings-list > *')]);
+ for(const node of nodes){
+  if(node.id==='vpSettingsToolbar'||node.closest('#vpSettingsToolbar'))continue;
+  const category=node.dataset.vpSettingsCategory||'general',text=String(node.innerText||node.textContent||'').toLocaleLowerCase('ru-RU');
+  const matchesCategory=mode==='all'||category===mode,matchesQuery=!query||text.includes(query);
+  node.classList.toggle('vp-filtered-out',!(matchesCategory&&matchesQuery));
+  if(node.tagName==='DETAILS'&&matchesCategory&&matchesQuery&&query)node.open=true;
+ }
+ const toolbar=$('vpSettingsToolbar');if(toolbar)toolbar.querySelectorAll('[data-vp-settings-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.vpSettingsFilter===mode)));
+}
 async function loadAchievements(){
  try{const d=await request('/api/achievements/me');const html=achievementHTML(d.items||[]);if($('vpOwnAchievements'))$('vpOwnAchievements').innerHTML='<div class="vp-suite-head"><small class="muted">Открыто '+Number(d.unlocked||0)+' из '+Number(d.total||0)+'</small></div>'+html;if($('vpOwnProfileAchievementList'))$('vpOwnProfileAchievementList').innerHTML=html}catch(e){if($('vpOwnAchievements'))$('vpOwnAchievements').innerHTML='<p class="vp-empty">'+esc(e.message)+'</p>'}
 }
