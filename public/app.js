@@ -175,7 +175,7 @@ async function checkSession(){
  try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(r.ok){const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();setTimeout(()=>requestPushPermissionOnEntry(),900);return}}catch{}
  // Let Chrome's password manager finish autofilling, then try automatically as soon as both fields exist.
  $('login')?.classList.remove('hidden');let attempts=0,autoLoginStarted=false;
- const trySavedLogin=()=>{if(autoLoginStarted||myId||authMode!=='login')return;attempts++;const name=$('nickname')?.value.trim()||'',password=$('password')?.value||'';if(name.length>=3&&password.length>=8){autoLoginStarted=true;$('loginError').textContent='Входим автоматически…';authenticate().then(()=>{if(!myId)$('login')?.classList.remove('hidden')}).catch(()=>{$('login')?.classList.remove('hidden')});return}if(attempts<12)setTimeout(trySavedLogin,500)};
+ const trySavedLogin=()=>{if(autoLoginStarted||myId||authMode!=='login')return;attempts++;const name=$('nickname')?.value.trim()||'',password=$('password')?.value||'';if(name.length>=3&&password.length>=8){autoLoginStarted=true;$('loginError').textContent='Входим автоматически…';authenticate().then(()=>{if(!myName)setTimeout(()=>{if(!myName)$('login')?.classList.remove('hidden')},2500)}).catch(()=>{$('login')?.classList.remove('hidden')});return}if(attempts<12)setTimeout(trySavedLogin,500)};
  setTimeout(trySavedLogin,250);
 }
 async function requestPushPermissionOnEntry(){
