@@ -72,6 +72,19 @@ function initBackNavigation(){
 }
 function init(){
  initBackNavigation();
+ // Match the app to the visible viewport on mobile so the keyboard resizes
+ // the chat pane instead of causing the page/composer to be auto-scrolled.
+ const syncVoltraViewport=()=>{
+  const viewport=window.visualViewport,height=Math.max(1,Math.round(viewport?.height||window.innerHeight||document.documentElement.clientHeight));
+  document.documentElement.style.setProperty('--voltra-viewport-height',height+'px');
+  const input=$('messageInput'),messages=$('messages');
+  if(!input||!messages||document.activeElement!==input)return;
+  const atBottom=messages.dataset.pulseStickToBottom==='1',before=messages.scrollTop;
+  requestAnimationFrame(()=>{if(document.activeElement!==input||!messages.isConnected)return;if(atBottom)messages.scrollTop=messages.scrollHeight;else messages.scrollTop=Math.min(before,Math.max(0,messages.scrollHeight-messages.clientHeight))});
+ };
+ syncVoltraViewport();
+ window.visualViewport?.addEventListener('resize',syncVoltraViewport,{passive:true});
+ window.addEventListener('resize',syncVoltraViewport,{passive:true});
  try{const last=localStorage.getItem('pulseLastAccount');if(last&&!$('nickname').value)$('nickname').value=last}catch{}
  $('authSwitch').onclick=()=>{authMode=authMode==='login'?'register':'login';$('authTitle').textContent=authMode==='login'?'Связь без границ.':'Создай свой VOLTRA.';$('authSubtitle').textContent=authMode==='login'?'Войди, чтобы открыть свои чаты и сообщения.':'Создай аккаунт по нику и паролю.';$('authSubmit').innerHTML=authMode==='login'?'Войти в VOLTRA <span>↗</span>':'Создать аккаунт <span>↗</span>';$('authSwitch').textContent=authMode==='login'?'Нет аккаунта? Создать':'Уже есть аккаунт? Войти';$('openRecovery').classList.toggle('hidden',authMode!=='login');$('registerPhoneWrap').classList.add('hidden');$('registerCodeWrap').classList.add('hidden');$('password').autocomplete=authMode==='login'?'current-password':'new-password';$('loginError').textContent='';registrationId=null;};
  $('sendPhoneLinkCode').onclick=async()=>{try{const r=await fetch('/api/contact/start',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({method:'phone',contact:$('linkPhone').value.trim()})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось отправить SMS');$('phoneLinkStatus').textContent=d.message||'Код отправлен по SMS'}catch(e){$('phoneLinkStatus').textContent=e.message||'Ошибка отправки'}};
@@ -95,7 +108,24 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('mediaViewer')){e
  document.querySelectorAll('[data-chat-bg]').forEach(b=>b.addEventListener('click',()=>{const bg=b.dataset.chatBg;applyChatBackground(bg,currentKey());hideModal('chatBackgroundModal');toast('Фон чата изменён 🎨');if(isDM())send({t:'message',kind:'background-invite',background:bg,text:'🎨 Предлагаю тебе такой же фон чата',to:activeId})}));
  $('formatToolbar').addEventListener('mousedown',e=>e.preventDefault());$('formatToolbar').addEventListener('click',e=>{const b=e.target.closest('[data-format]');if(!b)return;const input=$('messageInput'),mark=b.dataset.format,start=input.selectionStart,end=input.selectionEnd;if(start===end){toast('Сначала выдели текст');return}const selected=input.value.slice(start,end),replacement=mark+selected+mark;input.setRangeText(replacement,start,end,'select');input.focus();input.setSelectionRange(start+mark.length,start+mark.length+selected.length);showFormatToolbar()});$('messageInput').addEventListener('select',showFormatToolbar);$('messageInput').addEventListener('keyup',showFormatToolbar);document.addEventListener('selectionchange',()=>{if(document.activeElement===$('messageInput'))showFormatToolbar()});
  $('messageInput').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submitMessage()}else send({t:'typing',to:isDM()?activeId:null})};
- $('messageInput').oninput=()=>{const el=$('messageInput'),messages=$('messages'),before=messages?.scrollTop,atBottom=messages?messages.dataset.pulseStickToBottom==='1'&&messages.scrollHeight-messages.scrollTop-messages.clientHeight<120:false,windowY=window.scrollY,anchor=[...(messages?.querySelectorAll('.message[data-message-id]')||[])].find(n=>n.getBoundingClientRect().bottom>messages.getBoundingClientRect().top),anchorId=anchor?.dataset.messageId,anchorOffset=anchor?anchor.getBoundingClientRect().top-messages.getBoundingClientRect().top:0;el.style.height='auto';el.style.height=Math.min(el.scrollHeight,130)+'px';requestAnimationFrame(()=>{if(messages){if(atBottom)messages.scrollTop=messages.scrollHeight;else{const target=anchorId?[...messages.querySelectorAll('.message[data-message-id]')].find(n=>n.dataset.messageId===anchorId):null;if(target)messages.scrollTop+=target.getBoundingClientRect().top-messages.getBoundingClientRect().top-anchorOffset;else if(Number.isFinite(before))messages.scrollTop=before}}if(window.scrollY!==windowY)window.scrollTo({top:windowY,behavior:'instant'})})};
+ $('messageInput').oninput=()=>{
+  const el=$('messageInput'),messages=$('messages');
+  const mobile=window.matchMedia('(max-width: 700px)').matches;
+  const wasAtBottom=!!messages&&messages.dataset.pulseStickToBottom==='1';
+  const before=messages?.scrollTop;
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,130)+'px';
+  // Mobile browsers move the visual viewport when the keyboard opens. Do not
+  // fight that movement with window.scrollTo or per-keystroke anchor correction.
+  if(mobile){
+   if(messages&&wasAtBottom)requestAnimationFrame(()=>{if(document.activeElement===el&&messages.isConnected)messages.scrollTop=messages.scrollHeight});
+   return;
+  }
+  const windowY=window.scrollY;
+  const anchor=[...(messages?.querySelectorAll('.message[data-message-id]')||[])].find(n=>n.getBoundingClientRect().bottom>messages.getBoundingClientRect().top);
+  const anchorId=anchor?.dataset.messageId,anchorOffset=anchor?anchor.getBoundingClientRect().top-messages.getBoundingClientRect().top:0;
+  requestAnimationFrame(()=>{if(messages){if(wasAtBottom)messages.scrollTop=messages.scrollHeight;else{const target=anchorId?[...messages.querySelectorAll('.message[data-message-id]')].find(n=>n.dataset.messageId===anchorId):null;if(target)messages.scrollTop+=target.getBoundingClientRect().top-messages.getBoundingClientRect().top-anchorOffset;else if(Number.isFinite(before))messages.scrollTop=before}}if(window.scrollY!==windowY)window.scrollTo({top:windowY,behavior:'instant'})});
+ };
  $('attach').onclick=()=>showModal('attachChoiceModal');$('chooseGallery').onclick=()=>{hideModal('attachChoiceModal');$('galleryInput').click()};$('chooseFileManager').onclick=()=>{hideModal('attachChoiceModal');$('fileInput').click()};$('appIconFile').onchange=()=>{readPersonalAppIcon($('appIconFile').files?.[0]);$('appIconFile').value=''};$('resetAppIcon').onclick=()=>{localStorage.removeItem('voltraPersonalIcon');applyPersonalAppIcon();toast('Стандартная иконка восстановлена')};
  $('settingBiomeIcon')?.addEventListener('change',e=>applyBiomeIconTheme(e.target.value,true));
  $('composeFiles')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-compose-file]');if(b){pendingComposeFiles.splice(Number(b.dataset.removeComposeFile),1);renderComposeFiles()}});
