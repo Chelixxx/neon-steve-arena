@@ -410,15 +410,20 @@ function uploadLargeFileToGofile(file,onProgress){
 }
 async function uploadOneFile(file,index,total){
  const maxBytes=100*1024*1024;
- if(file.size>maxBytes)return await uploadLargeFileToGofile(file,pct=>setUploadProgress(pct,'Внешнее хранилище · '+file.name));
+ const extByMime={'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif','image/avif':'.avif','image/bmp':'.bmp','image/svg+xml':'.svg','video/mp4':'.mp4','video/webm':'.webm','video/quicktime':'.mov','audio/mpeg':'.mp3','audio/mp4':'.m4a','audio/ogg':'.ogg','audio/wav':'.wav','application/pdf':'.pdf','application/zip':'.zip','text/plain':'.txt'};
+ const mimeType=String(file.type||'application/octet-stream').toLowerCase();
+ const hasExtension=/\.[a-z0-9]{1,12}$/i.test(String(file.name||''));
+ const uploadName=hasExtension?file.name:(String(file.name||'file')+(extByMime[mimeType]||''));
+ const uploadFile=uploadName===file.name?file:new File([file],uploadName,{type:file.type||'application/octet-stream',lastModified:file.lastModified});
+ if(file.size>maxBytes)return await uploadLargeFileToGofile(uploadFile,pct=>setUploadProgress(pct,'Внешнее хранилище · '+uploadName));
  let a;
  for(let attempt=0;attempt<2;attempt++){
   const uploadToken=await getUploadTicket();
-  try{a=await uploadBinaryWithProgress(file,uploadToken,pct=>setUploadProgress(pct,'Файл '+(index+1)+' из '+total+' · '+file.name));break}
+  try{a=await uploadBinaryWithProgress(uploadFile,uploadToken,pct=>setUploadProgress(pct,'Файл '+(index+1)+' из '+total+' · '+uploadName));break}
   catch(e){if(e.status===401&&attempt===0){setUploadProgress(0,'Обновляем сессию загрузки…');continue}throw e}
  }
  if(!a)throw new Error('Не удалось получить файл от сервера');
- return {...a,mime:file.type||a.mime};
+ return {...a,name:file.name||uploadName,mime:file.type||a.mime};
 }
 async function uploadFile(fileList){
  if(uploadInProgress)return;
