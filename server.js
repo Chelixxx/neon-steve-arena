@@ -391,9 +391,11 @@ function issueWsTicket(uid){
  return ticket;
 }
 function consumeWsTicket(req){
- const offered=String(req.headers['sec-websocket-protocol']||'').split(',').map(x=>x.trim());
+ let queryTicket='';
+ try{queryTicket=new URL(req.url,'http://voltra.local').searchParams.get('ticket')||''}catch{}
+ const offered=[queryTicket,...String(req.headers['sec-websocket-protocol']||'').split(',').map(x=>x.trim())];
  for(const token of offered){
-  if(token==='voltra')continue;
+  if(!token||token==='voltra')continue;
   const item=wsAuthTickets.get(token);
   if(!item)continue;
   wsAuthTickets.delete(token);
