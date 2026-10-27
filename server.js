@@ -661,6 +661,49 @@ const server=http.createServer(async(req,res)=>{
    try{const b=await parseBody(req),id=String(b.deviceId||''),user=userById(uid),currentId=deviceIdFrom(req);if(!/^[0-9a-f-]{36}$/i.test(id))return json(res,400,{error:'Неверный идентификатор устройства'});if(id===currentId)return json(res,400,{error:'Текущую сессию не закрывай отсюда — используй «Выйти»'});if(!(user.devices||[]).some(d=>d.id===id))return json(res,404,{error:'Устройство не найдено в твоём аккаунте'});if(!Array.isArray(user.revokedDevices))user.revokedDevices=[];if(!user.revokedDevices.includes(id))user.revokedDevices.push(id);user.revokedDevices=user.revokedDevices.slice(-100);save();for(const socket of [...(clients.get(uid)||[])])if(socket.deviceId===id){send(socket,{t:'session-revoked',message:'Эта сессия завершена в настройках безопасности'});try{socket.close(1008,'Session revoked')}catch{}}return json(res,200,{ok:true,deviceId:id})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось завершить сессию'})}
   }
   if(req.method==='GET'&&u.pathname==='/api/achievements/me'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});const items=publicAchievements(uid);return json(res,200,{items,unlocked:items.filter(x=>x.unlocked).length,total:items.length})}
+  if(req.method==='GET'&&u.pathname==='/api/tips/collection'){
+   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+   const user=userById(uid),ids=Array.isArray(user.seenVoltraTips)?user.seenVoltraTips.filter(validVoltraTipId):[];
+   return json(res,200,{seenIds:[...new Set(ids)],total:VOLTRA_TIP_TOTAL,reward:2000,rewardClaimed:!!user.voltraTipsRewardClaimedAt,rewardAvailable:new Set(ids).size>=VOLTRA_TIP_TOTAL&&!user.voltraTipsRewardClaimedAt});
+  }
+  if(req.method==='POST'&&u.pathname==='/api/tips/seen'){
+   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+   try{
+    const b=await parseBody(req,12000),user=userById(uid),incoming=Array.isArray(b.ids)?b.ids.slice(0,160):[];
+    const existing=new Set((Array.isArray(user.seenVoltraTips)?user.seenVoltraTips:[]).filter(validVoltraTipId));
+    for(const id of incoming)if(validVoltraTipId(id))existing.add(String(id));
+    const merged=[...existing];
+    const old=Array.isArray(user.seenVoltraTips)?user.seenVoltraTips:[];
+    if(merged.length!==old.length||merged.some((id,i)=>id!==old[i])){user.seenVoltraTips=merged;save()}
+    return json(res,200,{ok:true,seen:merged.length,total:VOLTRA_TIP_TOTAL,rewardClaimed:!!user.voltraTipsRewardClaimedAt,rewardAvailable:merged.length>=VOLTRA_TIP_TOTAL&&!user.voltraTipsRewardClaimedAt,seenIds:merged});
+   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось сохранить коллекцию'})}
+  }
+  if(req.method==='POST'&&u.pathname==='/api/tips/claim'){
+   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+   const user=userById(uid),seen=new Set((Array.isArray(user.seenVoltraTips)?user.seenVoltraTips:[]).filter(validVoltraTipId));
+   if(user.voltraTipsRewardClaimedAt)return json(res,409,{error:'Награда за полную коллекцию уже получена',claimed:true,balance:user.pulses||0});
+   if(seen.size<VOLTRA_TIP_TOTAL)return json(res,400,{error:'Сначала собери все подсказки: '+seen.size+' / '+VOLTRA_TIP_TOTAL});
+   user.pulses=(Number(user.pulses)||0)+2000;user.voltraTipsRewardClaimedAt=Date.now();save();
+   sendUser(uid,{t:'pulses-updated',pulses:user.pulses});return json(res,200,{ok:true,reward:2000,balance:user.pulses,claimed:true});
+  }
+  if(req.method==='GET'&&u.pathname==='/api/quests'){
+   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+   const items=publicVoltraQuests(uid);return json(res,200,{items,total:items.length,claimed:items.filter(x=>x.claimed).length,ready:items.filter(x=>x.unlocked&&!x.claimed).length});
+  }
+  if(req.method==='POST'&&u.pathname==='/api/quests/claim'){
+   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+   try{
+    const b=await parseBody(req,4000),id=String(b.id||''),user=userById(uid),quest=publicVoltraQuests(uid).find(x=>x.id===id);
+    if(!quest)return json(res,404,{error:'Задание не найдено'});
+    if(quest.claimed)return json(res,409,{error:'Награда за это задание уже получена'});
+    if(!quest.unlocked)return json(res,400,{error:'Задание ещё не выполнено',current:quest.current,target:quest.target});
+    user.pulses=(Number(user.pulses)||0)+quest.reward;
+    if(!Array.isArray(user.claimedVoltraQuests))user.claimedVoltraQuests=[];
+    user.claimedVoltraQuests.push(quest.id);save();
+    sendUser(uid,{t:'pulses-updated',pulses:user.pulses});
+    return json(res,200,{ok:true,id:quest.id,reward:quest.reward,balance:user.pulses});
+   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось получить награду'})}
+  }
   if(req.method==='GET'&&u.pathname==='/api/me'){const uid=verifyToken(cookieToken(req));const user=uid&&userById(uid);if(!user)return json(res,401,{error:'Не авторизован'});return json(res,200,{user:{id:user.id,name:user.name,username:user.username||'',phoneVerified:!!user.phoneVerified,phone:user.phone||''},wsTicket:issueWsTicket(user.id)})}
 
  if(req.method==='POST'&&u.pathname==='/api/payments/test/orders'){
