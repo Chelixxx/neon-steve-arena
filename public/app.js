@@ -155,7 +155,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('mediaViewer')){e
  
 $('refreshModeration')?.addEventListener('click',loadModerationQueue);$('moderationItems')?.addEventListener('click',e=>{const b=e.target.closest('[data-mod-action]');if(b)void moderateItem(b.dataset.modType,b.dataset.modId,b.dataset.modAction)});
 window.addEventListener('beforeunload',()=>{try{send({t:'call-end',to:callPeer})}catch{}if(localStream)localStream.getTracks().forEach(t=>t.stop())});
- checkSession();if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(()=>updatePushButton()).catch(()=>{});
+ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(()=>updatePushButton()).catch(()=>{});
 }
 async function authenticate(){
  const name=$('nickname').value.trim(),password=$('password').value;
@@ -753,5 +753,6 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('classicStrikeModal
 
 document.addEventListener('submit',e=>{if(e.target&&e.target.id==='loginForm'){e.preventDefault();authenticate()}},true);
 window.voltraAuthenticate=authenticate;
+window.addEventListener('DOMContentLoaded',()=>{checkSession()});
 window.addEventListener('DOMContentLoaded',()=>{init();document.getElementById('shareCurrentLink')?.addEventListener('click',()=>voltraCopyLink(voltraLinkForChat(activeId||globalKey)));document.getElementById('shareSettingsLink')?.addEventListener('click',()=>voltraCopyLink(location.origin+'/settings'));setTimeout(()=>{try{voltraResolveDeepLink()}catch(e){console.warn('VOLTRA deep link skipped:',e)}},3500)});
 })();
