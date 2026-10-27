@@ -63,7 +63,8 @@ function compactSettingsLayout(){
   if(/компакт|интерфейс|цвет|тема|шрифт|иконк|анимац|дизайн|скруглен|размер текста|плотность|оформлен/.test(t))return 'appearance';
   return 'general';
  };
- card.querySelectorAll('.settings-list > *').forEach(node=>{if(!node.dataset.vpSettingsCategory)tag(node,guessCategory(String(node.innerText||node.textContent||'').toLocaleLowerCase('ru-RU')))});
+ const rootSettingsList=card.querySelector(':scope > .settings-list')||card.querySelector('.settings-list');
+ if(rootSettingsList)[...rootSettingsList.children].forEach(node=>{if(!node.dataset.vpSettingsCategory)tag(node,guessCategory(String(node.innerText||node.textContent||'').toLocaleLowerCase('ru-RU')))});
  [...card.children].forEach(node=>{
   if(node.matches('h2,.modal-close,.settings-list,#vpSettingsToolbar'))return;
   if(!node.dataset.vpSettingsCategory)tag(node,guessCategory(String(node.innerText||node.textContent||'').toLocaleLowerCase('ru-RU')));
@@ -91,7 +92,8 @@ function compactSettingsLayout(){
 function applySettingsFilter(){
  const card=document.querySelector('#settingsModal .modal-card');if(!card)return;
  const mode=$('vpSettingsToolbar')?.dataset.filter||'all',query=String($('vpSettingsSearch')?.value||'').trim().toLocaleLowerCase('ru-RU');
- const nodes=new Set([...card.querySelectorAll('[data-vp-settings-category]'),...card.querySelectorAll('.settings-list > *')]);
+ const rootSettingsList=card.querySelector(':scope > .settings-list')||card.querySelector('.settings-list');
+ const nodes=new Set([...card.querySelectorAll('[data-vp-settings-category]'),...(rootSettingsList?[...rootSettingsList.children]:[])]);
  for(const node of nodes){
   if(node.id==='vpSettingsToolbar'||node.closest('#vpSettingsToolbar'))continue;
   const category=node.dataset.vpSettingsCategory||'general',text=String(node.innerText||node.textContent||'').toLocaleLowerCase('ru-RU');
