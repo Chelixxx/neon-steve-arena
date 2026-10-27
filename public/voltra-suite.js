@@ -207,16 +207,21 @@ async function joinRoom(roomId,name){
 function toggleRoomMute(){if(!room.stream)return;room.muted=!room.muted;for(const track of room.stream.getAudioTracks())track.enabled=!room.muted;renderRoomMembers()}
 function leaveRoom(){if(!room.id)return;cleanupRoom(true);toast('Ты покинул(а) голосовую комнату')}
 function setupSuiteUI(){
- addSuitePanels();addRoomButton();initDrafts();
+ addSuitePanels();compactSettingsLayout();addRoomButton();initDrafts();
  document.addEventListener('click',async e=>{
+  const suiteToggle=e.target.closest('[data-vp-suite-toggle]');if(suiteToggle){const content=$('vpSuiteContent');if(content){const opening=content.classList.contains('hidden');content.classList.toggle('hidden',!opening);suiteToggle.textContent=opening?'Свернуть':'Показать';suiteToggle.setAttribute('aria-expanded',String(opening));if(opening){await loadSessions();await loadAchievements()}}return}
+  const refreshAchievements=e.target.closest('[data-vp-refresh-achievements]');if(refreshAchievements){refreshAchievements.disabled=true;try{await loadAchievements();toast('Достижения обновлены ✓')}finally{refreshAchievements.disabled=false}return}
   const refresh=e.target.closest('[data-vp-refresh-sessions]');if(refresh){await loadSessions();return}
   const revoke=e.target.closest('[data-vp-revoke-device]');if(revoke){const id=revoke.dataset.vpRevokeDevice;if(!confirm('Завершить эту сессию? Это устройство попросит войти заново.'))return;revoke.disabled=true;try{await request('/api/security/sessions/revoke',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({deviceId:id})});toast('Сессия завершена ✓');await loadSessions()}catch(err){toast(err.message)}finally{revoke.disabled=false}return}
+  const filterButton=e.target.closest('[data-vp-settings-filter]');if(filterButton){const toolbar=$('vpSettingsToolbar');if(toolbar)toolbar.dataset.filter=filterButton.dataset.vpSettingsFilter;applySettingsFilter();return}
   if(e.target.closest('[data-vp-open-miniapps]')){const b=$('openBots');if(b)b.click();else document.querySelector('[data-nav-action="bots"]')?.click();setTimeout(()=>window.pulseRefreshMiniApps?.(),180)}
  });
- const settings=$('settingsModal');if(settings)new MutationObserver(()=>{if(!settings.classList.contains('hidden')){void loadSessions();void loadAchievements()}}).observe(settings,{attributes:true,attributeFilter:['class']});
+ $('vpSettingsSearch')?.addEventListener('input',applySettingsFilter);
+ const settings=$('settingsModal');if(settings)new MutationObserver(()=>{if(!settings.classList.contains('hidden'))compactSettingsLayout()}).observe(settings,{attributes:true,attributeFilter:['class']});
  const profile=$('profileModal');if(profile)new MutationObserver(()=>{if(!profile.classList.contains('hidden'))void loadAchievements()}).observe(profile,{attributes:true,attributeFilter:['class']});
  const peer=$('peerName');if(peer)new MutationObserver(()=>{updateRoomButton();setTimeout(syncDraft,0)}).observe(peer,{childList:true,subtree:true,characterData:true});
  $('chatList')?.addEventListener('click',()=>setTimeout(()=>{updateRoomButton();syncDraft()},70),true);
+ $('settingCompact')?.addEventListener('change',e=>{document.body.classList.toggle('compact-mode',e.target.checked);try{localStorage.setItem('pulseCompact',e.target.checked?'1':'0')}catch{}});
  window.addEventListener('voltraWSMessage',e=>{const m=e.detail;if(m&&typeof m.t==='string')void handleRoomSignal(m)});
  window.addEventListener('pagehide',()=>{if(room.id){try{sendRoom({t:'voice-room-leave'})}catch{}for(const p of room.peers.values())try{p.pc.close()}catch{}for(const track of room.stream?.getTracks()||[])track.stop()}});
 }
