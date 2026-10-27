@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const $=id=>document.getElementById(id);let wsAuthTicket='',ws=null,myId=null,myName='',myUsername='',activeId=null,tab='chats',users=[],messagesByChat=new Map(),unreadCounts=new Map(),typingTimer=null,authMode='login',toastTimer=null,reconnectTimer=null,registrationId=null,smsStep=false,mediaRecorder=null,recordChunks=[],localStream=null,pc=null,callPeer=null,callType='audio',callInitiator=false,micMuted=false,cameraOff=false,pendingCandidates=[],pendingUploadTickets=new Map(),uploadInProgress=false,replyingTo=null,callId=null,callStartedAt=0,cookieStats={clicks:0,pulses:0},cookieCaptcha=null,reconnectDelay=1000,reconnectNoticeShown=false,manualDisconnect=false,messageSearchQuery='',messageSearchResults=[],silentNextMessage=false;
+const $=id=>document.getElementById(id);let wsAuthTicket='',authRestoreInProgress=false,autoLoginAttempted=false,authRestoreWatchdog=null,ws=null,myId=null,myName='',myUsername='',activeId=null,tab='chats',users=[],messagesByChat=new Map(),unreadCounts=new Map(),typingTimer=null,authMode='login',toastTimer=null,reconnectTimer=null,registrationId=null,smsStep=false,mediaRecorder=null,recordChunks=[],localStream=null,pc=null,callPeer=null,callType='audio',callInitiator=false,micMuted=false,cameraOff=false,pendingCandidates=[],pendingUploadTickets=new Map(),uploadInProgress=false,replyingTo=null,callId=null,callStartedAt=0,cookieStats={clicks:0,pulses:0},cookieCaptcha=null,reconnectDelay=1000,reconnectNoticeShown=false,manualDisconnect=false,messageSearchQuery='',messageSearchResults=[],silentNextMessage=false;
 const globalKey='global',dmKey=id=>'dm:'+id,channelKey=id=>'channel:'+id;let channels=[],newsPosts=[],profileAvatarData='',channelComments=[],publicProfileId=null;
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function avatar(name){return esc((name||'?').trim().slice(0,1).toUpperCase())}
@@ -159,6 +159,7 @@ window.addEventListener('beforeunload',()=>{try{send({t:'call-end',to:callPeer})
 }
 async function authenticate(){
  const name=$('nickname').value.trim(),password=$('password').value;
+ beginAuthRestore(authMode==='login'?'Входим в VOLTRA':'Создаём аккаунт','Проверяем данные и подключаем твои чаты…');
  $('authSubmit').disabled=true;$('loginError').textContent=authMode==='login'?'Входим…':'';
  try{
   if(authMode==='register'){
@@ -169,14 +170,68 @@ async function authenticate(){
   const r=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({name,password})});
   const data=await r.json();if(!r.ok)throw new Error(data.error||'Не удалось выполнить запрос');
   myName=data.user.name;myUsername=data.user.username||'';wsAuthTicket=data.wsTicket||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();
- }catch(e){$('loginError').textContent=e.message||'Ошибка соединения'}finally{$('authSubmit').disabled=false}
+ }catch(e){authRestoreInProgress=false;finishAuthSplash();$('login')?.classList.remove('hidden');$('loginError').textContent=e.message||'Ошибка соединения'}finally{$('authSubmit').disabled=false}
+}
+function showAuthSplash(title,subtitle){
+ const splash=$('bootLoader');
+ if(!splash)return;
+ const heading=$('bootLoaderTitle'),copy=$('bootLoaderSubtitle');
+ if(heading&&title)heading.textContent=title;
+ if(copy&&subtitle)copy.textContent=subtitle;
+ splash.classList.remove('hidden');
+}
+function finishAuthSplash(){
+ clearTimeout(authRestoreWatchdog);
+ authRestoreWatchdog=null;
+ $('bootLoader')?.classList.add('hidden');
+}
+function beginAuthRestore(title,subtitle){
+ authRestoreInProgress=true;
+ showAuthSplash(title,subtitle);
+ clearTimeout(authRestoreWatchdog);
+ authRestoreWatchdog=setTimeout(()=>{
+  if(myId)return;
+  authRestoreInProgress=false;
+  finishAuthSplash();
+  $('login')?.classList.remove('hidden');
+  if(!$('loginError')?.textContent) $('loginError').textContent='Не получилось восстановить вход автоматически. Нажми «Войти» ещё раз.';
+ },9000);
 }
 async function checkSession(){
- try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(r.ok){const d=await r.json();myName=d.user.name;myUsername=d.user.username||'';try{localStorage.setItem('pulseLastAccount',myName)}catch{}connect();setTimeout(()=>requestPushPermissionOnEntry(),900);return}}catch{}
- // Let Chrome's password manager finish autofilling, then try automatically as soon as both fields exist.
- $('login')?.classList.remove('hidden');let attempts=0,autoLoginStarted=false;
- const trySavedLogin=()=>{if(autoLoginStarted||myId||authMode!=='login')return;attempts++;const name=$('nickname')?.value.trim()||'',password=$('password')?.value||'';if(name.length>=3&&password.length>=8){autoLoginStarted=true;$('loginError').textContent='Входим автоматически…';authenticate().then(()=>{if(!myName)setTimeout(()=>{if(!myName)$('login')?.classList.remove('hidden')},2500)}).catch(()=>{$('login')?.classList.remove('hidden')});return}if(attempts<12)setTimeout(trySavedLogin,500)};
- setTimeout(trySavedLogin,250);
+ showAuthSplash('Возвращаем тебя в VOLTRA','Проверяем сохранённую сессию и подключаем чаты…');
+ try{
+  const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});
+  if(r.ok){
+   const d=await r.json();
+   myName=d.user.name;myUsername=d.user.username||'';
+   try{localStorage.setItem('pulseLastAccount',myName)}catch{}
+   connect();
+   return;
+  }
+ }catch{}
+ // Chrome can fill the username/password after the page has rendered. Check repeatedly,
+ // but show the real form quickly if it has nothing saved for this site.
+ let tries=0,started=false;
+ const revealForm=()=>{
+  if(started||myId)return;
+  finishAuthSplash();
+  $('login')?.classList.remove('hidden');
+ };
+ const tryAutoLogin=()=>{
+  if(started||myId||authMode!=='login')return;
+  tries++;
+  const name=$('nickname')?.value.trim()||'',password=$('password')?.value||'';
+  if(name.length>=3&&password.length>=8){
+   started=true;autoLoginAttempted=true;
+   beginAuthRestore('Входим автоматически','Используем сохранённые данные браузера…');
+   authenticate();
+   return;
+  }
+  if(tries<14)setTimeout(tryAutoLogin,250);
+  else revealForm();
+ };
+ setTimeout(tryAutoLogin,150);
+ setTimeout(()=>{if(!started&&!myId)revealForm()},3600);
 }
 async function requestPushPermissionOnEntry(){
  if(!myId||!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window))return;
@@ -203,16 +258,27 @@ function connect(){
  const proto=location.protocol==='https:'?'wss:':'ws:';const wsUrl=proto+'//'+location.host+'/ws';if(wsAuthTicket){const ticket=wsAuthTicket;wsAuthTicket='';ws=new WebSocket(wsUrl,['voltra',ticket])}else ws=new WebSocket(wsUrl);
  ws.onopen=()=>{reconnectDelay=1000;manualDisconnect=false;$('connection').textContent='подключено';send({t:'join',name:myName})};
  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}handle(m)};
- ws.onerror=()=>{if(!myId){$('loginError').textContent='Не удалось подключиться. Проверь интернет и попробуй снова.';$('bootLoader')?.classList.add('hidden')}};
- ws.onclose=()=>{$('connection').textContent='переподключение…';if(myId&&!manualDisconnect){if(!reconnectNoticeShown){toast('Соединение прервалось — восстанавливаем…');reconnectNoticeShown=true}clearTimeout(reconnectTimer);const delay=reconnectDelay;reconnectDelay=Math.min(15000,Math.round(reconnectDelay*1.8));reconnectTimer=setTimeout(()=>{if(myId&&!manualDisconnect&&(!ws||ws.readyState===WebSocket.CLOSED||ws.readyState===WebSocket.CLOSING)){if(document.visibilityState==='visible'&&navigator.onLine!==false)connect()}},delay)}};
+ ws.onerror=()=>{if(!myId&&!authRestoreInProgress){finishAuthSplash();$('login')?.classList.remove('hidden');$('loginError').textContent='Не удалось подключиться. Проверь интернет и попробуй снова.'}};
+ ws.onclose=()=>{$('connection').textContent='переподключение…';if(!myId&&!authRestoreInProgress){finishAuthSplash();$('login')?.classList.remove('hidden');if(!$('loginError')?.textContent)$('loginError').textContent='Подключение не завершилось. Нажми «Войти» ещё раз.'}if(myId&&!manualDisconnect){if(!reconnectNoticeShown){toast('Соединение прервалось — восстанавливаем…');reconnectNoticeShown=true}clearTimeout(reconnectTimer);const delay=reconnectDelay;reconnectDelay=Math.min(15000,Math.round(reconnectDelay*1.8));reconnectTimer=setTimeout(()=>{if(myId&&!manualDisconnect&&(!ws||ws.readyState===WebSocket.CLOSED||ws.readyState===WebSocket.CLOSING)){if(document.visibilityState==='visible'&&navigator.onLine!==false)connect()}},delay)}};
 }
 function handle(m){
  window.dispatchEvent(new CustomEvent('voltraWSMessage',{detail:m}));
  if(m.t==='messages-deleted'){const ids=new Set(Array.isArray(m.ids)?m.ids:[]);for(const [key,list] of messagesByChat)messagesByChat.set(key,list.filter(item=>!ids.has(item.id)));if(activeId)renderMessages();renderList();return}
  if(m.t==='banned'||m.t==='session-revoked'){clearTimeout(reconnectTimer);if(ws){ws.onclose=null;try{ws.close()}catch{}}myId=null;$('bootLoader')?.classList.add('hidden');$('app').classList.add('hidden');$('login').classList.remove('hidden');$('loginError').textContent=m.reason||m.message||(m.t==='session-revoked'?'Сессия завершена. Войди снова.':'Аккаунт или устройство заблокировано');return}
  if(m.t==='upload-ticket'){const pending=pendingUploadTickets.get(m.requestId);if(pending){pendingUploadTickets.delete(m.requestId);pending.resolve(m.token)}return}
- if(m.t==='auth-required'){ws?.close();$('bootLoader')?.classList.add('hidden');$('login').classList.remove('hidden');$('app').classList.add('hidden');return}
- if(m.t==='welcome'){$('bootLoader')?.classList.add('hidden');myId=m.id;users=m.users||[];myUsername=users.find(u=>u.id===myId)?.username||myUsername;unreadCounts=new Map(Object.entries(m.unread||{}));$('login').classList.add('hidden');$('app').classList.remove('hidden');const self=users.find(u=>u.id===myId);$('myName').innerHTML=esc(myName)+easterEggDecor({...self,name:myName,username:myUsername})+adminBadge(self)+giftDecor(self);updateVipBrand();$('myAvatar').innerHTML=avatarContent(myName,self?.avatar);$('profileBtn').innerHTML=avatarContent(myName,self?.avatar);$('connection').textContent='подключено';(m.history||[]).forEach(x=>pushMessage(globalKey,x,false));try{localStorage.removeItem('pulseActiveChat')}catch{}activeId=null;if(self?.globalChatDisabled){$('welcome').classList.remove('hidden');$('messages').classList.add('hidden');$('composer').classList.add('hidden');$('peerName').textContent='Выбери чат';$('peerStatus').textContent='Доступ к общему чату отключён';renderList();loadCommunity();return}showEmpty();$('app').classList.remove('chat-open');loadCommunity();renderList();void processCallActionFromUrl();return}
+ if(m.t==='auth-required'){
+ if(!autoLoginAttempted&&$('nickname')?.value.trim().length>=3&&($('password')?.value||'').length>=8){
+  autoLoginAttempted=true;
+  if(ws){ws.onclose=null;try{ws.close()}catch{}}
+  beginAuthRestore('Восстанавливаем вход','Обновляем сессию и открываем чаты…');
+  authenticate();
+  return;
+ }
+ authRestoreInProgress=false;finishAuthSplash();$('login').classList.remove('hidden');$('app').classList.add('hidden');
+ if(!$('loginError')?.textContent)$('loginError').textContent='Сессию восстановить не удалось. Проверь данные и войди ещё раз.';
+ return;
+}
+ if(m.t==='welcome'){authRestoreInProgress=false;finishAuthSplash();myId=m.id;users=m.users||[];myUsername=users.find(u=>u.id===myId)?.username||myUsername;unreadCounts=new Map(Object.entries(m.unread||{}));$('login').classList.add('hidden');$('app').classList.remove('hidden');const self=users.find(u=>u.id===myId);$('myName').innerHTML=esc(myName)+easterEggDecor({...self,name:myName,username:myUsername})+adminBadge(self)+giftDecor(self);updateVipBrand();$('myAvatar').innerHTML=avatarContent(myName,self?.avatar);$('profileBtn').innerHTML=avatarContent(myName,self?.avatar);$('connection').textContent='подключено';(m.history||[]).forEach(x=>pushMessage(globalKey,x,false));try{localStorage.removeItem('pulseActiveChat')}catch{}activeId=null;if(self?.globalChatDisabled){$('welcome').classList.remove('hidden');$('messages').classList.add('hidden');$('composer').classList.add('hidden');$('peerName').textContent='Выбери чат';$('peerStatus').textContent='Доступ к общему чату отключён';renderList();loadCommunity();return}showEmpty();$('app').classList.remove('chat-open');loadCommunity();renderList();void processCallActionFromUrl();return}
  if(m.t==='presence'){users=m.users||[];$('peopleCount').textContent=users.filter(u=>u.id!==myId).length;$('connection').textContent='подключено';const self=users.find(u=>u.id===myId);if(self){myName=self.name||myName;myUsername=self.username||myUsername;$('myName').innerHTML=esc(myName)+easterEggDecor({...self,name:myName,username:myUsername})+adminBadge(self)+giftDecor(self);updateVipBrand();$('myAvatar').innerHTML=avatarContent(myName,self.avatar);$('profileBtn').innerHTML=avatarContent(myName,self.avatar)}if(self?.globalChatDisabled&&activeId===globalKey){activeId=globalKey;$('welcome').classList.remove('hidden');$('messages').classList.add('hidden');$('composer').classList.add('hidden');$('peerName').textContent='Выбери чат';$('peerStatus').textContent='Доступ к общему чату отключён'}if(isDM()){const peer=users.find(u=>u.id===activeId);$('peerName').innerHTML=esc(labelFor(activeId))+adminBadge(peer)+giftDecor(peer);$('peerAvatar').innerHTML=avatarContent(labelFor(activeId),peer?.avatar);$('peerStatus').textContent=formatLastSeen(peer)}renderList();if(isDM())return}
  if(m.t==='reward-notice'){if(m.paymentOrderId){let overlay=document.getElementById('voltraPaymentAlert');if(!overlay){overlay=document.createElement('div');overlay.id='voltraPaymentAlert';overlay.style.cssText='position:fixed;inset:0;z-index:999999;background:rgba(5,4,15,.96);display:grid;place-items:center;padding:20px;color:white;font-family:system-ui,Arial';overlay.innerHTML='<section style="width:min(760px,100%);padding:clamp(24px,6vw,56px);border-radius:28px;background:linear-gradient(145deg,#2b1645,#111326);border:2px solid #a18aff;box-shadow:0 0 80px #8064ff55;text-align:center"><div style="font-size:clamp(48px,10vw,92px)">💸</div><div style="font-size:clamp(28px,6vw,56px);font-weight:1000;line-height:1.05;margin:18px 0">ПРОВЕРЬ ПОСТУПЛЕНИЕ!</div><p id="voltraPaymentAlertText" style="font-size:clamp(17px,3vw,25px);line-height:1.45"></p><button id="voltraPaymentAlertOpen" style="width:100%;padding:17px;border:0;border-radius:14px;background:#8b75ff;color:white;font-weight:900;font-size:18px;cursor:pointer">ОТКРЫТЬ ЗАЯВКИ</button><button id="voltraPaymentAlertClose" style="margin-top:10px;padding:12px;border:1px solid #ffffff33;border-radius:12px;background:transparent;color:white;font-weight:700;cursor:pointer">Позже</button></section>';document.body.appendChild(overlay);overlay.querySelector('#voltraPaymentAlertOpen').onclick=()=>{location.href='/admin-payments.html'};overlay.querySelector('#voltraPaymentAlertClose').onclick=()=>overlay.remove()}const text=overlay.querySelector('#voltraPaymentAlertText');if(text)text.textContent=(m.title?m.title+' — ':'')+(m.body||'Поступила заявка. Проверь банковское приложение.');return}toast((m.title?m.title+' — ':'')+(m.body||'Новое уведомление'));return}if(m.t==='game-state'){for(const list of messagesByChat.values())for(const item of list)if(item.gameInvite?.gameId===m.game?.id)item.gameInvite.game=m.game;renderMessages();return}if(m.t==='pulses-updated'){window.dispatchEvent(new CustomEvent('pulsePulsesUpdated',{detail:m}));return}if(m.t==='gift-inventory-updated'){window.dispatchEvent(new CustomEvent('pulseGiftInventoryUpdated'));return}if(m.t==='presence-refresh'){return}if(m.t==='message'){const msg=m.message,key=msg.channelId?channelKey(msg.channelId):(msg.to?dmKey(msg.from===myId?msg.to:msg.from):globalKey);if(msg.from!==myId&&(document.hidden||key!==currentKey())&&!msg.silent&&!isChatMuted(msg.channelId?'channel:'+msg.channelId:(msg.to?(msg.from===myId?msg.to:msg.from):globalKey)))playPulseSound('notification');pushMessage(key,msg,false);if(msg.from!==myId){if(key===currentKey()){send({t:'read',ids:[msg.id]});}else unreadCounts.set(key,(unreadCounts.get(key)||0)+1)}renderList();if(key===currentKey())renderMessages(msg.from===myId,true);return}
  if(m.t==='message-hidden'){for(const [key,list] of messagesByChat)messagesByChat.set(key,list.filter(x=>x.id!==m.id));renderList();renderMessages();return}if(m.t==='message-delete-result'){toast(m.scope==='everyone'?'Сообщение удалено у всех 🗑':'Сообщение удалено у тебя 🗑');return}
