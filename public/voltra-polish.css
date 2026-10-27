@@ -188,3 +188,20 @@ body{background:radial-gradient(ellipse at 8% 0%,color-mix(in srgb,var(--accent)
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* VOLTRA motion: richer micro-interactions by default */
+:root{--voltra-motion-fast:150ms;--voltra-motion-normal:240ms}
+.chat-item,.directory-result,.bot-card,.miniapp-entry,.market-card,.market-item,.gift-card,.sticker-pack-card,.rail-btn,.bottom-nav-btn,.tool-btn,.primary,.secondary,.send-btn{transition:transform var(--voltra-motion-normal) cubic-bezier(.2,.8,.2,1),box-shadow var(--voltra-motion-normal) ease,background var(--voltra-motion-fast) ease,border-color var(--voltra-motion-fast) ease}
+@media(hover:hover) and (pointer:fine){
+ .chat-item:hover,.directory-result:hover,.bot-card:hover,.miniapp-entry:hover,.market-card:hover,.market-item:hover,.gift-card:hover,.sticker-pack-card:hover{transform:translateY(-2px)}
+ .primary:hover,.secondary:hover,.send-btn:hover,.tool-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px color-mix(in srgb,var(--accent,#8b73ff) 24%,transparent)}
+}
+.chat-item.active,.tab.active,.bottom-nav-btn.active,.rail-btn.active{animation:voltra-select-pop 260ms cubic-bezier(.2,.9,.3,1)}
+@keyframes voltra-select-pop{0%{transform:scale(.985)}65%{transform:scale(1.012)}100%{transform:scale(1)}}
+.bot-search-label{display:block;margin:10px 0 5px;font-size:12px;color:var(--muted,#aaa)}
+#botDirectorySearch{width:100%;min-height:42px;margin:0 0 12px}
+.performance-setting{display:grid;gap:8px;padding:12px;border:1px solid var(--voltra-line,#7774);border-radius:14px;margin:12px 0;background:var(--voltra-grad-surface,transparent)}
+.performance-setting p{margin:5px 0}
+body.low-performance-mode *,body.low-performance-mode *::before,body.low-performance-mode *::after{animation-duration:180ms!important;transition-duration:150ms!important;scroll-behavior:auto!important}
+body.low-performance-mode .chat-item,body.low-performance-mode .directory-result,body.low-performance-mode .bot-card,body.low-performance-mode .miniapp-entry,body.low-performance-mode .market-card,body.low-performance-mode .market-item,body.low-performance-mode .gift-card,body.low-performance-mode .sticker-pack-card{box-shadow:none!important;backdrop-filter:none!important}
+body.low-performance-mode .chat-item:hover,body.low-performance-mode .directory-result:hover,body.low-performance-mode .bot-card:hover,body.low-performance-mode .miniapp-entry:hover,body.low-performance-mode .market-card:hover,body.low-performance-mode .market-item:hover,body.low-performance-mode .gift-card:hover,body.low-performance-mode .sticker-pack-card:hover{transform:none}
