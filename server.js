@@ -382,13 +382,10 @@ function deviceLabel(ua){ua=String(ua||'');const platform=/Android/i.test(ua)?'A
 function trackDevice(user,req){const id=deviceIdFrom(req);if(!id)return null;if(!Array.isArray(user.devices))user.devices=[];if(Array.isArray(user.revokedDevices))user.revokedDevices=user.revokedDevices.filter(x=>x!==id);let d=user.devices.find(x=>x.id===id);if(!d){d={id,firstSeen:Date.now(),lastSeen:Date.now(),label:deviceLabel(req.headers['user-agent'])};user.devices.push(d);if(user.devices.length>30)user.devices=user.devices.slice(-30)}else{d.lastSeen=Date.now();d.label=deviceLabel(req.headers['user-agent'])}return d}
 function signUploadToken(uid){const payload=Buffer.from(JSON.stringify({uid,exp:Date.now()+5*60*1000,purpose:'upload',nonce:crypto.randomBytes(12).toString('hex')})).toString('base64url');return payload+'.'+crypto.createHmac('sha256',SECRET).update('upload:'+payload).digest('base64url')}
 function verifyUploadToken(token){try{const [p,s]=String(token||'').split('.');if(!p||!s)return null;const expected=crypto.createHmac('sha256',SECRET).update('upload:'+p).digest('base64url'),a=Buffer.from(expected),b=Buffer.from(s);if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return null;const d=JSON.parse(Buffer.from(p,'base64url').toString());return d.purpose==='upload'&&d.exp>Date.now()&&store.users.some(u=>u.id===d.uid)?d.uid:null}catch{return null}}
-const wsAuthTickets=new Map();
 function issueWsTicket(uid){
- const now=Date.now();
- if(wsAuthTickets.size>2000)for(const [key,item] of wsAuthTickets)if(item.expires<=now)wsAuthTickets.delete(key);
- const ticket=crypto.randomBytes(24).toString('hex');
- wsAuthTickets.set(ticket,{uid,expires:now+60_000});
- return ticket;
+ const payload=Buffer.from(JSON.stringify({uid,exp:Date.now()+30_000,purpose:'ws',nonce:crypto.randomBytes(12).toString('hex')})).toString('base64url');
+ const signature=crypto.createHmac('sha256',SECRET).update(payload).digest('base64url');
+ return payload+'.'+signature;
 }
 function consumeWsTicket(req){
  let queryTicket='';
@@ -396,10 +393,16 @@ function consumeWsTicket(req){
  const offered=[queryTicket,...String(req.headers['sec-websocket-protocol']||'').split(',').map(x=>x.trim())];
  for(const token of offered){
   if(!token||token==='voltra')continue;
-  const item=wsAuthTickets.get(token);
-  if(!item)continue;
-  wsAuthTickets.delete(token);
-  if(item.expires>Date.now()&&store.users.some(u=>u.id===item.uid&&!u.bannedAt))return item.uid;
+  try{
+   const [payload,provided]=token.split('.');
+   if(!payload||!provided)continue;
+   const expected=crypto.createHmac('sha256',SECRET).update(payload).digest('base64url');
+   const a=Buffer.from(expected),b=Buffer.from(provided);
+   if(a.length!==b.length||!crypto.timingSafeEqual(a,b))continue;
+   const data=JSON.parse(Buffer.from(payload,'base64url').toString());
+   const user=store.users.find(u=>u.id===data.uid&&!u.bannedAt);
+   if(data.purpose==='ws'&&data.exp>Date.now()&&user)return user.id;
+  }catch{}
  }
  return null;
 }
