@@ -165,15 +165,39 @@ for(const u of store.users){
   }
   g.price=oldPrice;
   g.collectible=false;
-  g.ownedInstance=false;
+  g.ownedInstance=true;
+  const giftOwner=store.users.find(u=>(Array.isArray(u.ownedGifts)?u.ownedGifts:[]).some(id=>String(id)===String(g.id)));
+  const giftListing=(store.giftResaleListings||[]).find(l=>l.status!=='sold'&&[l.giftId,l.collectibleGiftId,l.baseGiftId].some(id=>String(id||'')===String(g.id)));
+  g.ownerId=giftOwner?.id||giftListing?.sellerId||g.ownerId;
   g.sakuraReplacement=true;
   for(const k of ['collection','variant','edition','totalSupply','remaining','baseGiftId']) delete g[k];
   changed=true;
  }
+ // Repair previously converted records that were mistakenly left in the shop catalogue.
+ for(const g of (store.collectibleGifts||[]).filter(x=>x.sakuraReplacement&&/sakura|сакур/i.test([x.id,x.name,x.collection,x.baseGiftId].filter(Boolean).join(' ')))){
+  const giftOwner=store.users.find(u=>(Array.isArray(u.ownedGifts)?u.ownedGifts:[]).some(id=>String(id)===String(g.id)));
+  const giftListing=(store.giftResaleListings||[]).find(l=>l.status!=='sold'&&[l.giftId,l.collectibleGiftId,l.baseGiftId].some(id=>String(id||'')===String(g.id)));
+  if(giftOwner||giftListing){g.ownedInstance=true;g.ownerId=giftOwner?.id||giftListing?.sellerId||g.ownerId}
+  else g.sakuraReplacement=false;
+  changed=true;
+ }
+ // Sanitize serialized Sakura gift instances without changing ids, owners, or currency value.
+ for(const g of (store.giftInstances||[])){
+  if(g.sakuraReplacement)continue;
+  const marker=[g.id,g.name,g.baseName,g.baseGiftId,g.collection].filter(Boolean).join(' ');
+  if(!/sakura|сакур/i.test(marker))continue;
+  const oldPrice=Number(g.price)||0;
+  const template=GIFT_CATALOG.filter(x=>!x.collectible&&!x.ownedInstance&&!isTestGift(x)).sort((a,b)=>Math.abs(Number(a.price||0)-oldPrice)-Math.abs(Number(b.price||0)-oldPrice))[0];
+  if(template){
+   g.baseGiftId=template.id;g.baseName=String(template.name||'Подарок');g.name=String(template.name||'Подарок');
+   for(const k of ['emoji','rarity','image','skin','material','background','pattern','effect','intensity','shape'])if(template[k]!==undefined)g[k]=template[k];
+  }else{g.baseName='Подарок-сюрприз';g.name='Подарок-сюрприз';g.emoji='🎁'}
+  g.price=oldPrice;g.collectible=false;g.ownedInstance=true;g.sakuraReplacement=true;
+  for(const k of ['collection','edition','totalSupply','remaining'])delete g[k];
+  changed=true;
+ }
  const before=store.collectibleGifts.length;
- store.collectibleGifts=store.collectibleGifts.filter(g=>!isSakura(g)||ownedIds.has(String(g.id)));
- // Owned variants were converted above; remove any Sakura records regardless of former collection metadata.
- store.collectibleGifts=store.collectibleGifts.filter(g=>!isSakura(g));
+ store.collectibleGifts=store.collectibleGifts.filter(g=>!isSakura(g)&&(!g.sakuraReplacement||ownedIds.has(String(g.id))));
  if(changed||store.collectibleGifts.length!==before)save();
 }
 
