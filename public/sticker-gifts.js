@@ -177,9 +177,18 @@ async function sendSelectedGift(){
  btn.disabled=true;
  try{const body=sendRecipientId?{userId:sendRecipientId,giftId:sendGift.id,variant:sendVariant,message:note}:{username,giftId:sendGift.id,variant:sendVariant,message:note};
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);let r,d;try{r=await fetch('/api/gifts/send',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:controller.signal});d=await r.json()}finally{clearTimeout(timeout)}if(!r.ok)throw new Error(d.error||'Не удалось отправить подарок');
- if(d.message&&window.pulseInjectMessage)window.pulseInjectMessage(d.message);
+ const message=d.message?{...d.message,kind:'gift',giftPurchase:d.message.giftPurchase||d.gift||{
+  name:sendGift.name,baseName:sendGift.name,emoji:sendGift.emoji||'🎁',rarity:sendGift.rarity||'Подарок',
+  price:Number(sendGift.price)||0,material:sendVariant?.material||sendGift.material||'',variant:sendVariant?.variant||sendGift.variant||0,
+  skin:sendVariant?.skin||sendGift.skin||'classic',background:sendVariant?.background||sendGift.background||'midnight',
+  pattern:sendVariant?.pattern||sendGift.pattern||'none',shape:sendVariant?.shape||sendGift.shape||1,
+  buyerName:d.message.name||'',recipientName:d.recipient||'',message:note,buyerId:d.message.from,recipientId:d.message.to
+}}:null;
+ if(message&&window.pulseInjectMessage)window.pulseInjectMessage(message);
  window.dispatchEvent(new CustomEvent('pulsePulsesUpdated',{detail:{pulses:d.balance}}));window.dispatchEvent(new Event('pulseGiftInventoryUpdated'));
- $('sendGiftStatus').textContent='Подарок отправлен пользователю '+d.recipient+' ✓';$('sendGiftModal').classList.add('hidden');toast('Подарок отправлен 🎁')
+ $('sendGiftStatus').textContent='Подарок отправлен пользователю '+d.recipient+' ✓';$('sendGiftModal').classList.add('hidden');
+ if(message&&window.pulseGetActiveChatContext&&window.pulseOpenChat){const active=window.pulseGetActiveChatContext();if(String(active?.id||'')!==String(message.to||''))window.pulseOpenChat(message.to)}
+ toast('Подарок отправлен 🎁')
  }catch(e){const message=e?.name==='AbortError'?'Сервер не ответил за 15 секунд. Проверь соединение и попробуй ещё раз.':(e.message||'Не удалось отправить подарок');$('sendGiftStatus').textContent=message;toast(message)}finally{btn.disabled=false}
 }
 function toast(s){const t=$('toast');if(t){t.textContent=s;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}}

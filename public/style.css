@@ -2683,3 +2683,16 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 #publicProfileModal .public-profile-actions>button{position:relative;z-index:5;pointer-events:auto!important;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
 #reportProfileModal{z-index:45!important}
 .gift-inspect-btn,.unified-gift-inspect,#inspectChocolate,#inspectLightning{display:none!important}
+
+
+/* Gift chat messages: make the gift card visible and readable in every theme. */
+.message .gift-purchase-card{display:grid;gap:10px;min-width:min(260px,100%);max-width:min(440px,calc(100vw - 110px));padding:12px;border:1px solid #b98cff78;border-radius:16px;background:linear-gradient(135deg,#39224e,#17263a 72%,#163a43);color:#fff;box-shadow:0 8px 24px #0003;overflow-wrap:anywhere}
+.message .gift-purchase-art{display:flex;align-items:center;gap:10px;min-width:0}
+.message .gift-purchase-emoji{display:grid;place-items:center;flex:0 0 68px;width:68px;height:68px;border-radius:13px;background:#ffffff12;overflow:hidden}
+.message .gift-purchase-emoji img,.message .gift-purchase-emoji svg{display:block;width:100%;height:100%;object-fit:contain}
+.message .gift-purchase-art>div{display:grid;gap:5px;min-width:0}
+.message .gift-purchase-art strong{font-size:13px;line-height:1.35}
+.message .gift-purchase-art small{font-size:11px;line-height:1.4;color:#e4d9ff;overflow-wrap:anywhere}
+.message .gift-purchase-ribbon{padding:8px 10px;border-radius:10px;background:#ffffff12;color:#9af8ff;font-size:12px;font-weight:700}
+.message .gift-purchase-note{padding:8px 10px;border-radius:10px;background:#080d1b44;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:600px){.message .gift-purchase-card{max-width:calc(100vw - 94px);min-width:min(230px,100%);padding:10px}.message .gift-purchase-emoji{flex-basis:54px;width:54px;height:54px}}
