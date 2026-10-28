@@ -150,13 +150,13 @@ function publicGiftUpgraderState(uid){
  const targets=allGiftCatalog().filter(g=>!g.ownedInstance&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))&&(!g.collectible||(!globallyOwned.has(String(g.id))&&Number(g.remaining)>0))).map(upgraderPublicGift).sort((a,b)=>a.price-b.price||a.name.localeCompare(b.name,'ru'));
  return {inventory,targets,topGift:{id:'voltra-galaxy-heart-500',name:'Сердце Галактики',chance:1},notice:'Шанс рассчитывает сервер и показывает настоящий процент. При неудаче исходный подарок снимается с инвентаря и возвращается в магазин по базовой цене.'};
 }
-function consumeUpgraderInput(user,gift){
+function consumeUpgraderInput(user,gift,returnToMarket=false){
  const id=String(gift.id);
  user.ownedGifts=(user.ownedGifts||[]).filter(x=>String(x)!==id);
  user.equippedGifts=(user.equippedGifts||[]).filter(x=>String(x)!==id);
  if(gift.ownedInstance){
   store.giftInstances=store.giftInstances.filter(x=>String(x.id)!==id);
- }else if(gift.collectible){
+ }else if(gift.collectible&&returnToMarket){
   const max=Math.max(Number(gift.totalSupply)||0,Number(gift.edition)||0,Number(gift.remaining)||0);
   gift.remaining=Math.min(max||Number.MAX_SAFE_INTEGER,Math.max(0,Number(gift.remaining)||0)+1);
  }
@@ -1075,6 +1075,7 @@ const server=http.createServer(async(req,res)=>{
   const foundChannels=store.channels.filter(c=>(!c.status||c.status==='approved')&&c.status!=='rejected'&&!(c.owner==='system'||c.owner===uid||(Array.isArray(c.members)&&c.members.includes(uid))||isAdmin(viewer))&&((String(c.name||'').toLowerCase()+' '+String(c.description||'').toLowerCase()).includes(q))).slice(0,20).map(c=>({...publicChannel(c,uid),kind:'channel'}));
   const foundBots=store.miniApps.filter(a=>(a.authorId===uid||((!a.status||a.status==='approved')&&a.status!=='rejected'&&a.access==='public'&&!userById(a.authorId)?.bannedAt))&&((String(a.botName||'')+' '+String(a.name||'')+' '+String(a.description||'')).toLowerCase().includes(q))).slice(0,20).map(a=>({id:a.id,name:a.botName||a.name,botName:a.botName||a.name,appName:a.name,description:a.description||'',botIcon:a.botIcon||'🤖',icon:a.icon||'🧩',coverUrl:a.coverUrl||'',botImageUrl:a.botImageUrl||'',status:a.status||'approved',kind:'bot'}));
   if(q==='drop')foundBots.unshift({id:'drop-bot',name:'Drop · Бесплатные кейсы',botName:'@drop',description:'Бесплатные косметические кейсы, прозрачные шансы и апгрейды',kind:'drop'});
+  if(['upgrader','upgrade','апгрейд'].includes(q))foundBots.unshift({id:'gift-upgrader-bot',name:'Gift Upgrader',botName:'@upgrader',description:'Апгрейдер настоящих подарков VOLTRA с честным шансом по цене',kind:'upgrader'});
   return json(res,200,{users:foundUsers,channels:foundChannels,bots:foundBots});
  }
  if(req.method==='GET'&&u.pathname==='/api/community'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'});const x=userById(uid),isAdmin=!!x.admin; return json(res,200,{channels:store.channels.filter(c=>c.status!=='rejected'&&((!c.status||c.status==='approved')||c.owner===uid||isAdmin)&&(c.owner==='system'||c.owner===uid||(Array.isArray(c.members)&&c.members.includes(uid))||isAdmin)).map(c=>publicChannel(c,uid)),posts:store.posts.slice(-100).reverse(),bots:[{id:'crypto-bot',name:'Крипто бот',description:'Общий для всех пользователей кошелёк CAT: обмен VLT, переводы и история',active:true,configured:true},{id:'pulse-verify',name:'VOLTRA Verify',description:'Подтверждение номера SMS',configured:!!(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_VERIFY_SERVICE_SID)},{id:'pulse-news',name:'VOLTRA News',description:'Новости в канале и общей ленте',active:true}],adminUsers:isAdmin?store.users.map(u=>({id:u.id,name:u.name,roleLabel:u.roleLabel||'',globalChatDisabled:!!u.globalChatDisabled,admin:!!u.admin,banned:!!u.bannedAt,banReason:u.banReason||'',devices:(u.devices||[]).map(d=>({id:d.id,label:d.label||'Устройство',lastSeen:d.lastSeen||0,banned:!!store.deviceBans[d.id],banReason:store.deviceBans[d.id]?.reason||''}))})):[],profile:(()=>({name:x.name,username:x.username||'',email:x.email||'',phone:x.phone||'',emailVerified:!!x.emailVerified,phoneVerified:!!x.phoneVerified,bio:x.bio||'',avatar:x.avatar||'',admin:isAdmin,rootAdmin:isRootAdmin(x),roleLabel:x.roleLabel||'',alwaysOnline:!!x.alwaysOnline,ghostMode:!!x.ghostMode,hideFromUnmessaged:!!x.hideFromUnmessaged}))()}); }
@@ -1315,7 +1316,7 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
    const chance=giftUpgradeChance(source,target),won=crypto.randomInt(10000)<chance*100,sourceName=source.name,sourcePrice=upgraderPrice(source);
    let prize=null;
    if(won&&target.collectible&&!reserveCollectible(target))return json(res,409,{error:'Целевой подарок только что закончился — попробуй ещё раз'});
-   consumeUpgraderInput(user,source);
+   consumeUpgraderInput(user,source,!won);
    if(won){
     prize=target.collectible?target:makeGiftInstance(target,uid,{variant:1});
     if(target.collectible){
