@@ -970,6 +970,15 @@ const server=http.createServer(async(req,res)=>{
    return json(res,200,{ok:true,case:{id:caseDef.id,name:caseDef.name},item,odds:{...caseDef.weights},state:publicDropState(uid)});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось открыть бесплатный кейс'})}
  }
+ if(u.pathname==='/api/drop/discard'&&req.method==='POST'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  try{
+   const b=await parseBody(req,4000),st=dropStateFor(uid),idx=st.items.findIndex(x=>x.instanceId===String(b.instanceId||''));
+   if(idx<0)return json(res,404,{error:'Косметический предмет не найден'});
+   const [item]=st.items.splice(idx,1);save();
+   return json(res,200,{ok:true,item,state:publicDropState(uid)});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось удалить предмет'})}
+ }
  if(u.pathname==='/api/drop/upgrade'&&req.method==='POST'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
   try{
