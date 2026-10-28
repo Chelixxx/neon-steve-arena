@@ -84,13 +84,13 @@ document.addEventListener('click',async e=>{
  const attempt=e.target.closest('[data-upgrader-attempt]');
  if(attempt){
   e.preventDefault();if(busy)return;
-  const sourceGift=ownedSource(),targetGift=targetGift();
-  if(!sourceGift||!targetGift)return;
-  if(!window.confirm('Попробовать улучшить «'+sourceGift.name+'» до «'+targetGift.name+'»? Исходный подарок будет снят с инвентаря при любом результате. При проигрыше он возвращается в каталог по базовой цене. Настоящий шанс успеха — '+chanceFor(sourceGift,targetGift)+'%.' ))return;
+  const sourceGift=ownedSource(),targetItem=targetGift();
+  if(!sourceGift||!targetItem)return;
+  if(!window.confirm('Попробовать улучшить «'+sourceGift.name+'» до «'+targetGift.name+'»? Исходный подарок будет снят с инвентаря при любом результате. При проигрыше он возвращается в каталог по базовой цене. Настоящий шанс успеха — '+chanceFor(sourceGift,targetItem)+'%.' ))return;
   busy=true;result=null;render(targetNode);
   const shell=targetNode?.querySelector('.gift-upgrader-shell');shell?.classList.add('is-upgrading');
   try{
-   const request=api('/api/gifts/upgrader/attempt',{sourceId:sourceGift.id,targetId:targetGift.id});
+   const request=api('/api/gifts/upgrader/attempt',{sourceId:sourceGift.id,targetId:targetItem.id});
    await new Promise(resolve=>setTimeout(resolve,1400));
    const data=await request;state=data.state;result={won:!!data.won,chance:data.chance,source:data.source,target:data.target,prize:data.prize,message:data.message};
    sourceId=state.inventory?.[0]?.id||'';
@@ -98,7 +98,7 @@ document.addEventListener('click',async e=>{
    if((state.targets||[]).some(x=>x.id===targetId)){}else targetId=state.targets?.find(x=>x.price>Number(sourceGift.price||0))?.id||state.targets?.[0]?.id||'';
    window.dispatchEvent(new CustomEvent('pulseGiftInventoryUpdated'));
    if(data.won)window.dispatchEvent(new CustomEvent('pulseGiftUpgraderResult',{detail:{won:true,gift:data.prize}}));
-  }catch(error){result={won:false,chance:chanceFor(sourceGift,targetGift),source:sourceGift,target:targetGift,message:error.message||'Не удалось выполнить попытку.'};}
+  }catch(error){result={won:false,chance:chanceFor(sourceGift,targetItem),source:sourceGift,target:targetItem,message:error.message||'Не удалось выполнить попытку.'};}
   finally{busy=false;render(targetNode)}
  }
 });
