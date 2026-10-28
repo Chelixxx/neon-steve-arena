@@ -163,8 +163,8 @@ const VOLTRA_SERIES_DEFINITIONS=[
     pattern:series.patterns[(i*5+Math.floor(i/11))%series.patterns.length],
     effect:['sparkles','glow','confetti','aura','none'][i%5],
     intensity:45+(i*17)%56,
-    edition:100,
-    totalSupply:100
+    edition:1,
+    totalSupply:1
    };
    if(!gift){
     gift={id,...values,remaining:100,createdAt:Date.now()};
@@ -174,7 +174,7 @@ const VOLTRA_SERIES_DEFINITIONS=[
     for(const [key,value] of Object.entries(values)){
      if(gift[key]!==value){gift[key]=value;changed=true}
     }
-    if(!Number.isFinite(Number(gift.remaining))){gift.remaining=100;changed=true}
+    if(!Number.isFinite(Number(gift.remaining))){gift.remaining=1;changed=true}
    }
   }
  }
