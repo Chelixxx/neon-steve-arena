@@ -167,15 +167,15 @@ const VOLTRA_SERIES_DEFINITIONS=[
     totalSupply:1
    };
    if(!gift){
-    gift={id,...values,remaining:100,createdAt:Date.now()};
+    gift={id,...values,remaining:1,createdAt:Date.now()};
     store.collectibleGifts.push(gift);
     changed=true;
    }else{
     for(const [key,value] of Object.entries(values)){
      if(gift[key]!==value){gift[key]=value;changed=true}
     }
-    const alreadyOwned=store.users.some(owner=>Array.isArray(owner.ownedGifts)&&owner.ownedGifts.includes(id));const desiredRemaining=alreadyOwned?0:1;if(Number(gift.remaining)!==desiredRemaining){gift.remaining=desiredRemaining;changed=true}
    }
+   const alreadyOwned=store.users.some(owner=>Array.isArray(owner.ownedGifts)&&owner.ownedGifts.includes(id));const desiredRemaining=alreadyOwned?0:1;if(Number(gift.remaining)!==desiredRemaining){gift.remaining=desiredRemaining;changed=true}
   }
  }
  if(changed)save();
