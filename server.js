@@ -130,55 +130,16 @@ for(const u of store.users){
 }
 
 /* Seven premium collectible families: 120 variants in each family. */
-const VOLTRA_SERIES_DEFINITIONS=[
- {key:'aurora-crystal',title:'Aurora Crystal',emoji:'💎',materials:['Северный опал','Ледяной кварц','Галактический аметист','Хромированный кристалл','Перламутровый лёд','Звёздный сапфир','Неоновый турмалин'],skins:['crystal','holographic','ice','chrome','royal','neon','shadow','candy','classic','ember'],backgrounds:['aurora','ice','cosmic','violet','midnight','rose','gold','forest','custom','ember'],patterns:['stars','diamonds','waves','runes','grid','sparkles','none','stars','diamonds','waves'],rarities:['Обычный','Необычный','Редкий','Эпический','Легендарный','Мифический','Космический']},
- {key:'dragon-relic',title:'Dragon Relic',emoji:'🐉',materials:['Обсидиановая чешуя','Драконье золото','Огненный гранат','Древний нефрит','Лава и сталь','Рубиновая эмаль','Тёмный кристалл'],skins:['ember','shadow','royal','chrome','neon','crystal','holographic','classic','ice','candy'],backgrounds:['ember','midnight','gold','forest','cosmic','violet','aurora','rose','custom','ice'],patterns:['scales','flames','runes','diamonds','grid','stars','sparkles','waves','none','scales'],rarities:['Обычный','Необычный','Редкий','Эпический','Легендарный','Мифический','Космический']},
- {key:'royal-crown',title:'Royal Crown',emoji:'👑',materials:['Жёлтое золото','Белое золото','Королевский рубин','Сапфировый бархат','Полированный хром','Королевский аметист','Жемчужная эмаль'],skins:['royal','gold','chrome','holographic','crystal','candy','classic','shadow','ice','neon'],backgrounds:['gold','violet','rose','midnight','aurora','cosmic','custom','ice','forest','ember'],patterns:['diamonds','runes','stars','grid','waves','sparkles','none','diamonds','stars','grid'],rarities:['Обычный','Необычный','Редкий','Эпический','Легендарный','Мифический','Космический']},
- {key:'ocean-pearl',title:'Ocean Pearl',emoji:'🦪',materials:['Глубоководный перламутр','Коралл','Морское серебро','Атлантический опал','Синий жемчуг','Лунная раковина','Морская эмаль'],skins:['ice','crystal','holographic','candy','chrome','royal','classic','neon','shadow','ember'],backgrounds:['ice','aurora','ocean','midnight','rose','cosmic','forest','violet','gold','custom'],patterns:['waves','bubbles','stars','diamonds','grid','sparkles','none','waves','bubbles','runes'],rarities:['Обычный','Необычный','Редкий','Эпический','Легендарный','Мифический','Космический']},
- {key:'cyber-core',title:'Cyber Core',emoji:'🔮',materials:['Неоновый титан','Квантовая медь','Хром и стекло','Плазменная эмаль','Кибернетический опал','Синтетический кристалл','Чёрный графен'],skins:['neon','chrome','holographic','crystal','shadow','ice','ember','royal','classic','candy'],backgrounds:['midnight','violet','ice','cosmic','forest','ember','aurora','gold','custom','rose'],patterns:['grid','circuits','runes','diamonds','waves','stars','sparkles','none','circuits','grid'],rarities:['Обычный','Необычный','Редкий','Эпический','Легендарный','Мифический','Космический']},
- {key:'sakura-bloom',title:'Sakura Bloom',emoji:'🌸',materials:['Розовый кварц','Сакура-перламутр','Шёлковая эмаль','Розовое золото','Вишнёвый кристалл','Лунный опал','Цветочная глазурь'],skins:['candy','rose','holographic','crystal','royal','ice','classic','chrome','neon','shadow'],backgrounds:['rose','aurora','violet','ice','gold','cosmic','midnight','forest','custom','ember'],patterns:['petals','flowers','waves','stars','diamonds','sparkles','none','petals','flowers','grid'],rarities:['Обычный','Необычный','Редкий','Эпический','Легендарный','Мифический','Космический']},
- {key:'golden-fortune',title:'Golden Fortune',emoji:'🪙',materials:['Чистое золото','Античная бронза','Золотая фольга','Платиновая вставка','Императорская эмаль','Медный сплав','Солнечный янтарь'],skins:['gold','royal','chrome','ember','holographic','classic','neon','shadow','crystal','candy'],backgrounds:['gold','ember','midnight','violet','rose','cosmic','forest','aurora','custom','ice'],patterns:['coins','runes','diamonds','stars','grid','waves','sparkles','none','coins','runes'],rarities:['Обычный','Необычный','Редкий','Эпический','Легендарный','Мифический','Космический']}
-];
+// Retired the seven draft collections requested on 2026-10-28.
 {
- let changed=false;
- const rarityPrices=[1800,3500,7200,14500,39000,95000,260000];
- for(const series of VOLTRA_SERIES_DEFINITIONS){
-  for(let i=1;i<=120;i++){
-   const id='voltra-'+series.key+'-'+String(i).padStart(3,'0');
-   const tier=Math.min(6,Math.floor((i-1)/18));
-   let gift=store.collectibleGifts.find(x=>String(x.id)===id);
-   const values={
-    name:series.title+' · '+String(i).padStart(3,'0'),
-    emoji:series.emoji,
-    price:rarityPrices[tier],
-    rarity:series.rarities[tier],
-    collectible:true,
-    collection:series.key,
-    baseGiftId:'gift-012',
-    variant:i,
-    shape:((i-1)%7)+1,
-    skin:series.skins[(i-1)%series.skins.length],
-    material:series.materials[(i*7+Math.floor(i/10))%series.materials.length],
-    background:series.backgrounds[(i*3+Math.floor(i/7))%series.backgrounds.length],
-    pattern:series.patterns[(i*5+Math.floor(i/11))%series.patterns.length],
-    effect:['sparkles','glow','confetti','aura','none'][i%5],
-    intensity:45+(i*17)%56,
-    edition:1,
-    totalSupply:1
-   };
-   if(!gift){
-    gift={id,...values,remaining:1,createdAt:Date.now()};
-    store.collectibleGifts.push(gift);
-    changed=true;
-   }else{
-    for(const [key,value] of Object.entries(values)){
-     if(gift[key]!==value){gift[key]=value;changed=true}
-    }
-   }
-   const alreadyOwned=store.users.some(owner=>Array.isArray(owner.ownedGifts)&&owner.ownedGifts.includes(id));const desiredRemaining=alreadyOwned?0:1;if(Number(gift.remaining)!==desiredRemaining){gift.remaining=desiredRemaining;changed=true}
-  }
- }
- if(changed)save();
+ const retiredSeries=new Set(['aurora-crystal','dragon-relic','royal-crown','ocean-pearl','cyber-core','sakura-bloom','golden-fortune']);
+ const ownedIds=new Set();
+ for(const u of (store.users||[])) for(const id of (Array.isArray(u.ownedGifts)?u.ownedGifts:[])) ownedIds.add(String(id));
+ for(const g of (store.giftInstances||[])) if(g.baseGiftId) ownedIds.add(String(g.baseGiftId));
+ for(const l of (store.giftResaleListings||[])) for(const k of ['giftId','collectibleGiftId','baseGiftId']) if(l[k]) ownedIds.add(String(l[k]));
+ const before=store.collectibleGifts.length;
+ store.collectibleGifts=store.collectibleGifts.filter(g=>!retiredSeries.has(String(g.collection||''))||ownedIds.has(String(g.id)));
+ if(store.collectibleGifts.length!==before) save();
 }
 
 function allGiftCatalog(){return [...GIFT_CATALOG.filter(g=>g.id!=='gift-013'&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))&&!/\s+(?:[2-9]|\d{2,})$/.test(String(g.name||''))),...store.collectibleGifts.filter(g=>!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id)))]}
