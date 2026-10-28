@@ -30,7 +30,7 @@ function selectedCard(g,label){
 function renderResult(){
  if(!result)return'';
  const g=result.prize||result.target;
- return '<section class="gift-upgrader-result '+(result.won?'is-win':'is-loss')+'"><div class="gift-upgrader-result-glow"></div><div class="gift-upgrader-result-icon">'+(result.won?'🎉':'↩️')+'</div><b>'+(result.won?'АПГРЕЙД УСПЕШЕН':'НЕ УДАЛОСЬ')+'</b><div class="gift-upgrader-result-art">'+art(g,true)+'</div><h3>'+esc(result.won?(result.prize?.name||result.target?.name):'Исходный подарок возвращён в магазин')+'</h3><p>'+esc(result.message||'')+'</p><span>Фактический шанс: '+Number(result.chance||0)+'%</span><button type="button" class="secondary" data-upgrader-dismiss>Понятно</button></section>';
+ return '<section class="gift-upgrader-result '+(result.won?'is-win':'is-loss')+'"><div class="gift-upgrader-result-glow"></div><div class="gift-upgrader-result-icon">'+(result.won?'🎉':'↩️')+'</div><b>'+(result.won?'СИМУЛЯЦИЯ УСПЕШНА':'СИМУЛЯЦИЯ НЕ УДАЛАСЬ')+'</b><div class="gift-upgrader-result-art">'+art(g,true)+'</div><h3>'+esc(result.won?('Предпросмотр приза: '+(result.prize?.name||result.target?.name)):'Учебный результат не удался')+'</h3><p>'+esc(result.message||'')+'</p><span>Фактический шанс: '+Number(result.chance||0)+'%</span><button type="button" class="secondary" data-upgrader-dismiss>Понятно</button></section>';
 }
 function render(target){
  target=target||targetNode||$('messages');if(!target)return;targetNode=target;
@@ -38,13 +38,13 @@ function render(target){
  const queryTerms=query.toLowerCase().trim().split(/\\s+/).filter(Boolean);const visibleTargets=allTargets.filter(g=>{const aliases=(g.collection==='galaxy-heart'?'Сердце Галактики Galaxy Heart heart galaxy ':'')+String(g.name||'')+' '+String(g.rarity||'')+' '+String(g.collection||'')+' '+String(g.id||'')+' '+String(g.variant||'');const haystack=aliases.toLowerCase();return !queryTerms.length||queryTerms.every(term=>haystack.includes(term))}).slice(0,48);
  const focus=document.activeElement?.dataset?.upgraderSearch!==undefined,caret=focus?document.activeElement.selectionStart:null;
  target.innerHTML='<main class="gift-upgrader-shell">'+
-  '<header class="gift-upgrader-hero"><div class="gift-upgrader-mark">⌃<span>✦</span></div><div class="gift-upgrader-hero-text"><small>VOLTRA · GIFT UPGRADE</small><h2>GIFT UPGRADER</h2><p>Выбери свой настоящий подарок и приз из каталога VOLTRA. При проигрыше подарок возвращается в магазин по базовой цене.</p></div><button type="button" class="gift-upgrader-refresh" data-upgrader-refresh title="Обновить">↻</button></header>'+
-  '<div class="gift-upgrader-safety"><span>ⓘ</span><p>Шанс рассчитывается на сервере и отображается честно. Вольтриксы за попытку не списываются — ставкой служит выбранный подарок.</p></div>'+
+  '<header class="gift-upgrader-hero"><div class="gift-upgrader-mark">⌃<span>✦</span></div><div class="gift-upgrader-hero-text"><small>VOLTRA · GIFT UPGRADE</small><h2>GIFT UPGRADER</h2><p>Выбери свой подарок и цель из настоящего каталога VOLTRA. Это тренировочная симуляция: инвентарь и баланс не изменяются.</p></div><button type="button" class="gift-upgrader-refresh" data-upgrader-refresh title="Обновить">↻</button></header>'+
+  '<div class="gift-upgrader-safety"><span>ⓘ</span><p>Это симулятор: фактический шанс рассчитывается сервером, но реальные подарки не теряются и призы не выдаются.</p></div>'+
   (result?renderResult():'')+
   '<section class="gift-upgrader-stage"><div class="gift-upgrader-picks">'+selectedCard(source,'ТВОЙ ПОДАРОК')+'<div class="gift-upgrader-vs">➜</div>'+selectedCard(prize,'ЖЕЛАЕМЫЙ ПРИЗ')+'</div>'+
   '<div class="gift-upgrader-gauge-wrap"><div class="gift-upgrader-gauge" style="--upgrade-chance:'+chance+';--upgrade-angle:'+(chance*3.6)+'deg"><div class="gift-upgrader-gauge-inner"><small>ШАНС УСПЕХА</small><strong>'+chance.toFixed(0)+'<span>%</span></strong><b>'+(!source||!prize?'ВЫБЕРИ ПРЕДМЕТЫ':chance<=1?'ОЧЕНЬ НИЗКИЙ ШАНС':chance<10?'НИЗКИЙ ШАНС':chance<25?'СРЕДНИЙ ШАНС':'ВЫСОКИЙ ШАНС')+'</b></div><div class="gift-upgrader-gauge-pointer"></div></div><div class="gift-upgrader-gauge-labels"><span>0%</span><span>100%</span></div></div>'+
   '<button type="button" class="primary gift-upgrader-attempt" data-upgrader-attempt '+(!source||!prize||busy?'disabled':'')+'>'+(busy?'✦ Проверяем результат…':'⌃ АПГРЕЙД ПОДАРКА')+'</button>'+
-  '<small class="gift-upgrader-target-note">'+(prize&&(String(prize.id||'')==='voltra-galaxy-heart-500'||Number(prize.price)>=99999999)?'💜 Сердце Галактики — самый дорогой приз. Честный шанс: 1%.':prize?'Фактический шанс рассчитывается по ценам подарков и ограничен 35%.':'Сначала выбери цель апгрейда.')+'</small></section>'+
+  '<small class="gift-upgrader-target-note">'+(prize&&(String(prize.id||'')==='voltra-galaxy-heart-500'||Number(prize.price)>=99999999)?'💜 Сердце Галактики — самый дорогой приз. Честный шанс: 1%.':prize?'Фактический шанс рассчитывается по ценам подарков и ограничен 35%. Результат учебный — реальные подарки не меняются.':'Сначала выбери цель апгрейда.')+'</small></section>'+
   '<section class="gift-upgrader-section"><div class="gift-upgrader-section-heading"><div><h3>🎒 Мои подарки</h3><p>Выбери подарок, который используешь для попытки.</p></div><span>'+inventory.length+'</span></div>'+
   (inventory.length?'<div class="gift-upgrader-items">'+inventory.map(g=>'<button type="button" class="gift-upgrader-item '+(g.id===sourceId?'is-selected ':'')+'rarity-'+rarityClass(g)+'" data-upgrader-source="'+esc(g.id)+'"><span class="gift-upgrader-item-art">'+art(g)+'</span><span class="gift-upgrader-item-details"><b>'+esc(g.name)+'</b><small>'+esc(rarityName(g))+'</small><strong>'+money(g.price)+' ϟ</strong></span>'+(g.id===sourceId?'<span class="gift-upgrader-check">✓</span>':'')+'</button>').join('')+'</div>':'<div class="gift-upgrader-empty"><span>🎁</span><b>Пока нет подарков</b><p>Купи или получи подарок VOLTRA, и он появится здесь.</p><button type="button" class="primary" data-upgrader-open-gifts>Открыть магазин подарков</button></div>')+
   '</section>'+
@@ -86,18 +86,15 @@ document.addEventListener('click',async e=>{
   e.preventDefault();if(busy)return;
   const sourceGift=ownedSource(),targetItem=targetGift();
   if(!sourceGift||!targetItem)return;
-  if(!window.confirm('Попробовать улучшить «'+sourceGift.name+'» до «'+targetItem.name+'»? Исходный подарок будет снят с инвентаря при любом результате. При проигрыше он возвращается в каталог по базовой цене. Настоящий шанс успеха — '+chanceFor(sourceGift,targetItem)+'%.' ))return;
+  if(!window.confirm('Запустить учебную симуляцию «'+sourceGift.name+'» → «'+targetItem.name+'»? Инвентарь и баланс останутся без изменений. Настоящий шанс симуляции — '+chanceFor(sourceGift,targetItem)+'%.' ))return;
   busy=true;result=null;render(targetNode);
   const shell=targetNode?.querySelector('.gift-upgrader-shell');shell?.classList.add('is-upgrading');
   try{
    const request=api('/api/gifts/upgrader/attempt',{sourceId:sourceGift.id,targetId:targetItem.id});
    await new Promise(resolve=>setTimeout(resolve,1400));
    const data=await request;state=data.state;result={won:!!data.won,chance:data.chance,source:data.source,target:data.target,prize:data.prize,message:data.message};
-   sourceId=state.inventory?.[0]?.id||'';
-   if(data.won&&data.prize?.id)sourceId=state.inventory?.find(x=>x.id===data.prize.id)?.id||sourceId;
-   if((state.targets||[]).some(x=>x.id===targetId)){}else targetId=state.targets?.find(x=>x.price>Number(sourceGift.price||0))?.id||state.targets?.[0]?.id||'';
-   window.dispatchEvent(new CustomEvent('pulseGiftInventoryUpdated'));
-   if(data.won)window.dispatchEvent(new CustomEvent('pulseGiftUpgraderResult',{detail:{won:true,gift:data.prize}}));
+   sourceId=state.inventory?.some(x=>x.id===sourceGift.id)?sourceGift.id:(state.inventory?.[0]?.id||'');
+   targetId=state.targets?.some(x=>x.id===targetItem.id)?targetItem.id:(state.targets?.[0]?.id||'');
   }catch(error){result={won:false,chance:chanceFor(sourceGift,targetItem),source:sourceGift,target:targetItem,message:error.message||'Не удалось выполнить попытку.'};}
   finally{busy=false;render(targetNode)}
  }
