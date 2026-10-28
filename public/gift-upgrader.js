@@ -86,7 +86,7 @@ document.addEventListener('click',async e=>{
   e.preventDefault();if(busy)return;
   const sourceGift=ownedSource(),targetItem=targetGift();
   if(!sourceGift||!targetItem)return;
-  if(!window.confirm('Попробовать улучшить «'+sourceGift.name+'» до «'+targetGift.name+'»? Исходный подарок будет снят с инвентаря при любом результате. При проигрыше он возвращается в каталог по базовой цене. Настоящий шанс успеха — '+chanceFor(sourceGift,targetItem)+'%.' ))return;
+  if(!window.confirm('Попробовать улучшить «'+sourceGift.name+'» до «'+targetItem.name+'»? Исходный подарок будет снят с инвентаря при любом результате. При проигрыше он возвращается в каталог по базовой цене. Настоящий шанс успеха — '+chanceFor(sourceGift,targetItem)+'%.' ))return;
   busy=true;result=null;render(targetNode);
   const shell=targetNode?.querySelector('.gift-upgrader-shell');shell?.classList.add('is-upgrading');
   try{
