@@ -714,7 +714,17 @@ function walletPinAllowed(uid){const x=walletPinAttempts.get(uid);if(!x||Date.no
 function walletPinFailure(uid){const x=walletPinAttempts.get(uid)||{at:Date.now(),count:0};x.count++;x.at=Date.now();walletPinAttempts.set(uid,x)}
 function walletPinSuccess(uid){walletPinAttempts.delete(uid)}
 function visibleTo(uid,m){return !(store.messageHides[uid]||[]).includes(m.id)}
-function directHistory(uid,other){return store.messages.filter(m=>visibleTo(uid,m)&&((m.to===other&&m.from===uid)||(m.to===uid&&m.from===other)))}
+function canonicalUserId(value){
+ const key=String(value??'');if(!key)return '';
+ const direct=userById(key);if(direct)return direct.id;
+ const raw=key.replace(/^@/,'').trim().toLocaleLowerCase('ru-RU');
+ const byName=store.users.find(u=>String(u.username||'').replace(/^@/,'').trim().toLocaleLowerCase('ru-RU')===raw);
+ return byName?byName.id:key;
+}
+function directHistory(uid,other){
+ const me=canonicalUserId(uid),peer=canonicalUserId(other);
+ return store.messages.filter(m=>visibleTo(uid,m)&&((canonicalUserId(m.to)===peer&&canonicalUserId(m.from)===me)||(canonicalUserId(m.to)===me&&canonicalUserId(m.from)===peer)));
+}
 function chatHistory(uid,to,channelId){if(channelId)return store.messages.filter(m=>visibleTo(uid,m)&&m.channelId===channelId);if(!to&&userById(uid)?.globalChatDisabled)return [];return to?directHistory(uid,to):store.messages.filter(m=>visibleTo(uid,m)&&!m.to&&!m.channelId).slice(-250)}
 function unreadFor(uid){const counts={};for(const m of store.messages){if(m.to===uid&&m.from!==uid&&!m.readBy.includes(uid))counts['dm:'+m.from]=(counts['dm:'+m.from]||0)+1}return counts}
 function online(id){return (clients.get(id)?.size||0)>0}
@@ -1601,7 +1611,7 @@ wss.on('connection',(ws,req)=>{
    if(requestedTo&&!to){send(ws,{t:'error',message:'Не удалось найти собеседника по ID или юзернейму. Открой чат заново из списка.'});return}
    if(to){
     const target=historyTarget,senderAdmin=!!user.admin&&user.name.toLowerCase()==='chelixxx';
-    const hasConversation=store.messages.some(x=>(x.from===uid&&x.to===to)||(x.from===to&&x.to===uid));
+    const hasConversation=store.messages.some(x=>(canonicalUserId(x.from)===uid&&canonicalUserId(x.to)===to)||(canonicalUserId(x.from)===to&&canonicalUserId(x.to)===uid));
     if(target.hideFromUnmessaged&&!senderAdmin&&!hasConversation){send(ws,{t:'error',message:'Этот профиль скрыт. Пользователь должен первым написать тебе'});return}
    }
    if(!to&&!channelId&&user.globalChatDisabled){send(ws,{t:'history',to,channelId,items:[],disabled:true});send(ws,{t:'error',message:'Доступ к общему чату отключён администратором'});return}
