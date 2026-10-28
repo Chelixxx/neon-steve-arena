@@ -174,7 +174,7 @@ const VOLTRA_SERIES_DEFINITIONS=[
     for(const [key,value] of Object.entries(values)){
      if(gift[key]!==value){gift[key]=value;changed=true}
     }
-    if(!Number.isFinite(Number(gift.remaining))){gift.remaining=1;changed=true}
+    const alreadyOwned=store.users.some(owner=>Array.isArray(owner.ownedGifts)&&owner.ownedGifts.includes(id));const desiredRemaining=alreadyOwned?0:1;if(Number(gift.remaining)!==desiredRemaining){gift.remaining=desiredRemaining;changed=true}
    }
   }
  }
