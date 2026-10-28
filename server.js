@@ -129,6 +129,40 @@ for(const u of store.users){
  if(nextEquipped.length!==equipped.length){u.equippedGifts=nextEquipped;giftDataCleanupChanged=true}
 }
 function allGiftCatalog(){return [...GIFT_CATALOG.filter(g=>g.id!=='gift-013'&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))&&!/\s+(?:[2-9]|\d{2,})$/.test(String(g.name||''))),...store.collectibleGifts.filter(g=>!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id)))]}
+
+function upgraderPrice(gift){
+ const value=Number(gift?.price)||15;
+ return gift?.collectible||gift?.ownedInstance?Math.max(15,Math.min(99999999,Math.round(value))):clampOrdinaryGiftPrice(value);
+}
+function upgraderPublicGift(gift){
+ return {id:String(gift.id),baseGiftId:String(gift.baseGiftId||gift.id),name:String(gift.name||'Подарок'),emoji:String(gift.emoji||'🎁'),image:String(gift.image||''),price:upgraderPrice(gift),rarity:String(gift.rarity||'Обычный'),collectible:!!gift.collectible,ownedInstance:!!gift.ownedInstance,collection:String(gift.collection||''),skin:String(gift.skin||'classic'),background:String(gift.background||'midnight'),pattern:String(gift.pattern||'none'),material:String(gift.material||''),variant:Number(gift.variant)||0,remaining:Number.isFinite(Number(gift.remaining))?Number(gift.remaining):null};
+}
+function giftUpgradeChance(source,target){
+ const sourcePrice=Math.max(15,upgraderPrice(source)),targetPrice=Math.max(15,upgraderPrice(target));
+ if(target?.collection==='galaxy-heart'||String(target?.id||'').startsWith('voltra-galaxy-heart-'))return 1;
+ return Math.max(1,Math.min(35,Math.floor(35*sourcePrice/targetPrice)));
+}
+function publicGiftUpgraderState(uid){
+ const user=userById(uid);if(!user)return {inventory:[],targets:[]};
+ const ids=Array.isArray(user.ownedGifts)?user.ownedGifts.map(String):[];
+ const inventory=ids.map(id=>giftForUser(user,id)).filter(g=>g&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))).map(upgraderPublicGift);
+ const globallyOwned=new Set();for(const owner of store.users)for(const id of Array.isArray(owner.ownedGifts)?owner.ownedGifts:[])globallyOwned.add(String(id));
+ const targets=allGiftCatalog().filter(g=>!g.ownedInstance&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))&&(!g.collectible||(!globallyOwned.has(String(g.id))&&Number(g.remaining)>0))).map(upgraderPublicGift).sort((a,b)=>a.price-b.price||a.name.localeCompare(b.name,'ru'));
+ return {inventory,targets,topGift:{id:'voltra-galaxy-heart-500',name:'Сердце Галактики',chance:1},notice:'Шанс рассчитывает сервер и показывает настоящий процент. При неудаче исходный подарок снимается с инвентаря и возвращается в магазин по базовой цене.'};
+}
+function consumeUpgraderInput(user,gift){
+ const id=String(gift.id);
+ user.ownedGifts=(user.ownedGifts||[]).filter(x=>String(x)!==id);
+ user.equippedGifts=(user.equippedGifts||[]).filter(x=>String(x)!==id);
+ if(gift.ownedInstance){
+  store.giftInstances=store.giftInstances.filter(x=>String(x.id)!==id);
+ }else if(gift.collectible){
+  const max=Math.max(Number(gift.totalSupply)||0,Number(gift.edition)||0,Number(gift.remaining)||0);
+  gift.remaining=Math.min(max||Number.MAX_SAFE_INTEGER,Math.max(0,Number(gift.remaining)||0)+1);
+ }
+ for(const listing of store.giftResaleListings||[])if(listing.giftId===id&&listing.sellerId===user.id&&listing.status==='active'){listing.status='cancelled';listing.cancelledAt=Date.now();listing.cancelReason='gift-upgrader'}
+ for(const offer of store.giftResaleOffers||[])if(offer.giftId===id&&offer.sellerId===user.id&&offer.status==='pending')offer.status='closed';
+}
 function giftCatalogForUser(uid){
  const user=store.users.find(u=>u.id===uid),owned=new Set(Array.isArray(user?.ownedGifts)?user.ownedGifts.map(String):[]),globallyOwned=new Set();
  for(const u of store.users)for(const id of Array.isArray(u.ownedGifts)?u.ownedGifts:[])globallyOwned.add(String(id));
@@ -1258,6 +1292,45 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
    else {if(decision!=='full')return json(res,400,{error:'VIP нельзя выдать частичной оплатой'});target.vip=true;order.paidRub=paid;}
    order.status=decision==='full'?'approved':'partial_approved';order.reviewedAt=Date.now();order.reviewedBy=uid;order.granted=true;let referralBonus=null;if(target.referrerId&&!target.referralRewardedAt){const inviter=userById(target.referrerId);if(inviter&&inviter.id!==target.id){inviter.pulses=(Number(inviter.pulses)||0)+500;target.pulses=(Number(target.pulses)||0)+500;target.referralRewardedAt=Date.now();target.referralRewardOrderId=order.id;referralBonus={inviterId:inviter.id,inviteeId:target.id,amount:500};notifyUser(inviter.id,'🎉 Бонус за приглашение','Твой друг совершил первую подтверждённую покупку! Начислено 500 ϟ.',{referralBonus:true});notifyUser(target.id,'🎁 Бонус новичка','Спасибо за первый заказ! Начислено 500 ϟ бонусом за приглашение.',{referralBonus:true});}}save();notifyUser(order.uid,'✅ Оплата подтверждена',order.kind==='vlt'?'Начислено '+Number(order.grantedAmount).toLocaleString('ru-RU')+' ϟ по заказу '+order.title: 'VOLTRA VIP активирован по подтверждённой оплате.',{paymentOrderId:order.id});return json(res,200,{ok:true,status:order.status,grantedAmount:order.grantedAmount||null,paidRub:order.paidRub});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось обработать заказ'})}
+ }
+
+ if(req.method==='GET'&&u.pathname==='/api/gifts/upgrader'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  return json(res,200,publicGiftUpgraderState(uid));
+ }
+ if(req.method==='POST'&&u.pathname==='/api/gifts/upgrader/attempt'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  try{
+   const b=await parseBody(req,5000),user=userById(uid),sourceId=String(b.sourceId||''),targetId=String(b.targetId||'');
+   if(!Array.isArray(user.ownedGifts)||!user.ownedGifts.some(x=>String(x)===sourceId))return json(res,400,{error:'Исходный подарок больше не находится в твоей коллекции'});
+   const source=giftForUser(user,sourceId);
+   const target=allGiftCatalog().find(g=>String(g.id)===targetId&&!g.ownedInstance&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id)));
+   if(!source||isTestGift(source)||TEST_GIFT_IDS.has(String(source.id)))return json(res,404,{error:'Исходный подарок не найден'});
+   if(!target)return json(res,404,{error:'Целевой подарок не найден в каталоге'});
+   if(sourceId===targetId)return json(res,400,{error:'Выбери другой подарок для апгрейда'});
+   if(target.collectible){
+    if(giftHasAnotherOwner(target.id,uid)||(user.ownedGifts||[]).includes(target.id))return json(res,409,{error:'Этот коллекционный подарок уже кому-то принадлежит'});
+    if(Number(target.remaining)<=0)return json(res,409,{error:'Такого подарка сейчас нет в наличии'});
+   }
+   const chance=giftUpgradeChance(source,target),won=crypto.randomInt(10000)<chance*100,sourceName=source.name,sourcePrice=upgraderPrice(source);
+   let prize=null;
+   if(won&&target.collectible&&!reserveCollectible(target))return json(res,409,{error:'Целевой подарок только что закончился — попробуй ещё раз'});
+   consumeUpgraderInput(user,source);
+   if(won){
+    prize=target.collectible?target:makeGiftInstance(target,uid,{variant:1});
+    if(target.collectible){
+     if(!Number.isSafeInteger(prize.serialNumber)||prize.serialNumber<1)prize.serialNumber=Number(prize.variant)||Number((String(prize.id).match(/(\d+)$/)||[])[1])||1;
+     recordGiftOwner(prize,user,'upgrade-win');
+    }
+    user.ownedGifts.push(prize.id);
+   }
+   const at=Date.now();
+   store.giftTransactions.push({id:crypto.randomUUID(),type:won?'upgrader-win':'upgrader-loss',userId:uid,sourceGiftId:sourceId,targetGiftId:target.id,sourceName,sourcePrice,targetName:target.name,targetPrice:upgraderPrice(target),chance,won,at});
+   save();
+   sendUser(uid,{t:'gift-inventory-updated'});
+   notifyUser(uid,won?'✨ Апгрейд успешен!':'Апгрейд не удался',won?'Ты выиграл(а) '+(prize.emoji||'🎁')+' '+prize.name+'.':sourceName+' снят с инвентаря и снова доступен в магазине по базовой цене.');
+   return json(res,200,{ok:true,won,chance,source:{id:sourceId,name:sourceName,price:sourcePrice},target:upgraderPublicGift(target),prize:prize?upgraderPublicGift(prize):null,message:won?'Апгрейд успешен!':'Не удалось — исходный подарок возвращён в магазин по базовой цене.',state:publicGiftUpgraderState(uid)});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось выполнить апгрейд'})}
  }
  if(req.method==='GET'&&u.pathname==='/api/gifts'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});const user=userById(uid);return json(res,200,{catalog:giftCatalogForUser(uid),balance:user.pulses||0,catCoins:user.catCoins||0,owned:user.ownedGifts||[],equipped:user.equippedGifts||[],admin:!!user.admin})}
  if(req.method==='POST'&&u.pathname==='/api/gifts/admin/create-collectible'){
