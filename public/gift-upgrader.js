@@ -13,7 +13,7 @@ function ownedSource(){return (state?.inventory||[]).find(x=>x.id===sourceId)||n
 function targetGift(){return (state?.targets||[]).find(x=>x.id===targetId)||null}
 function chanceFor(source,target){
  if(!source||!target)return 0;
- if(target.collection==='galaxy-heart'||String(target.id||'').startsWith('voltra-galaxy-heart-'))return 1;
+ if(String(target.id||'')==='voltra-galaxy-heart-500'||Number(target.price)>=99999999)return 1;
  return Math.max(1,Math.min(35,Math.floor(35*Math.max(15,Number(source.price)||15)/Math.max(15,Number(target.price)||15))));
 }
 function art(g,large=false){
@@ -44,7 +44,7 @@ function render(target){
   '<section class="gift-upgrader-stage"><div class="gift-upgrader-picks">'+selectedCard(source,'ТВОЙ ПОДАРОК')+'<div class="gift-upgrader-vs">➜</div>'+selectedCard(prize,'ЖЕЛАЕМЫЙ ПРИЗ')+'</div>'+
   '<div class="gift-upgrader-gauge-wrap"><div class="gift-upgrader-gauge" style="--upgrade-chance:'+chance+'"><div class="gift-upgrader-gauge-inner"><small>ШАНС УСПЕХА</small><strong>'+chance.toFixed(0)+'<span>%</span></strong><b>'+(!source||!prize?'ВЫБЕРИ ПРЕДМЕТЫ':chance<=1?'ОЧЕНЬ НИЗКИЙ ШАНС':chance<10?'НИЗКИЙ ШАНС':chance<25?'СРЕДНИЙ ШАНС':'ВЫСОКИЙ ШАНС')+'</b></div><div class="gift-upgrader-gauge-pointer"></div></div><div class="gift-upgrader-gauge-labels"><span>0%</span><span>100%</span></div></div>'+
   '<button type="button" class="primary gift-upgrader-attempt" data-upgrader-attempt '+(!source||!prize||busy?'disabled':'')+'>'+(busy?'✦ Проверяем результат…':'⌃ АПГРЕЙД ПОДАРКА')+'</button>'+
-  '<small class="gift-upgrader-target-note">'+(prize&&(prize.collection==='galaxy-heart'||String(prize.id||'').startsWith('voltra-galaxy-heart-'))?'💜 Сердце Галактики — самый дорогой приз. Честный шанс: 1%.':prize?'Фактический шанс рассчитывается по ценам подарков и ограничен 35%.':'Сначала выбери цель апгрейда.')+'</small></section>'+
+  '<small class="gift-upgrader-target-note">'+(prize&&(String(prize.id||'')==='voltra-galaxy-heart-500'||Number(prize.price)>=99999999)?'💜 Сердце Галактики — самый дорогой приз. Честный шанс: 1%.':prize?'Фактический шанс рассчитывается по ценам подарков и ограничен 35%.':'Сначала выбери цель апгрейда.')+'</small></section>'+
   '<section class="gift-upgrader-section"><div class="gift-upgrader-section-heading"><div><h3>🎒 Мои подарки</h3><p>Выбери подарок, который используешь для попытки.</p></div><span>'+inventory.length+'</span></div>'+
   (inventory.length?'<div class="gift-upgrader-items">'+inventory.map(g=>'<button type="button" class="gift-upgrader-item '+(g.id===sourceId?'is-selected ':'')+'rarity-'+rarityClass(g)+'" data-upgrader-source="'+esc(g.id)+'"><span class="gift-upgrader-item-art">'+art(g)+'</span><span class="gift-upgrader-item-details"><b>'+esc(g.name)+'</b><small>'+esc(rarityName(g))+'</small><strong>'+money(g.price)+' ϟ</strong></span>'+(g.id===sourceId?'<span class="gift-upgrader-check">✓</span>':'')+'</button>').join('')+'</div>':'<div class="gift-upgrader-empty"><span>🎁</span><b>Пока нет подарков</b><p>Купи или получи подарок VOLTRA, и он появится здесь.</p><button type="button" class="primary" data-upgrader-open-gifts>Открыть магазин подарков</button></div>')+
   '</section>'+
