@@ -2670,3 +2670,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
  .remote-video-wrap video{max-height:34dvh}.local-video{right:12px;top:12px}
 }
 @media(max-width:360px){.call-history-panel{padding-inline:9px}.call-history-item{grid-template-columns:36px minmax(0,1fr) auto;gap:7px;padding-inline:7px}.call-history-kind{width:35px;height:35px}.call-history-actions button{width:30px;height:32px}}
+
+
+/* VOLTRA message actions: use the message menu/long-press for reactions, reply and forward. */
+.message-reaction-add{display:none!important}
+.message-menu-trigger{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.voltra-message-context{pointer-events:auto}
