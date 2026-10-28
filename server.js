@@ -564,6 +564,48 @@ function publicVoltraQuests(uid){
  return VOLTRA_QUESTS.map(q=>{const current=Math.max(0,Number(stats[q.metric])||0);return {...q,current,unlocked:current>=q.target,claimed:claimed.has(q.id),progress:Math.min(100,Math.round(current/q.target*100))}});
 }
 
+
+const DROP_RARITIES=['common','uncommon','rare','epic','legendary','mythic'];
+const DROP_RARITY_LABELS={common:'Обычная',uncommon:'Необычная',rare:'Редкая',epic:'Эпическая',legendary:'Легендарная',mythic:'Мифическая'};
+const DROP_RARITY_EMOJIS={common:'⚪',uncommon:'🟢',rare:'🔵',epic:'🟣',legendary:'🟡',mythic:'💠'};
+const DROP_NEXT_RARITY={common:'uncommon',uncommon:'rare',rare:'epic',epic:'legendary',legendary:'mythic',mythic:null};
+const DROP_UPGRADE_CHANCES={common:65,uncommon:45,rare:30,epic:18,legendary:8,mythic:0};
+const DROP_ITEMS={
+ common:[{id:'mint-spark',name:'Мятная искра',emoji:'✦'},{id:'blue-orbit',name:'Синяя орбита',emoji:'🔹'},{id:'paper-star',name:'Бумажная звезда',emoji:'⭐'},{id:'soft-cloud',name:'Мягкое облако',emoji:'☁️'}],
+ uncommon:[{id:'neon-petal',name:'Неоновый лепесток',emoji:'🌸'},{id:'aqua-comet',name:'Аква-комета',emoji:'☄️'},{id:'pixel-fox',name:'Пиксельная лиса',emoji:'🦊'},{id:'tiny-planet',name:'Маленькая планета',emoji:'🪐'}],
+ rare:[{id:'crystal-wave',name:'Кристальная волна',emoji:'🌊'},{id:'violet-flame',name:'Фиолетовое пламя',emoji:'🔥'},{id:'prism-heart',name:'Призматическое сердце',emoji:'💜'},{id:'starlit-cat',name:'Звёздный кот',emoji:'🐈'}],
+ epic:[{id:'aurora-crown',name:'Корона авроры',emoji:'👑'},{id:'glitch-dragon',name:'Глитч-дракон',emoji:'🐉'},{id:'moon-guardian',name:'Страж луны',emoji:'🌙'},{id:'electric-bloom',name:'Электроцвет',emoji:'⚡'}],
+ legendary:[{id:'solar-phoenix',name:'Солнечный феникс',emoji:'🌞'},{id:'void-orchid',name:'Орхидея пустоты',emoji:'🪻'},{id:'royal-nebula',name:'Королевская туманность',emoji:'🌌'}],
+ mythic:[{id:'voltra-starcore',name:'Звёздное ядро VOLTRA',emoji:'🌠'},{id:'infinite-prism',name:'Бесконечная призма',emoji:'🔮'}]
+};
+const DROP_CASES={
+ starter:{id:'starter',name:'Стартовый',emoji:'📦',description:'Спокойный кейс, чтобы начать коллекцию.',cooldownMs:60*60*1000,weights:{common:7200,uncommon:2000,rare:650,epic:130,legendary:18,mythic:2}},
+ neon:{id:'neon',name:'Неоновый',emoji:'💜',description:'Больше редких сияющих украшений.',cooldownMs:6*60*60*1000,weights:{common:3800,uncommon:3200,rare:2000,epic:800,legendary:180,mythic:20}},
+ cosmic:{id:'cosmic',name:'Космический',emoji:'🌌',description:'Лучший шанс на высокие редкости.',cooldownMs:24*60*60*1000,weights:{common:1000,uncommon:1800,rare:2700,epic:2800,legendary:1300,mythic:400}}
+};
+function dropStateFor(uid){
+ if(!store.dropGame[uid]||typeof store.dropGame[uid]!=='object')store.dropGame[uid]={};
+ const st=store.dropGame[uid];
+ if(!Array.isArray(st.items))st.items=[];
+ if(!st.caseOpenedAt||typeof st.caseOpenedAt!=='object')st.caseOpenedAt={};
+ st.totalOpened=Math.max(0,Number(st.totalOpened)||0);st.upgradesAttempted=Math.max(0,Number(st.upgradesAttempted)||0);st.upgradesWon=Math.max(0,Number(st.upgradesWon)||0);st.lastUpgradeAt=Math.max(0,Number(st.lastUpgradeAt)||0);
+ return st;
+}
+function rollDropRarity(weights){
+ const roll=crypto.randomInt(10000);let total=0;
+ for(const rarity of DROP_RARITIES){total+=Number(weights[rarity])||0;if(roll<total)return rarity}
+ return 'common';
+}
+function createDropCosmetic(rarity){
+ const pool=DROP_ITEMS[rarity]||DROP_ITEMS.common,item=pool[crypto.randomInt(pool.length)];
+ return {instanceId:crypto.randomUUID(),cosmeticId:item.id,name:item.name,emoji:item.emoji,rarity,obtainedAt:Date.now()};
+}
+function publicDropState(uid){
+ const st=dropStateFor(uid),now=Date.now();
+ const cases=Object.values(DROP_CASES).map(c=>({id:c.id,name:c.name,emoji:c.emoji,description:c.description,cooldownMs:c.cooldownMs,remainingMs:Math.max(0,(Number(st.caseOpenedAt[c.id])||0)+c.cooldownMs-now),odds:{...c.weights}}));
+ return {cases,inventory:st.items.slice(-100),totalOpened:st.totalOpened,upgradesAttempted:st.upgradesAttempted,upgradesWon:st.upgradesWon,upgradeOdds:{...DROP_UPGRADE_CHANCES},rarityLabels:{...DROP_RARITY_LABELS},rarityEmojis:{...DROP_RARITY_EMOJIS},nextRarity:{...DROP_NEXT_RARITY},notice:'Бесплатные косметические предметы. Их нельзя продать, передать, обменять на подарки/CAT или конвертировать в Вольтриксы.'};
+}
+
 async function sendPush(uid,payload){const list=store.pushSubscriptions?.[uid];if(!Array.isArray(list)||!list.length)return;await Promise.all(list.map(async sub=>{try{await webpush.sendNotification(sub,JSON.stringify(payload),{TTL:90,urgency:'high'})}catch(e){if(e.statusCode===404||e.statusCode===410){store.pushSubscriptions[uid]=(store.pushSubscriptions[uid]||[]).filter(x=>x.endpoint!==sub.endpoint);save()}else console.error('Push delivery failed:',e.statusCode||'',e.message||e)}}))}
 function broadcast(m){for(const set of clients.values())for(const ws of set)send(ws,m)}
 function isVipSeller(u){return !!u?.admin&&['chelixxx','chelixxx2'].includes(String(u.name||'').replace(/^@/,'').toLowerCase())}
@@ -910,6 +952,44 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='GET'&&u.pathname==='/api/push/public-key'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});return json(res,200,{publicKey:vapidKeys.publicKey})}
  if(req.method==='POST'&&u.pathname==='/api/push/subscribe'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});try{const b=await parseBody(req),sub=b.subscription;if(!sub||typeof sub.endpoint!=='string'||!sub.endpoint.startsWith('https://')||!sub.keys?.p256dh||!sub.keys?.auth)return json(res,400,{error:'Некорректная push-подписка'});const list=store.pushSubscriptions[uid]||(store.pushSubscriptions[uid]=[]);const i=list.findIndex(x=>x.endpoint===sub.endpoint);if(i>=0)list[i]=sub;else{if(list.length>=8)list.shift();list.push(sub)}save();return json(res,200,{ok:true,subscriptions:list.length})}catch(e){return json(res,e.status||400,{error:e.message||'Не удалось включить уведомления'})}}
  if(req.method==='DELETE'&&u.pathname==='/api/push/subscribe'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});try{const b=await parseBody(req),endpoint=String(b.endpoint||'');store.pushSubscriptions[uid]=(store.pushSubscriptions[uid]||[]).filter(x=>x.endpoint!==endpoint);save();return json(res,200,{ok:true})}catch(e){return json(res,400,{error:e.message||'Не удалось отключить уведомления'})}}
+
+ if(u.pathname==='/api/drop/status'&&req.method==='GET'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  return json(res,200,publicDropState(uid));
+ }
+ if(u.pathname==='/api/drop/open'&&req.method==='POST'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  try{
+   const b=await parseBody(req,4000),caseDef=DROP_CASES[String(b.caseId||'')];
+   if(!caseDef)return json(res,404,{error:'Кейс не найден'});
+   const st=dropStateFor(uid),now=Date.now(),last=Number(st.caseOpenedAt[caseDef.id])||0,remaining=Math.max(0,last+caseDef.cooldownMs-now);
+   if(remaining>0)return json(res,429,{error:'Этот бесплатный кейс ещё восстанавливается',remainingMs:remaining});
+   if(st.items.length>=100)return json(res,409,{error:'Коллекция полная (100 предметов). Улучши несколько предметов, чтобы освободить место.'});
+   const rarity=rollDropRarity(caseDef.weights),item=createDropCosmetic(rarity);
+   st.items.push(item);st.caseOpenedAt[caseDef.id]=now;st.totalOpened++;save();
+   return json(res,200,{ok:true,case:{id:caseDef.id,name:caseDef.name},item,odds:{...caseDef.weights},state:publicDropState(uid)});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось открыть бесплатный кейс'})}
+ }
+ if(u.pathname==='/api/drop/upgrade'&&req.method==='POST'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  try{
+   const b=await parseBody(req,4000),st=dropStateFor(uid),now=Date.now(),idx=st.items.findIndex(x=>x.instanceId===String(b.instanceId||''));
+   if(idx<0)return json(res,404,{error:'Косметический предмет не найден'});
+   if(now-st.lastUpgradeAt<1800)return json(res,429,{error:'Подожди секунду перед следующей попыткой'});
+   const item=st.items[idx],next=DROP_NEXT_RARITY[item.rarity],chance=Number(DROP_UPGRADE_CHANCES[item.rarity])||0;
+   if(!next||chance<=0)return json(res,400,{error:'Этот уровень уже максимальный'});
+   st.lastUpgradeAt=now;st.upgradesAttempted++;
+   const won=crypto.randomInt(10000)<chance*100;
+   let upgraded=null;
+   if(won){
+    const pool=DROP_ITEMS[next],chosen=pool[crypto.randomInt(pool.length)];
+    item.cosmeticId=chosen.id;item.name=chosen.name;item.emoji=chosen.emoji;item.rarity=next;item.obtainedAt=now;
+    st.upgradesWon++;upgraded={...item};
+   }
+   save();
+   return json(res,200,{ok:true,success:won,chance,previousRarity:won?Object.keys(DROP_NEXT_RARITY).find(r=>DROP_NEXT_RARITY[r]===next):item.rarity,item:won?upgraded:{...item},message:won?'Апгрейд успешен!':'Не получилось в этот раз — предмет остался в коллекции.',state:publicDropState(uid)});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось улучшить предмет'})}
+ }
  if(req.method==='GET'&&u.pathname==='/api/users/search'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Не авторизован'});
   const viewer=userById(uid),raw=String(u.searchParams.get('q')||'').trim().toLowerCase(),q=raw.replace(/^@/,'').slice(0,40);
@@ -920,6 +1000,7 @@ const server=http.createServer(async(req,res)=>{
   const foundUsers=store.users.filter(target=>target.id!==uid&&!target.bannedAt).filter(target=>{const connected=hasConversation(target)||isAdmin(viewer),username=String(target.username||'').toLowerCase(),nick=String(target.name||'').toLowerCase();return connected?(matchNick(username)||matchNick(nick)):matchNick(username)}).slice(0,30).map(target=>({...publicUser(target),online:!target.ghostMode&&(!!target.alwaysOnline||online(target.id)),kind:'user'}));
   const foundChannels=store.channels.filter(c=>(!c.status||c.status==='approved')&&c.status!=='rejected'&&!(c.owner==='system'||c.owner===uid||(Array.isArray(c.members)&&c.members.includes(uid))||isAdmin(viewer))&&((String(c.name||'').toLowerCase()+' '+String(c.description||'').toLowerCase()).includes(q))).slice(0,20).map(c=>({...publicChannel(c,uid),kind:'channel'}));
   const foundBots=store.miniApps.filter(a=>(a.authorId===uid||((!a.status||a.status==='approved')&&a.status!=='rejected'&&a.access==='public'&&!userById(a.authorId)?.bannedAt))&&((String(a.botName||'')+' '+String(a.name||'')+' '+String(a.description||'')).toLowerCase().includes(q))).slice(0,20).map(a=>({id:a.id,name:a.botName||a.name,botName:a.botName||a.name,appName:a.name,description:a.description||'',botIcon:a.botIcon||'🤖',icon:a.icon||'🧩',coverUrl:a.coverUrl||'',botImageUrl:a.botImageUrl||'',status:a.status||'approved',kind:'bot'}));
+  if(q==='drop')foundBots.unshift({id:'drop-bot',name:'Drop · Бесплатные кейсы',botName:'@drop',description:'Бесплатные косметические кейсы, прозрачные шансы и апгрейды',kind:'drop'});
   return json(res,200,{users:foundUsers,channels:foundChannels,bots:foundBots});
  }
  if(req.method==='GET'&&u.pathname==='/api/community'){ const uid=verifyToken(cookieToken(req)); if(!uid)return json(res,401,{error:'Не авторизован'});const x=userById(uid),isAdmin=!!x.admin; return json(res,200,{channels:store.channels.filter(c=>c.status!=='rejected'&&((!c.status||c.status==='approved')||c.owner===uid||isAdmin)&&(c.owner==='system'||c.owner===uid||(Array.isArray(c.members)&&c.members.includes(uid))||isAdmin)).map(c=>publicChannel(c,uid)),posts:store.posts.slice(-100).reverse(),bots:[{id:'crypto-bot',name:'Крипто бот',description:'Общий для всех пользователей кошелёк CAT: обмен VLT, переводы и история',active:true,configured:true},{id:'pulse-verify',name:'VOLTRA Verify',description:'Подтверждение номера SMS',configured:!!(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_VERIFY_SERVICE_SID)},{id:'pulse-news',name:'VOLTRA News',description:'Новости в канале и общей ленте',active:true}],adminUsers:isAdmin?store.users.map(u=>({id:u.id,name:u.name,roleLabel:u.roleLabel||'',globalChatDisabled:!!u.globalChatDisabled,admin:!!u.admin,banned:!!u.bannedAt,banReason:u.banReason||'',devices:(u.devices||[]).map(d=>({id:d.id,label:d.label||'Устройство',lastSeen:d.lastSeen||0,banned:!!store.deviceBans[d.id],banReason:store.deviceBans[d.id]?.reason||''}))})):[],profile:(()=>({name:x.name,username:x.username||'',email:x.email||'',phone:x.phone||'',emailVerified:!!x.emailVerified,phoneVerified:!!x.phoneVerified,bio:x.bio||'',avatar:x.avatar||'',admin:isAdmin,rootAdmin:isRootAdmin(x),roleLabel:x.roleLabel||'',alwaysOnline:!!x.alwaysOnline,ghostMode:!!x.ghostMode,hideFromUnmessaged:!!x.hideFromUnmessaged}))()}); }
