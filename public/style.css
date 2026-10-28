@@ -2585,3 +2585,42 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 .voltra-context-actions-title{border-top:1px solid var(--line,#30334a);margin-top:4px}
 .voltra-message-context [data-msg-action]{min-height:42px!important;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @media(max-width:700px){.voltra-message-context{width:min(320px,calc(100vw - 16px));max-height:75dvh;padding:7px;border-radius:16px}.voltra-context-reaction{height:39px!important;min-height:39px!important;font-size:23px!important}}
+
+
+/* VOLTRA mobile interaction repair: explicit message menu, usable profile, reliable chat back. */
+.message-menu-trigger{display:inline-grid;place-items:center;flex:0 0 32px;width:32px;height:28px;margin-left:4px;padding:0;border:1px solid color-mix(in srgb,var(--accent,#8c70ff) 28%,var(--line,#30334a));border-radius:10px;background:color-mix(in srgb,var(--accent,#8c70ff) 9%,var(--panel,#171927));color:var(--text,#f4f3ff);font-size:20px;line-height:1;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.message-menu-trigger:active{background:color-mix(in srgb,var(--accent,#8c70ff) 25%,var(--panel,#171927))}
+.msg-time{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.msg-time-label{min-width:0}
+.voltra-message-context{z-index:10050;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);padding:8px;overscroll-behavior:contain;touch-action:pan-y}
+.voltra-message-context button{min-height:44px;touch-action:manipulation}
+.voltra-context-reaction-grid{max-height:min(30dvh,220px);overscroll-behavior:contain}
+@media(max-width:700px){
+  .app:not(.chat-open) .app-shell{display:grid!important}
+  .app:not(.chat-open)>.main{display:none!important}
+  .app.chat-open .app-shell{display:none!important}
+  .app.chat-open>.main{display:flex!important}
+  #back{display:grid!important;place-items:center;position:relative;z-index:20;flex:0 0 42px;width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;touch-action:manipulation;border-radius:13px!important}
+  .main .chat-head{position:relative;z-index:5}
+  .message-menu-trigger{width:36px;height:36px;flex-basis:36px;min-width:36px;border-radius:12px;font-size:23px}
+  .message-actions{display:none!important}
+  .msg-time{min-height:36px}
+  #profileModal.modal:not(.hidden),#giftsModal.modal:not(.hidden),#sendGiftModal.modal:not(.hidden){place-items:end center;padding:0}
+  #profileModal>.modal-card,#settingsModal>.modal-card{max-height:calc(100dvh - env(safe-area-inset-top) - 6px);max-height:calc(100svh - env(safe-area-inset-top) - 6px);margin:0;border-radius:24px 24px 0 0!important;padding:18px 15px calc(18px + env(safe-area-inset-bottom))}
+  #profileModal .profile-form-grid{grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+  #profileModal .profile-identity-card{grid-template-columns:72px minmax(0,1fr)!important;gap:11px!important;padding:12px!important}
+  #profileModal .profile-preview{width:66px;height:66px;border-radius:20px;font-size:24px}
+  #profileModal .profile-panel-tabs{position:sticky;top:-18px;z-index:8;gap:4px;padding:5px;margin:0 0 12px;background:color-mix(in srgb,var(--panel,#171927) 94%,transparent);backdrop-filter:blur(14px)}
+  #profileModal .profile-panel-tab{min-width:0;min-height:44px;padding:8px 3px;font-size:11px;line-height:1.15}
+  #profileModal .profile-content-panel:not(.hidden){gap:11px}
+  #profileModal .profile-fields-card{padding:13px!important}
+  #profileModal .profile-invite-btn{display:flex;width:100%;min-height:44px;align-items:center;justify-content:center;gap:8px;margin:0 0 12px}
+  #profileModal .profile-modal-subtitle{margin-right:28px;margin-bottom:12px}
+}
+@media(max-width:390px){
+  #profileModal>.modal-card{padding-inline:11px}
+  #profileModal .profile-identity-card{grid-template-columns:58px minmax(0,1fr)!important;gap:9px!important;padding:10px!important}
+  #profileModal .profile-preview{width:54px;height:54px;border-radius:17px;font-size:21px}
+  #profileModal .profile-identity-main h3{font-size:14px}
+  #profileModal .profile-panel-tab{font-size:10px}
+}
