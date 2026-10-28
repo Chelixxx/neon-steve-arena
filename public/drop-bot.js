@@ -42,7 +42,7 @@ function render(target){
   '<section class="drop-section"><div class="drop-section-heading"><div><h3>🧩 Моя косметическая коллекция</h3><p>Предметы принадлежат только коллекции @drop и не связаны с инвентарём подарков.</p></div><span class="drop-stat-pill">'+items.length+' / 100</span></div>'+
   (items.length?'<div class="drop-inventory-grid">'+items.slice().reverse().map(item=>{
     const nextRarity=next[item.rarity],chance=upgradeOdds[item.rarity]||0;
-    return '<article class="drop-item-card '+rarityKey(item.rarity)+'"><div class="drop-item-icon">'+esc(item.emoji||'✦')+'</div><div class="drop-item-copy"><span class="drop-rarity-pill '+rarityKey(item.rarity)+'">'+esc(labels[item.rarity]||item.rarity)+'</span><b>'+esc(item.name)+'</b><small>Косметический дроп · не продаётся</small></div><div class="drop-item-actions">'+(nextRarity?'<button type="button" class="secondary drop-upgrade-button" data-drop-upgrade="'+esc(item.instanceId)+'" '+(busy?'disabled':'')+'>Улучшить · '+chance+'%</button>':'<span class="drop-max-rarity">✦ MAX</span>')+'</div></article>';
+    return '<article class="drop-item-card '+rarityKey(item.rarity)+'"><div class="drop-item-icon">'+esc(item.emoji||'✦')+'</div><div class="drop-item-copy"><span class="drop-rarity-pill '+rarityKey(item.rarity)+'">'+esc(labels[item.rarity]||item.rarity)+'</span><b>'+esc(item.name)+'</b><small>Косметический дроп · не продаётся</small></div><div class="drop-item-actions">'+(nextRarity?'<button type="button" class="secondary drop-upgrade-button" data-drop-upgrade="'+esc(item.instanceId)+'" '+(busy?'disabled':'')+'>Улучшить · '+chance+'%</button>':'<span class="drop-max-rarity">✦ MAX</span>')+'<button type="button" class="drop-discard-button" data-drop-discard="'+esc(item.instanceId)+'" '+(busy?'disabled':'')+'>Убрать</button>'+'</div></article>';
   }).join('')+'</div>':'<div class="drop-empty"><span>🪄</span><b>Коллекция пока пустая</b><p>Открой бесплатный кейс — первый косметический дроп ждёт тебя.</p></div>')+
   '</section><footer class="drop-bot-footer"><span>Открыто кейсов: <b>'+Number(state.totalOpened||0)+'</b></span><span>Попыток апгрейда: <b>'+Number(state.upgradesAttempted||0)+'</b></span><span>Без ставок и обмена на валюту</span></footer></div>';
 }
@@ -66,6 +66,16 @@ document.addEventListener('click',async event=>{
    const data=await request;state=data.state;lastReveal={kind:'case',item:data.item,caseName:data.case?.name||'Drop'};
    render(lastTarget);
   }catch(error){if(lastTarget){const message=document.createElement('div');message.className='drop-inline-error';message.textContent=error.message||'Не удалось открыть кейс';lastTarget.querySelector('.drop-bot-shell')?.prepend(message)}await refresh(lastTarget)}
+  finally{busy=false;if(lastTarget)render(lastTarget)}
+  return;
+ }
+ const discardButton=event.target.closest('[data-drop-discard]');
+ if(discardButton){
+  event.preventDefault();if(busy)return;
+  if(!window.confirm('Убрать этот косметический предмет из коллекции @drop? Баланс и подарки не изменятся.'))return;
+  busy=true;discardButton.disabled=true;
+  try{const data=await api('/api/drop/discard',{instanceId:discardButton.dataset.dropDiscard});state=data.state;lastReveal=null;render(lastTarget)}
+  catch(error){await refresh(lastTarget);if(lastTarget){const note=document.createElement('div');note.className='drop-inline-error';note.textContent=error.message||'Не удалось убрать предмет';lastTarget.querySelector('.drop-bot-shell')?.prepend(note)}}
   finally{busy=false;if(lastTarget)render(lastTarget)}
   return;
  }
