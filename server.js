@@ -240,7 +240,7 @@ const GIFT_VARIANT_MATERIALS=['Глянцевая эмаль','Галактич�
   for(const l of (store.giftResaleListings||[])) for(const k of ['giftId','collectibleGiftId','baseGiftId']) if(l[k]) protectedIds.add(String(l[k]));
   const before=store.collectibleGifts.length;
   store.collectibleGifts=store.collectibleGifts.filter(g=>{
-   const m=String(g.id||'').match(/^voltra-lightning-(\\d{3})$/);
+   const m=String(g.id||'').match(/^voltra-lightning-(\d{3})$/);
    return !m||Number(m[1])<=75||protectedIds.has(String(g.id));
   });
   if(store.collectibleGifts.length!==before)save();
