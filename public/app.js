@@ -821,6 +821,18 @@ document.addEventListener('click',async e=>{
 document.addEventListener('click',e=>{const b=e.target.closest('[data-nav-action="payment-requests"]');if(!b)return;e.preventDefault();location.href='/admin-payments.html'},true);
 setInterval(refreshPaymentRequestBadge,15000);
 
+// Touch devices have no persistent hover: briefly reveal the tapped icon label without changing its click action.
+document.addEventListener('pointerdown',e=>{
+ const button=e.target.closest('.bottom-nav-btn');
+ if(!button)return;
+ document.querySelectorAll('.bottom-nav-btn.nav-label-peek').forEach(other=>{
+  if(other!==button){other.classList.remove('nav-label-peek');clearTimeout(other.__navLabelTimer)}
+ });
+ button.classList.add('nav-label-peek');
+ clearTimeout(button.__navLabelTimer);
+ button.__navLabelTimer=setTimeout(()=>button.classList.remove('nav-label-peek'),1400);
+},{passive:true});
+
 // Reliable icon-dock actions: delegated outside init so a failed optional setup cannot disable navigation.
 document.addEventListener('click',e=>{
  const button=e.target.closest('[data-nav-action]');
