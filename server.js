@@ -148,23 +148,9 @@ function publicGiftUpgraderState(uid){
  const inventory=ids.map(id=>giftForUser(user,id)).filter(g=>g&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))).map(upgraderPublicGift);
  const globallyOwned=new Set();for(const owner of store.users)for(const id of Array.isArray(owner.ownedGifts)?owner.ownedGifts:[])globallyOwned.add(String(id));
  const targets=allGiftCatalog().filter(g=>!g.ownedInstance&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))&&(!g.collectible||(!globallyOwned.has(String(g.id))&&Number(g.remaining)>0))).map(upgraderPublicGift).sort((a,b)=>a.price-b.price||a.name.localeCompare(b.name,'ru'));
- return {inventory,targets,topGift:{id:'voltra-galaxy-heart-500',name:'Сердце Галактики',chance:1},notice:'Шанс рассчитывает сервер и показывает настоящий процент. При неудаче исходный подарок снимается с инвентаря и возвращается в магазин по базовой цене.'};
+ return {inventory,targets,topGift:{id:'voltra-galaxy-heart-500',name:'Сердце Галактики',chance:1},notice:'Учебная симуляция: шанс рассчитывает сервер. Инвентарь, баланс и наличие подарков не меняются; симуляция не выдаёт реальный приз.'};
 }
-function consumeUpgraderInput(user,gift,returnToMarket=false){
- const id=String(gift.id);
- user.ownedGifts=(user.ownedGifts||[]).filter(x=>String(x)!==id);
- user.equippedGifts=(user.equippedGifts||[]).filter(x=>String(x)!==id);
- if(gift.ownedInstance){
-  store.giftInstances=store.giftInstances.filter(x=>String(x.id)!==id);
- }else if(gift.collectible&&returnToMarket){
-  const max=Math.max(Number(gift.totalSupply)||0,Number(gift.edition)||0,Number(gift.remaining)||0);
-  gift.remaining=Math.min(max||Number.MAX_SAFE_INTEGER,Math.max(0,Number(gift.remaining)||0)+1);
- }else if(gift.collectible){
-  gift.remaining=0;
- }
- for(const listing of store.giftResaleListings||[])if(listing.giftId===id&&listing.sellerId===user.id&&listing.status==='active'){listing.status='cancelled';listing.cancelledAt=Date.now();listing.cancelReason='gift-upgrader'}
- for(const offer of store.giftResaleOffers||[])if(offer.giftId===id&&offer.sellerId===user.id&&offer.status==='pending')offer.status='closed';
-}
+
 function giftCatalogForUser(uid){
  const user=store.users.find(u=>u.id===uid),owned=new Set(Array.isArray(user?.ownedGifts)?user.ownedGifts.map(String):[]),globallyOwned=new Set();
  for(const u of store.users)for(const id of Array.isArray(u.ownedGifts)?u.ownedGifts:[])globallyOwned.add(String(id));
