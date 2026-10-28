@@ -251,7 +251,8 @@ function onCapture(e){
  if(receiving)openVariantModal(g,'send');else openVariantModal(g,'buy')
 }
 window.pulseOpenVariantPicker=(id,mode,current)=>{const g=giftInfo(id);if(g)openVariantModal(g,mode,current)};
-window.pulseOpenGiftSend=id=>{const g=giftInfo(id);if(g&&g.collectible){openSendModal(g,null);return}if(typeof coreOpenGiftSend==='function')coreOpenGiftSend(id)};
+window.pulseOpenGiftSendFromGift=gift=>{const g=gift&&gift.id?(giftInfo(gift.id)||gift):null;if(!g){toast('Не удалось найти этот подарок');return false}if(g.collectible){openSendModal(g,null);return true}if(typeof coreOpenGiftSend==='function'){coreOpenGiftSend(g.id);return true}toast('Отправка подарков недоступна. Обнови страницу и попробуй снова.');return false};
+window.pulseOpenGiftSend=id=>{const g=giftInfo(id);if(g&&g.collectible){openSendModal(g,null);return true}if(typeof coreOpenGiftSend==='function'){coreOpenGiftSend(id);return true}toast('Отправка подарков недоступна. Обнови страницу и попробуй снова.');return false};
 document.addEventListener('click',onCapture,true);
 const catalogRoot=$('giftCatalog');if(catalogRoot)new MutationObserver(()=>enhanceCards()).observe(catalogRoot,{childList:true,subtree:true});
 document.addEventListener('DOMContentLoaded',()=>{reload();$('giftMarketOpen')?.addEventListener('click',openGiftResaleMarket);$('sendGiftVariantBtn')?.addEventListener('click',()=>{if(sendGift&&!sendGift.collectible)openVariantModal(sendGift,'update-send',sendVariant)});$('sendGiftModal')?.addEventListener('click',e=>{if(e.target.closest('[data-close="sendGiftModal"]')){sendGift=null;sendVariant=null;sendRecipientId=null}})});
