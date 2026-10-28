@@ -1315,25 +1315,10 @@ if(req.method==='POST'&&u.pathname==='/api/miniapps/subscribe'){const uid=verify
     if(giftHasAnotherOwner(target.id,uid)||(user.ownedGifts||[]).includes(target.id))return json(res,409,{error:'Этот коллекционный подарок уже кому-то принадлежит'});
     if(Number(target.remaining)<=0)return json(res,409,{error:'Такого подарка сейчас нет в наличии'});
    }
-   const chance=giftUpgradeChance(source,target),won=crypto.randomInt(10000)<chance*100,sourceName=source.name,sourcePrice=upgraderPrice(source);
-   let prize=null;
-   if(won&&target.collectible&&!reserveCollectible(target))return json(res,409,{error:'Целевой подарок только что закончился — попробуй ещё раз'});
-   consumeUpgraderInput(user,source,!won);
-   if(won){
-    prize=target.collectible?target:makeGiftInstance(target,uid,{variant:1});
-    if(target.collectible){
-     if(!Number.isSafeInteger(prize.serialNumber)||prize.serialNumber<1)prize.serialNumber=Number(prize.variant)||Number((String(prize.id).match(/(\d+)$/)||[])[1])||1;
-     recordGiftOwner(prize,user,'upgrade-win');
-    }
-    user.ownedGifts.push(prize.id);
-   }
-   const at=Date.now();
-   store.giftTransactions.push({id:crypto.randomUUID(),type:won?'upgrader-win':'upgrader-loss',userId:uid,sourceGiftId:sourceId,targetGiftId:target.id,sourceName,sourcePrice,targetName:target.name,targetPrice:upgraderPrice(target),chance,won,at});
-   save();
-   sendUser(uid,{t:'gift-inventory-updated'});
-   notifyUser(uid,won?'✨ Апгрейд успешен!':'Апгрейд не удался',won?'Ты выиграл(а) '+(prize.emoji||'🎁')+' '+prize.name+'.':sourceName+' снят с инвентаря и снова доступен в магазине по базовой цене.');
-   return json(res,200,{ok:true,won,chance,source:{id:sourceId,name:sourceName,price:sourcePrice},target:upgraderPublicGift(target),prize:prize?upgraderPublicGift(prize):null,message:won?'Апгрейд успешен!':'Не удалось — исходный подарок возвращён в магазин по базовой цене.',state:publicGiftUpgraderState(uid)});
-  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось выполнить апгрейд'})}
+   const chance=giftUpgradeChance(source,target),won=crypto.randomInt(10000)<chance*100;
+   const sourcePublic=upgraderPublicGift(source),targetPublic=upgraderPublicGift(target);
+   return json(res,200,{ok:true,mode:'simulation',won,chance,source:sourcePublic,target:targetPublic,prize:won?targetPublic:null,message:won?'Учебная симуляция успешна. Реальный подарок не выдан, инвентарь и баланс не изменены.':'Учебная симуляция не удалась. Инвентарь и баланс не изменены.',state:publicGiftUpgraderState(uid)});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось выполнить учебную симуляцию'})}
  }
  if(req.method==='GET'&&u.pathname==='/api/gifts'){const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});const user=userById(uid);return json(res,200,{catalog:giftCatalogForUser(uid),balance:user.pulses||0,catCoins:user.catCoins||0,owned:user.ownedGifts||[],equipped:user.equippedGifts||[],admin:!!user.admin})}
  if(req.method==='POST'&&u.pathname==='/api/gifts/admin/create-collectible'){
