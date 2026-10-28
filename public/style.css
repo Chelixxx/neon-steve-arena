@@ -1292,3 +1292,86 @@ body{overflow:hidden}
 @media(max-width:880px){.gift-upgrader-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:580px){.gift-upgrader-shell{padding:12px 5px 24px}.gift-upgrader-hero{padding:13px;gap:10px;border-radius:16px}.gift-upgrader-mark{flex-basis:45px;width:45px;height:45px;font-size:34px}.gift-upgrader-hero h2{font-size:21px}.gift-upgrader-hero p{font-size:10px}.gift-upgrader-refresh{flex-basis:34px;width:34px;height:34px}.gift-upgrader-picks{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);gap:5px}.gift-upgrader-selected-card{padding:8px 5px 10px}.gift-upgrader-selected-art{height:90px}.gift-upgrader-selected-label{font-size:8px}.gift-upgrader-selected-name{font-size:11px}.gift-upgrader-selected-rarity{font-size:9px}.gift-upgrader-selected-price{font-size:10px}.gift-upgrader-vs{font-size:19px}.gift-upgrader-gauge{width:min(100%,275px)}.gift-upgrader-gauge-pointer{transform-origin:50% 137.5px}.gift-upgrader-gauge-inner>strong{font-size:44px}.gift-upgrader-items{grid-template-columns:1fr}.gift-upgrader-item{padding:9px}.gift-upgrader-item-art{flex-basis:44px;width:44px;height:44px}.gift-upgrader-section-heading h3{font-size:16px}.gift-upgrader-stage{padding:11px}.gift-upgrader-gauge-wrap{margin-top:22px}.gift-upgrader-attempt{font-size:11px!important}.gift-upgrader-footer{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.gift-upgrader-result,.gift-upgrader-shell.is-upgrading .gift-upgrader-gauge{animation:none!important}}
+
+
+/* VOLTRA navigation cleanup: four equal destinations, account actions live in account */
+.bottom-nav{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  align-items:center;
+  gap:7px;
+  margin-top:auto!important;
+  margin-bottom:0!important;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  flex:0 0 auto;
+  border:0;
+  border-top:1px solid color-mix(in srgb,var(--line) 85%,transparent);
+  border-radius:0;
+  background:color-mix(in srgb,var(--panel) 96%,transparent);
+  box-shadow:0 -5px 18px #00000010;
+}
+.bottom-nav-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  width:100%;
+  min-width:0;
+  height:43px;
+  padding:0 5px;
+  border:1px solid transparent;
+  border-radius:12px;
+  background:transparent;
+  color:var(--muted);
+  font-size:18px;
+  line-height:1;
+  transition:background .16s ease,color .16s ease,border-color .16s ease;
+}
+.bottom-nav-btn span{display:grid;place-items:center;flex:none}
+.bottom-nav-btn small{font-size:11px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bottom-nav-btn:hover{transform:none;background:color-mix(in srgb,var(--accent) 8%,var(--panel));border-color:color-mix(in srgb,var(--accent) 18%,var(--line));color:var(--text)}
+.bottom-nav-btn.active{transform:none;background:color-mix(in srgb,var(--accent) 15%,var(--panel));border-color:color-mix(in srgb,var(--accent) 25%,var(--line));color:var(--text);box-shadow:none}
+.bottom-nav-btn.active span{filter:none}
+.side-bottom{order:0;flex-shrink:0}
+.chat-list{min-height:0}
+.corner-friends-btn{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:25;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:44px;
+  padding:9px 15px;
+  border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));
+  border-radius:999px;
+  background:linear-gradient(125deg,var(--accent),color-mix(in srgb,var(--cyan) 65%,var(--accent)));
+  color:#11111b;
+  box-shadow:0 8px 25px #0003;
+  font-size:12px;
+  font-weight:850;
+  letter-spacing:.01em;
+  cursor:pointer;
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+.corner-friends-btn:hover{transform:translateY(-2px);box-shadow:0 11px 30px #0004}
+.corner-friends-icon{display:grid;place-items:center;font-size:18px}
+.app.chat-open .corner-friends-btn{display:none!important}
+.account-session-actions{display:grid;gap:8px;margin-top:18px;padding:14px;border:1px solid color-mix(in srgb,var(--line) 80%,transparent);border-radius:14px;background:color-mix(in srgb,var(--panel2) 65%,transparent)}
+.account-session-actions>p{margin:0;color:var(--muted);font-size:11px}
+.account-session-actions .payment-requests-nav{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0;border-radius:10px;padding:10px}
+.account-session-actions .payment-requests-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;min-height:20px;border-radius:10px;padding:0 6px;background:color-mix(in srgb,var(--accent) 22%,var(--panel));color:var(--text);font-size:10px}
+.profile-logout-btn{width:100%;min-height:42px;padding:11px 13px;border:1px solid color-mix(in srgb,#ff7f9b 25%,var(--line));border-radius:10px;background:color-mix(in srgb,#ff7f9b 6%,var(--panel));color:color-mix(in srgb,#ff9eb3 85%,var(--text));font-size:12px;text-align:center}
+.profile-logout-btn:hover{background:color-mix(in srgb,#ff7f9b 13%,var(--panel));border-color:color-mix(in srgb,#ff7f9b 45%,var(--line))}
+@media(max-width:700px){
+ .bottom-nav{position:sticky;bottom:0;z-index:8;width:100%;margin:0!important;padding:8px 8px calc(8px + env(safe-area-inset-bottom));grid-template-columns:repeat(4,minmax(0,1fr))!important;border-radius:0;border-top:1px solid var(--line)}
+ .bottom-nav-btn{height:43px;gap:5px;font-size:17px}
+ .bottom-nav-btn small{font-size:10px}
+ .corner-friends-btn{right:14px;bottom:calc(67px + env(safe-area-inset-bottom));min-height:42px;padding:8px 13px}
+ .account-session-actions{padding:12px;margin-top:15px}
+}
+@media(min-width:701px){
+ .bottom-nav{grid-template-columns:repeat(4,minmax(0,1fr))!important;padding:8px 9px}
+}
