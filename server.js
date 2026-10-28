@@ -46,6 +46,7 @@ for(const gift of GIFT_CATALOG)gift.price=clampOrdinaryGiftPrice(gift.price);
 
 if(!Array.isArray(store.giftInstances))store.giftInstances=[];
 if(!store.dropGame||typeof store.dropGame!=='object'||Array.isArray(store.dropGame))store.dropGame={};
+if(!store.dropSettings||typeof store.dropSettings!=='object'||Array.isArray(store.dropSettings))store.dropSettings={};
 if(!Array.isArray(store.giftTransactions))store.giftTransactions=[];
 if(!Array.isArray(store.giftResaleListings))store.giftResaleListings=[];
 if(!Array.isArray(store.giftResaleOffers))store.giftResaleOffers=[];
@@ -600,10 +601,23 @@ function createDropCosmetic(rarity){
  const pool=DROP_ITEMS[rarity]||DROP_ITEMS.common,item=pool[crypto.randomInt(pool.length)];
  return {instanceId:crypto.randomUUID(),cosmeticId:item.id,name:item.name,emoji:item.emoji,rarity,obtainedAt:Date.now()};
 }
+function activeDropWeights(caseDef){
+ const custom=store.dropSettings?.cases?.[caseDef.id];
+ if(!custom||typeof custom!=='object')return {...caseDef.weights};
+ const weights={};let sum=0;
+ for(const rarity of DROP_RARITIES){weights[rarity]=Math.max(0,Math.min(10000,Math.round(Number(custom[rarity])||0)));sum+=weights[rarity]}
+ return sum===10000?weights:{...caseDef.weights};
+}
+function activeDropUpgradeOdds(){
+ const custom=store.dropSettings?.upgradeOdds;
+ const out={...DROP_UPGRADE_CHANCES};
+ if(custom&&typeof custom==='object')for(const rarity of DROP_RARITIES)if(Number.isFinite(Number(custom[rarity])))out[rarity]=Math.max(0,Math.min(100,Math.round(Number(custom[rarity])));
+ return out;
+}
 function publicDropState(uid){
  const st=dropStateFor(uid),now=Date.now();
- const cases=Object.values(DROP_CASES).map(c=>({id:c.id,name:c.name,emoji:c.emoji,description:c.description,cooldownMs:c.cooldownMs,remainingMs:Math.max(0,(Number(st.caseOpenedAt[c.id])||0)+c.cooldownMs-now),odds:{...c.weights}}));
- return {cases,inventory:st.items.slice(-100),totalOpened:st.totalOpened,upgradesAttempted:st.upgradesAttempted,upgradesWon:st.upgradesWon,upgradeOdds:{...DROP_UPGRADE_CHANCES},rarityLabels:{...DROP_RARITY_LABELS},rarityEmojis:{...DROP_RARITY_EMOJIS},nextRarity:{...DROP_NEXT_RARITY},notice:'Бесплатные косметические предметы. Их нельзя продать, передать, обменять на подарки/CAT или конвертировать в Вольтриксы.'};
+ const cases=Object.values(DROP_CASES).map(c=>({id:c.id,name:c.name,emoji:c.emoji,description:c.description,cooldownMs:c.cooldownMs,remainingMs:Math.max(0,(Number(st.caseOpenedAt[c.id])||0)+c.cooldownMs-now),odds:activeDropWeights(c)}));
+ return {cases,inventory:st.items.slice(-100),totalOpened:st.totalOpened,upgradesAttempted:st.upgradesAttempted,upgradesWon:st.upgradesWon,upgradeOdds:activeDropUpgradeOdds(),canConfigure:!!userById(uid)?.admin,rarityLabels:{...DROP_RARITY_LABELS},rarityEmojis:{...DROP_RARITY_EMOJIS},nextRarity:{...DROP_NEXT_RARITY},notice:'Бесплатные косметические предметы. Их нельзя продать, передать, обменять на подарки/CAT или конвертировать в Вольтриксы.'};
 }
 
 async function sendPush(uid,payload){const list=store.pushSubscriptions?.[uid];if(!Array.isArray(list)||!list.length)return;await Promise.all(list.map(async sub=>{try{await webpush.sendNotification(sub,JSON.stringify(payload),{TTL:90,urgency:'high'})}catch(e){if(e.statusCode===404||e.statusCode===410){store.pushSubscriptions[uid]=(store.pushSubscriptions[uid]||[]).filter(x=>x.endpoint!==sub.endpoint);save()}else console.error('Push delivery failed:',e.statusCode||'',e.message||e)}}))}
@@ -965,10 +979,27 @@ const server=http.createServer(async(req,res)=>{
    const st=dropStateFor(uid),now=Date.now(),last=Number(st.caseOpenedAt[caseDef.id])||0,remaining=Math.max(0,last+caseDef.cooldownMs-now);
    if(remaining>0)return json(res,429,{error:'Этот бесплатный кейс ещё восстанавливается',remainingMs:remaining});
    if(st.items.length>=100)return json(res,409,{error:'Коллекция полная (100 предметов). Улучши несколько предметов, чтобы освободить место.'});
-   const rarity=rollDropRarity(caseDef.weights),item=createDropCosmetic(rarity);
+   const weights=activeDropWeights(caseDef),rarity=rollDropRarity(weights),item=createDropCosmetic(rarity);
    st.items.push(item);st.caseOpenedAt[caseDef.id]=now;st.totalOpened++;save();
-   return json(res,200,{ok:true,case:{id:caseDef.id,name:caseDef.name},item,odds:{...caseDef.weights},state:publicDropState(uid)});
+   return json(res,200,{ok:true,case:{id:caseDef.id,name:caseDef.name},item,odds:weights,state:publicDropState(uid)});
   }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось открыть бесплатный кейс'})}
+ }
+ if(u.pathname==='/api/drop/settings'&&req.method==='POST'){
+  const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
+  if(!isAdmin(userById(uid)))return json(res,403,{error:'Настраивать шансы может только администратор'});
+  try{
+   const b=await parseBody(req,10000),nextCases={...(store.dropSettings.cases||{})};
+   if(b.cases&&typeof b.cases==='object')for(const caseDef of Object.values(DROP_CASES)){
+    if(!b.cases[caseDef.id])continue;
+    const input=b.cases[caseDef.id],weights={};let total=0;
+    for(const rarity of DROP_RARITIES){const pct=Number(input[rarity]);if(!Number.isFinite(pct)||pct<0||pct>100)return json(res,400,{error:'Шанс каждой редкости должен быть от 0 до 100%'});weights[rarity]=Math.round(pct*100);total+=weights[rarity]}
+    if(total!==10000)return json(res,400,{error:'Шансы для каждого кейса должны суммироваться ровно до 100%'});nextCases[caseDef.id]=weights;
+   }
+   const nextUpgrade={...activeDropUpgradeOdds()};
+   if(b.upgradeOdds&&typeof b.upgradeOdds==='object')for(const rarity of DROP_RARITIES){const pct=Number(b.upgradeOdds[rarity]);if(!Number.isFinite(pct)||pct<0||pct>100)return json(res,400,{error:'Шанс апгрейда должен быть от 0 до 100%'});nextUpgrade[rarity]=Math.round(pct)}
+   store.dropSettings.cases=nextCases;store.dropSettings.upgradeOdds=nextUpgrade;save();
+   return json(res,200,{ok:true,message:'Шансы сохранены',state:publicDropState(uid)});
+  }catch(e){return json(res,e.status||400,{error:e.message||'Не удалось сохранить шансы'})}
  }
  if(u.pathname==='/api/drop/discard'&&req.method==='POST'){
   const uid=verifyToken(cookieToken(req));if(!uid)return json(res,401,{error:'Сначала войди в VOLTRA'});
@@ -985,7 +1016,7 @@ const server=http.createServer(async(req,res)=>{
    const b=await parseBody(req,4000),st=dropStateFor(uid),now=Date.now(),idx=st.items.findIndex(x=>x.instanceId===String(b.instanceId||''));
    if(idx<0)return json(res,404,{error:'Косметический предмет не найден'});
    if(now-st.lastUpgradeAt<1800)return json(res,429,{error:'Подожди секунду перед следующей попыткой'});
-   const item=st.items[idx],next=DROP_NEXT_RARITY[item.rarity],chance=Number(DROP_UPGRADE_CHANCES[item.rarity])||0;
+   const item=st.items[idx],next=DROP_NEXT_RARITY[item.rarity],chance=Number(activeDropUpgradeOdds()[item.rarity])||0;
    if(!next||chance<=0)return json(res,400,{error:'Этот уровень уже максимальный'});
    st.lastUpgradeAt=now;st.upgradesAttempted++;
    const won=crypto.randomInt(10000)<chance*100;
