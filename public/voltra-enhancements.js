@@ -6,7 +6,6 @@ const SERIES=[
  {key:'royal-crown',title:'Royal Crown',emoji:'👑',tagline:'Королевские регалии',c:['#ffd86b','#b678ff','#fff1b5','#57309a']},
  {key:'ocean-pearl',title:'Ocean Pearl',emoji:'🦪',tagline:'Сокровища глубин',c:['#69ddff','#5a9cff','#e3ffff','#174770']},
  {key:'cyber-core',title:'Cyber Core',emoji:'🔮',tagline:'Квантовые ядра VOLTRA',c:['#58ffd7','#38a8ff','#d5fff6','#133b5c']},
- {key:'sakura-bloom',title:'Sakura Bloom',emoji:'🌸',tagline:'Цветущая сакура',c:['#ff8dca','#ff5c90','#ffe9f6','#853b87']},
  {key:'golden-fortune',title:'Golden Fortune',emoji:'🪙',tagline:'Артефакты удачи',c:['#ffdf73','#d88e28','#fff6c7','#75401b']}
 ];
 const RARITIES=['Обычный','Необычный','Редкий','Эпический','Легендарный','Мифический','Космический'];
