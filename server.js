@@ -795,7 +795,7 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='POST'&&['/api/register','/api/login'].includes(u.pathname)){
   try{const b=await parseBody(req),name=cleanName(b.name),password=String(b.password||'');
    if(name.length<3||name.length>24)return json(res,400,{error:'Ник должен содержать от 3 до 24 символов'});
-   if(password.length<8||password.length>200)return json(res,400,{error:'Пароль должен быть не короче 8 символов'});
+   if(password.length>200)return json(res,400,{error:'Пароль слишком длинный'});if(u.pathname==='/api/register'&&password.length<8)return json(res,400,{error:'Пароль должен быть не короче 8 символов'});if(u.pathname==='/api/login'&&password.length<1)return json(res,400,{error:'Укажи пароль'});
    let user=userByName(name);
    if(u.pathname==='/api/register'){
      if(user)return json(res,409,{error:'Этот ник уже занят'});
