@@ -176,31 +176,52 @@ async function sendSelectedGift(){
  if(!sendRecipientId&&!username){$('sendGiftStatus').textContent='Укажи ник получателя';return}
  btn.disabled=true;
  try{const body=sendRecipientId?{userId:sendRecipientId,giftId:sendGift.id,variant:sendVariant,message:note}:{username,giftId:sendGift.id,variant:sendVariant,message:note};
- const r=await fetch('/api/gifts/send',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify(body)}),d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось отправить подарок');
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);let r,d;try{r=await fetch('/api/gifts/send',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:controller.signal});d=await r.json()}finally{clearTimeout(timeout)}if(!r.ok)throw new Error(d.error||'Не удалось отправить подарок');
  if(d.message&&window.pulseInjectMessage)window.pulseInjectMessage(d.message);
  window.dispatchEvent(new CustomEvent('pulsePulsesUpdated',{detail:{pulses:d.balance}}));window.dispatchEvent(new Event('pulseGiftInventoryUpdated'));
  $('sendGiftStatus').textContent='Подарок отправлен пользователю '+d.recipient+' ✓';$('sendGiftModal').classList.add('hidden');toast('Подарок отправлен 🎁')
- }catch(e){$('sendGiftStatus').textContent=e.message;toast(e.message)}finally{btn.disabled=false}
+ }catch(e){const message=e?.name==='AbortError'?'Сервер не ответил за 15 секунд. Проверь соединение и попробуй ещё раз.':(e.message||'Не удалось отправить подарок');$('sendGiftStatus').textContent=message;toast(message)}finally{btn.disabled=false}
 }
 function toast(s){const t=$('toast');if(t){t.textContent=s;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}}
 window.pulseGiftInspectionData=id=>{const g=giftInfo(id);if(!g)return null;const art=artForGift(g),base=String(g.baseGiftId||g.id);return {id:g.id,name:String(g.name||'').replace(/\s+1$/,''),emoji:g.emoji,rarity:g.rarity,material:g.material||'',pattern:g.pattern||'',kind:/^halloween-pumpkin-/.test(base)?'pumpkin':/^voltra-bat-/.test(base)?'bat':String(base).startsWith('voltra-chocolate-')?'chocolate':String(base).startsWith('voltra-lightning-')?'lightning':'sticker',art,accent:(pal[g.skin]||pal.classic)[0]}};
 
 async function openGiftResaleMarket(){
  let modal=$('giftResaleMarketModal');
- if(!modal){modal=document.createElement('div');modal.id='giftResaleMarketModal';modal.className='gift-variant-backdrop';modal.innerHTML='<section class="gift-variant-panel gift-market-panel"><header><div><small>VOLTRA MARKET</small><h2>🏷️ Маркет подарков</h2><p>Покупай подарки у других пользователей по фиксированной цене.</p></div><button type="button" id="closeGiftResaleMarket">×</button></header><div id="giftResaleMarketStatus" class="muted"></div><div id="giftResaleListings" class="gift-resale-listings"></div></section>';document.body.appendChild(modal);$('closeGiftResaleMarket').onclick=()=>modal.classList.remove('show')}
+ if(!modal){
+  modal=document.createElement('div');modal.id='giftResaleMarketModal';modal.className='gift-variant-backdrop';
+  modal.innerHTML='<section class="gift-variant-panel gift-market-panel"><header><div><small>VOLTRA MARKET</small><h2>🏷️ Маркет подарков</h2><p>Покупай подарки у других пользователей по фиксированной цене.</p></div><button type="button" id="closeGiftResaleMarket">×</button></header><div id="giftResaleMarketStatus" class="muted"></div><div id="giftResaleListings" class="gift-resale-listings"></div></section>';
+  document.body.appendChild(modal);
+  $('closeGiftResaleMarket').onclick=()=>modal.classList.remove('show');
+ }
  modal.classList.add('show');
- const status=$('giftResaleMarketStatus'),root=$('giftResaleListings');status.textContent='Загружаю лоты…';
+ const status=$('giftResaleMarketStatus'),root=$('giftResaleListings');
+ if(!status||!root)return;
+ status.textContent='Загружаю лоты…';root.innerHTML='';
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
  try{
-  const r=await fetch('/api/gifts/resale',{credentials:'same-origin'}),d=await r.json();
-  if(!r.ok)throw new Error(d.error||'Не удалось открыть маркет');
-  const list=d.listings||[];
+  let response,data;
+  try{
+   response=await fetch('/api/gifts/resale',{credentials:'same-origin',cache:'no-store',signal:controller.signal});
+   const raw=await response.text();
+   try{data=JSON.parse(raw)}catch{throw new Error('Сервер вернул некорректный ответ')}
+  }finally{clearTimeout(timeout)}
+  if(!response.ok)throw new Error(data.error||'Не удалось открыть маркет');
+  const list=Array.isArray(data.listings)?data.listings:[];
   status.textContent=list.length?'Активных лотов: '+list.length:'Пока нет активных лотов. Чтобы продать подарок, открой «Мою коллекцию» и нажми «Продать / выставить».';
-  root.innerHTML=list.map(l=>{
-   const art=artForGift({...l,id:l.baseGiftId||l.giftId,baseGiftId:l.baseGiftId||'',giftId:l.giftId,name:l.giftName,emoji:l.emoji});
-   const prices=(l.priceVlt?'<button type="button" data-resale-buy="'+esc(l.id)+'" data-resale-currency="vlt">Купить за '+Number(l.priceVlt).toLocaleString('ru-RU')+' ϟ</button>':'')+(l.priceCat?'<button type="button" class="secondary" data-resale-buy="'+esc(l.id)+'" data-resale-currency="cat">Купить за '+Number(l.priceCat).toLocaleString('ru-RU')+' CAT</button>':'');
-   return '<article class="gift-resale-card"><div class="gift-resale-art">'+art+'</div><div class="gift-resale-info"><b>'+esc(l.giftName||'Подарок')+'</b><small>Продавец: '+esc(l.sellerName||'Пользователь')+'</small><small>'+esc(l.material||'Особое оформление')+' · вариант #'+String(l.variant||1).padStart(2,'0')+'</small></div><div class="gift-resale-actions">'+(l.mine?'<span>Твой лот</span><button type="button" class="secondary" data-resale-cancel="'+esc(l.id)+'">Снять с продажи</button>':prices)+'</div></article>';
-  }).join('');
- }catch(e){status.textContent=e.message;root.innerHTML=''}
+  const cards=[];
+  for(const l of list){
+   try{
+    const art=artForGift({...l,id:l.baseGiftId||l.giftId,baseGiftId:l.baseGiftId||'',giftId:l.giftId,name:l.giftName,emoji:l.emoji});
+    const prices=(l.priceVlt?'<button type="button" data-resale-buy="'+esc(l.id)+'" data-resale-currency="vlt">Купить за '+Number(l.priceVlt).toLocaleString('ru-RU')+' ϟ</button>':'')+(l.priceCat?'<button type="button" class="secondary" data-resale-buy="'+esc(l.id)+'" data-resale-currency="cat">Купить за '+Number(l.priceCat).toLocaleString('ru-RU')+' CAT</button>':'');
+    cards.push('<article class="gift-resale-card"><div class="gift-resale-art">'+art+'</div><div class="gift-resale-info"><b>'+esc(l.giftName||'Подарок')+'</b><small>Продавец: '+esc(l.sellerName||'Пользователь')+'</small><small>'+esc(l.material||'Особое оформление')+' · вариант #'+String(l.variant||1).padStart(2,'0')+'</small></div><div class="gift-resale-actions">'+(l.mine?'<span>Твой лот</span><button type="button" class="secondary" data-resale-cancel="'+esc(l.id)+'">Снять с продажи</button>':prices)+'</div></article>');
+   }catch(error){console.warn('VOLTRA resale listing render failed:',error)}
+  }
+  root.innerHTML=cards.join('');
+  if(list.length&&!cards.length)status.textContent='Лоты загружены, но их оформление не удалось отобразить. Обнови маркет.';
+ }catch(error){
+  status.textContent=error?.name==='AbortError'?'Маркет не ответил за 8 секунд. Попробуй ещё раз.':(error.message||'Не удалось загрузить маркет');
+  root.innerHTML='<button type="button" class="secondary" id="giftResaleRetry">↻ Повторить загрузку</button>';
+ }finally{clearTimeout(timeout)}
 }
 async function buyResaleListing(id,currency){
  try{const r=await fetch('/api/gifts/resale/buy',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({listingId:id,currency})}),d=await r.json();if(!r.ok)throw new Error(d.error||'Не удалось купить подарок');toast('Подарок куплен у '+d.seller+' 🎁');window.dispatchEvent(new CustomEvent('pulsePulsesUpdated',{detail:{pulses:d.balance,catCoins:d.catCoins}}));window.dispatchEvent(new Event('pulseGiftInventoryUpdated'));await openGiftResaleMarket()}catch(e){toast(e.message)}
@@ -215,7 +236,7 @@ function onCapture(e){
  const pumpkinTile=t.closest('#pumpkinGrid [data-pumpkin]');if(pumpkinTile){const id=pumpkinTile.dataset.pumpkin;setTimeout(()=>enhancePumpkinCollections(id),60);return}
  const marketBuy=t.closest('[data-resale-buy]');if(marketBuy){e.preventDefault();e.stopImmediatePropagation();void buyResaleListing(marketBuy.dataset.resaleBuy,marketBuy.dataset.resaleCurrency);return}const marketCancel=t.closest('[data-resale-cancel]');if(marketCancel){e.preventDefault();e.stopImmediatePropagation();void cancelResaleListing(marketCancel.dataset.resaleCancel);return}
  const inspect=t.closest('[data-gift-inspect]');if(inspect){const card=inspect.closest('.gift-card'),action=card?.querySelector('[data-gift]')||card?.querySelector('[data-gift-sell]')||card?.querySelector('[data-gift-send]'),id=action?.dataset.gift||action?.dataset.giftSell||action?.dataset.giftSend;if(id)inspect.dataset.giftId=id;return}
- if(t.closest('#giftMarketOpen')){e.preventDefault();e.stopImmediatePropagation();void openGiftResaleMarket();return}
+ if(t.closest('#giftResaleRetry')){e.preventDefault();e.stopImmediatePropagation();void openGiftResaleMarket();return}if(t.closest('#giftMarketOpen')){e.preventDefault();e.stopImmediatePropagation();void openGiftResaleMarket();return}
  if(t.closest('#openGifts')){void reload();return}
  const variantBtn=t.closest('#sendGiftVariantBtn');if(variantBtn){e.preventDefault();e.stopImmediatePropagation();if(sendGift)openVariantModal(sendGift,'update-send',sendVariant);return}
  const confirm=t.closest('#confirmSendGift');if(confirm){e.preventDefault();e.stopImmediatePropagation();void sendSelectedGift();return}
