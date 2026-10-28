@@ -29,7 +29,42 @@ function choosePulseSound(inputId,key){const input=$(inputId);if(!input)return;i
 function clearPulseSound(key){const type=key==='pulseCallSound'?'call':'notification';if(pulseSoundUrls[type])URL.revokeObjectURL(pulseSoundUrls[type]);delete pulseSoundUrls[type];deletePulseSound(key).catch(()=>{});localStorage.removeItem(key);updateSoundStatuses();toast('Возвращён стандартный звук')}
 initPulseSounds();
 
-function send(m){if(ws&&ws.readyState===1)ws.send(JSON.stringify(m))}
+const pendingSocketQueue=[];
+function send(m){
+ if(!m||typeof m.t!=='string')return false;
+ if(ws&&ws.readyState===1){
+  try{ws.send(JSON.stringify(m));return true}catch(error){console.warn('VOLTRA send failed:',error)}
+ }
+ if(!['message','history','read'].includes(m.t))return false;
+ if(m.t==='history'){
+  const key=m.channelId?'channel:'+m.channelId:(m.to?'dm:'+m.to:'global');
+  const existing=pendingSocketQueue.findIndex(item=>item.message.t==='history'&&(item.message.channelId?'channel:'+item.message.channelId:(item.message.to?'dm:'+item.message.to:'global'))===key);
+  if(existing>=0)pendingSocketQueue.splice(existing,1);
+ }
+ if(m.t==='read'){
+  const ids=new Set(Array.isArray(m.ids)?m.ids:[]);
+  for(let i=pendingSocketQueue.length-1;i>=0;i--){
+   const item=pendingSocketQueue[i];
+   if(item.message.t==='read'){for(const id of item.message.ids||[])ids.add(id);pendingSocketQueue.splice(i,1)}
+  }
+  m={...m,ids:[...ids].slice(-300)};
+ }
+ if(m.t==='message'&&pendingSocketQueue.filter(item=>item.message.t==='message').length>=100){
+  toast('Очередь сообщений заполнена. Дождись подключения и повтори отправку.');
+  return false;
+ }
+ pendingSocketQueue.push({message:m,queuedAt:Date.now()});
+ if(m.t==='message')toast('Соединение восстанавливается — сообщение поставлено в очередь 📤');
+ return false;
+}
+function flushPendingSocketQueue(){
+ if(!ws||ws.readyState!==1)return;
+ while(pendingSocketQueue.length&&ws&&ws.readyState===1){
+  const item=pendingSocketQueue.shift();
+  try{ws.send(JSON.stringify(item.message))}
+  catch(error){pendingSocketQueue.unshift(item);console.warn('VOLTRA queue flush failed:',error);break}
+ }
+}
 function isDM(){return activeId!==globalKey&&activeId!=='cookie-bot'&&!String(activeId||'').startsWith('channel:')}function isChannel(){return String(activeId||'').startsWith('channel:')}function activeChannelId(){return isChannel()?activeId.slice(8):null}
 function currentKey(){return activeId===globalKey?globalKey:(activeId==='favorites'?'favorites':(isChannel()?channelKey(activeChannelId()):dmKey(activeId)))}
 function readFavorites(){try{const v=JSON.parse(localStorage.getItem('pulseFavoritesChat')||'[]');return Array.isArray(v)?v:[]}catch{return []}}
@@ -288,7 +323,7 @@ function connect(){
  if(ws&&(ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING))return;
  $('loginError').textContent='Подключаемся…';/* Keep the app shell visible; don't block entry with a full-screen loader. */
  const proto=location.protocol==='https:'?'wss:':'ws:';let wsUrl=proto+'//'+location.host+'/ws';if(wsAuthTicket){wsUrl+='?ticket='+encodeURIComponent(wsAuthTicket);wsAuthTicket=''}ws=new WebSocket(wsUrl);
- ws.onopen=()=>{reconnectDelay=1000;manualDisconnect=false;$('connection').textContent='подключено';send({t:'join',name:myName})};
+ ws.onopen=()=>{reconnectDelay=1000;manualDisconnect=false;$('connection').textContent='подключено';send({t:'join',name:myName});flushPendingSocketQueue()};
  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}handle(m)};
  ws.onerror=()=>{if(!myId&&!authRestoreInProgress){finishAuthSplash();$('login')?.classList.remove('hidden');$('loginError').textContent='Не удалось подключиться. Проверь интернет и попробуй снова.'}};
  ws.onclose=()=>{$('connection').textContent='переподключение…';if(!myId&&!authRestoreInProgress){finishAuthSplash();$('login')?.classList.remove('hidden');if(!$('loginError')?.textContent)$('loginError').textContent='Подключение не завершилось. Нажми «Войти» ещё раз.'}if(myId&&!manualDisconnect){if(!reconnectNoticeShown){toast('Соединение прервалось — восстанавливаем…');reconnectNoticeShown=true}clearTimeout(reconnectTimer);const delay=reconnectDelay;reconnectDelay=Math.min(15000,Math.round(reconnectDelay*1.8));reconnectTimer=setTimeout(()=>{if(myId&&!manualDisconnect&&(!ws||ws.readyState===WebSocket.CLOSED||ws.readyState===WebSocket.CLOSING)){if(document.visibilityState==='visible'&&navigator.onLine!==false)connect()}},delay)}};
