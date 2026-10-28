@@ -1422,3 +1422,126 @@ body{overflow:hidden}
 @media(prefers-reduced-motion:reduce){
  .bottom-nav-btn>small{transition:none}
 }
+
+
+/* VOLTRA motion polish: responsive micro-interactions across the messenger */
+:root{
+ --voltra-motion-fast:160ms;
+ --voltra-motion-base:240ms;
+ --voltra-motion-spring:cubic-bezier(.2,.8,.2,1);
+ --voltra-motion-pop:cubic-bezier(.18,.85,.32,1.25);
+}
+@keyframes voltraSurfaceIn{from{opacity:0;transform:translateY(9px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes voltraSheetIn{from{opacity:0;transform:translateY(16px) scale(.975);filter:blur(3px)}to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
+@keyframes voltraBackdropIn{from{opacity:0}to{opacity:1}}
+@keyframes voltraSoftPop{0%{transform:scale(.88);opacity:.3}68%{transform:scale(1.045);opacity:1}100%{transform:scale(1)}}
+@keyframes voltraMessageEnter{0%{opacity:0;transform:translateY(9px) scale(.985)}70%{opacity:1;transform:translateY(-1px) scale(1.002)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes voltraIconBounce{0%,100%{transform:translateY(0) scale(1)}38%{transform:translateY(-3px) scale(1.09)}70%{transform:translateY(1px) scale(.98)}}
+@keyframes voltraGlowPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 0%,transparent)}50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 10%,transparent)}}
+@keyframes voltraBadgePop{0%{transform:scale(.65);opacity:0}75%{transform:scale(1.13);opacity:1}100%{transform:scale(1)}}
+@keyframes voltraToastEnter{0%{opacity:0;transform:translate(-50%,10px) scale(.96)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes voltraShinePass{0%{transform:translateX(-140%) skewX(-16deg);opacity:0}18%{opacity:.7}55%,100%{transform:translateX(240%) skewX(-16deg);opacity:0}}
+@keyframes voltraStatusBreath{0%,100%{opacity:.75;transform:scale(.9)}50%{opacity:1;transform:scale(1.14)}}
+@keyframes voltraFriendNudge{0%,100%{transform:translateY(0)}40%{transform:translateY(-3px)}70%{transform:translateY(1px)}}
+
+/* Panels and dialogs */
+.modal:not(.hidden){animation:voltraBackdropIn var(--voltra-motion-base) ease both}
+.modal:not(.hidden)>.modal-card{transform-origin:center;animation:voltraSheetIn 300ms var(--voltra-motion-spring) both}
+.modal:not(.hidden)>.modal-card>*{animation:voltraSurfaceIn 260ms var(--voltra-motion-spring) both}
+.modal:not(.hidden)>.modal-card>:nth-child(2){animation-delay:25ms}
+.modal:not(.hidden)>.modal-card>:nth-child(3){animation-delay:45ms}
+.modal:not(.hidden)>.modal-card>:nth-child(4){animation-delay:65ms}
+.news-announcement:not(.hidden) .news-announcement-card{animation:voltraSheetIn 420ms var(--voltra-motion-spring) both}
+.profile-panel-tab,.tab,.top-nav-btn,.bottom-nav-btn,.rail-btn,.icon-btn,.tool-btn,
+.side-head button,.chat-item,.secondary,.primary,.auth-switch,.market-card,
+.profile-tip-card,.profile-task-card,.gift-card,.gift-item-card{
+ transition:color var(--voltra-motion-fast) ease,background var(--voltra-motion-base) ease,
+ border-color var(--voltra-motion-base) ease,box-shadow var(--voltra-motion-base) ease,
+ transform var(--voltra-motion-fast) var(--voltra-motion-spring),filter var(--voltra-motion-base) ease;
+}
+button:not(:disabled){-webkit-tap-highlight-color:transparent}
+button:not(:disabled):active{transform:scale(.965)}
+button:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 80%,white);outline-offset:3px}
+
+/* Buttons feel tactile without shifting their neighbors */
+.primary,.secondary,.icon-btn,.rail-btn,.tool-btn,.top-nav-btn,.bottom-nav-btn,.auth-switch{
+ position:relative;
+}
+.primary,.secondary{overflow:hidden}
+.primary:after,.secondary:after{
+ content:"";position:absolute;inset:0;pointer-events:none;
+ background:linear-gradient(105deg,transparent 28%,#ffffff2c 48%,transparent 66%);
+ transform:translateX(-140%);opacity:0;
+}
+.primary:hover:after,.secondary:hover:after{animation:voltraShinePass 650ms ease-out}
+.primary:hover:not(:disabled),.secondary:hover:not(:disabled){filter:brightness(1.07)}
+.primary:active:not(:disabled),.secondary:active:not(:disabled){filter:brightness(.96)}
+.icon-btn:hover,.rail-btn:hover{transform:translateY(-2px);box-shadow:0 5px 16px #0002}
+.icon-btn:hover svg,.rail-btn:hover svg{animation:voltraIconBounce 360ms var(--voltra-motion-spring)}
+.top-nav-btn:hover,.profile-panel-tab:hover{transform:translateY(-2px)}
+.top-nav-btn.active,.profile-panel-tab.active{animation:voltraSoftPop 260ms var(--voltra-motion-spring)}
+.bottom-nav-btn:hover>span,.bottom-nav-btn:focus-visible>span,.bottom-nav-btn.nav-label-peek>span{animation:voltraIconBounce 360ms var(--voltra-motion-spring)}
+.bottom-nav-btn.active>span{filter:drop-shadow(0 0 7px color-mix(in srgb,var(--accent) 35%,transparent))}
+.rail-btn.active{animation:voltraSoftPop 260ms var(--voltra-motion-spring)}
+
+/* Conversations, messages and list rows */
+.chat-item{transform-origin:left center}
+.chat-item:hover{transform:translateX(3px);border-color:color-mix(in srgb,var(--accent) 24%,var(--line));box-shadow:0 4px 17px #00000016}
+.chat-item.active{box-shadow:inset 3px 0 color-mix(in srgb,var(--accent) 75%,var(--cyan)),0 3px 15px #00000016}
+.chat-item .avatar{transition:transform 230ms var(--voltra-motion-pop),box-shadow 230ms ease}
+.chat-item:hover .avatar{transform:scale(1.055) rotate(-2deg);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 15%,transparent)}
+.message .bubble{transition:box-shadow 180ms ease,filter 180ms ease}
+.message.mine .bubble{box-shadow:0 3px 12px #00000012}
+.message .bubble:hover{filter:brightness(1.035)}
+.message .bubble a{transition:color 150ms ease,text-decoration-color 150ms ease}
+.message .bubble a:hover{color:var(--cyan)}
+.message-reaction-chip:hover,.message-reaction-options button:hover{transform:translateY(-2px) scale(1.035);background:color-mix(in srgb,var(--accent) 17%,var(--panel2));border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.message-reaction-chip:active,.message-reaction-options button:active{transform:scale(.94)}
+.message-reaction-picker{animation:voltraSoftPop 220ms var(--voltra-motion-spring) both}
+.chat-head .avatar{transition:transform 200ms var(--voltra-motion-pop),box-shadow 200ms ease}
+.chat-head .avatar:hover{transform:scale(1.06);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 13%,transparent)}
+.pinned-message-bar{transition:transform 180ms var(--voltra-motion-spring),border-color 180ms ease,background 180ms ease,box-shadow 180ms ease}
+.pinned-message-bar:hover{transform:translateY(-2px);box-shadow:0 8px 22px #0002}
+.pinned-message-bar:hover .pinned-bar-arrow{transform:translateX(3px)}
+.pinned-bar-arrow{transition:transform 180ms ease}
+
+/* Feedback, notifications and status indicators */
+.toast.show{animation:voltraToastEnter 240ms var(--voltra-motion-spring) both}
+.unread-badge,.payment-requests-count,.chat-item .unread-badge{animation:voltraBadgePop 280ms var(--voltra-motion-pop) both}
+.online-dot,.pulse-dot{animation:voltraStatusBreath 2.4s ease-in-out infinite}
+#connection{transition:color 220ms ease}
+.upload-progress-fill{transition:width 220ms var(--voltra-motion-spring)}
+input:focus-visible,textarea:focus-visible,select:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
+.me-row .avatar,.rail-profile{transition:transform 220ms var(--voltra-motion-pop),box-shadow 220ms ease}
+.me-row .avatar:hover,.rail-profile:hover{transform:translateY(-2px) rotate(-2deg);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 14%,transparent)}
+
+/* Floating friends action and small decoration */
+.corner-friends-btn{isolation:isolate;overflow:hidden;transition:transform 180ms var(--voltra-motion-spring),box-shadow 180ms ease,filter 180ms ease}
+.corner-friends-btn:before{content:"";position:absolute;z-index:-1;inset:-2px;border-radius:inherit;background:linear-gradient(100deg,transparent 12%,#ffffff38 46%,transparent 76%);transform:translateX(-130%)}
+.corner-friends-btn:hover:before,.corner-friends-btn:focus-visible:before{animation:voltraShinePass 680ms ease-out}
+.corner-friends-btn:hover{filter:brightness(1.06)}
+.corner-friends-btn:hover .corner-friends-icon{animation:voltraIconBounce 380ms var(--voltra-motion-spring)}
+.corner-friends-btn:active{transform:scale(.96)}
+.friends-count,.friend-badge{animation:voltraSoftPop 280ms var(--voltra-motion-pop) both}
+
+/* Cards and profile sections */
+.profile-tip-card,.profile-task-card,.market-card,.gift-card,.gift-item-card{transform-origin:center}
+.profile-tip-card:hover,.profile-task-card:hover,.market-card:hover,.gift-card:hover,.gift-item-card:hover{transform:translateY(-2px);box-shadow:0 9px 25px #0000001b}
+.market-card:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.profile-progress-track>span{background-size:200% 100%;animation:voltraProgressGlow 2.8s linear infinite}
+@keyframes voltraProgressGlow{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.modal-close{transition:transform 180ms var(--voltra-motion-pop),background 180ms ease,color 180ms ease}
+.modal-close:hover{transform:rotate(90deg) scale(1.08);background:color-mix(in srgb,var(--accent) 16%,var(--panel2));color:var(--text)}
+
+/* Keep animations responsive and honor accessibility preferences */
+@media(max-width:700px){
+ .chat-item:hover{transform:none;box-shadow:none}
+ .profile-tip-card:hover,.profile-task-card:hover,.market-card:hover,.gift-card:hover,.gift-item-card:hover{transform:none}
+ .modal:not(.hidden)>.modal-card{animation:voltraSheetIn 240ms ease-out both}
+ .bottom-nav-btn:active>span{animation:voltraIconBounce 280ms ease-out}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0ms!important}
+ .modal:not(.hidden),.modal:not(.hidden)>.modal-card,.modal:not(.hidden)>.modal-card>*,
+ .toast.show,.news-announcement:not(.hidden) .news-announcement-card{animation:none!important;filter:none!important}
+}
