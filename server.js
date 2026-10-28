@@ -611,7 +611,7 @@ function activeDropWeights(caseDef){
 function activeDropUpgradeOdds(){
  const custom=store.dropSettings?.upgradeOdds;
  const out={...DROP_UPGRADE_CHANCES};
- if(custom&&typeof custom==='object')for(const rarity of DROP_RARITIES)if(Number.isFinite(Number(custom[rarity])))out[rarity]=Math.max(0,Math.min(100,Math.round(Number(custom[rarity])));
+ if(custom&&typeof custom==='object')for(const rarity of DROP_RARITIES)if(Number.isFinite(Number(custom[rarity])))out[rarity]=Math.max(0,Math.min(100,Math.round(Number(custom[rarity]))));
  return out;
 }
 function publicDropState(uid){
