@@ -1780,3 +1780,193 @@ input[type=range]{accent-color:var(--accent);cursor:pointer}
  .modal-close,#settingsModal .modal-close,button[data-close],.call-close{transition:none!important}
  #settingsModal .settings-disclosure[open]>.settings-disclosure-body{animation:none}
 }
+
+
+/* VOLTRA Motion Pack III — richer ambient effects, polished settings and circular close controls */
+@keyframes voltraAuroraDrift3{0%{background-position:0% 0%,100% 10%,50% 100%}50%{background-position:100% 25%,0% 55%,70% 0%}100%{background-position:0% 0%,100% 10%,50% 100%}}
+@keyframes voltraGlassLine3{0%,100%{opacity:.22;transform:translateX(-70%)}50%{opacity:.7;transform:translateX(70%)}}
+@keyframes voltraCloseIn3{0%{opacity:0;transform:rotate(-85deg) scale(.55)}70%{opacity:1;transform:rotate(10deg) scale(1.08)}100%{opacity:1;transform:rotate(0) scale(1)}}
+@keyframes voltraCloseHalo3{0%,100%{box-shadow:0 5px 18px #0003,0 0 0 0 color-mix(in srgb,var(--accent) 0%,transparent),inset 0 1px #ffffff18}50%{box-shadow:0 7px 24px #0004,0 0 0 5px color-mix(in srgb,var(--accent) 10%,transparent),inset 0 1px #ffffff22}}
+@keyframes voltraSettingTile3{0%{opacity:0;transform:translateY(8px) scale(.985)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes voltraDisclosure3{0%{opacity:0;transform:translateY(-5px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes voltraRailSpark3{0%,100%{filter:drop-shadow(0 0 0 color-mix(in srgb,var(--accent) 0%,transparent));transform:rotate(0) scale(1)}50%{filter:drop-shadow(0 0 9px color-mix(in srgb,var(--cyan) 45%,transparent));transform:rotate(7deg) scale(1.06)}}
+@keyframes voltraAvatarAura3{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 0%,transparent)}50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 12%,transparent),0 0 20px color-mix(in srgb,var(--cyan) 8%,transparent)}}
+@keyframes voltraGiftPrism3{0%,100%{filter:drop-shadow(0 0 0 color-mix(in srgb,var(--accent) 0%,transparent))}50%{filter:drop-shadow(0 5px 14px color-mix(in srgb,var(--accent) 24%,transparent))}}
+@keyframes voltraTogglePop3{0%{transform:scale(.85)}70%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes voltraToastBreathe3{0%,100%{box-shadow:0 12px 35px #0004,0 0 0 0 color-mix(in srgb,var(--accent) 0%,transparent)}50%{box-shadow:0 15px 40px #0005,0 0 0 4px color-mix(in srgb,var(--accent) 7%,transparent)}}
+@keyframes voltraSearchSweep3{0%{background-position:180% 0}100%{background-position:-80% 0}}
+@keyframes voltraSettingsBackdrop3{from{backdrop-filter:blur(0);background-color:#05060c00}to{backdrop-filter:blur(17px);background-color:#05060cce}}
+@keyframes voltraModalGlow3{0%,100%{opacity:.65;transform:translate3d(0,0,0) scale(1)}50%{opacity:1;transform:translate3d(0,-5px,0) scale(1.025)}}
+
+/* Replace square/awkward X buttons with one consistent circular glass control. */
+.modal-close,#settingsModal .modal-close,button[data-close],.call-close,
+button[data-close-message-search],button[data-close-emoji-picker]{
+ display:grid!important;place-items:center!important;
+ width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;
+ padding:0!important;aspect-ratio:1/1!important;flex:none!important;
+ border:1px solid color-mix(in srgb,var(--accent) 42%,var(--line))!important;
+ border-radius:50%!important;
+ background:radial-gradient(circle at 28% 20%,color-mix(in srgb,var(--accent) 35%,var(--panel2)),color-mix(in srgb,var(--panel) 94%,#05050b))!important;
+ color:var(--text)!important;font-size:24px!important;font-weight:450!important;line-height:1!important;
+ box-shadow:0 5px 18px #0004,inset 0 1px #ffffff1c;
+ cursor:pointer;
+ transition:transform 230ms cubic-bezier(.18,.85,.32,1.25),background 200ms ease,border-color 200ms ease,box-shadow 200ms ease!important;
+}
+.modal-close,#settingsModal .modal-close,button[data-close]{position:absolute!important;float:none!important;right:14px!important;top:14px!important;z-index:20!important}
+.call-close{position:absolute!important;right:14px!important;top:14px!important;z-index:20!important}
+.modal:not(.hidden) .modal-close,.modal:not(.hidden) button[data-close],.call-overlay:not(.hidden) .call-close{animation:voltraCloseIn3 420ms cubic-bezier(.18,.85,.32,1.25) both}
+.modal-close:hover,#settingsModal .modal-close:hover,button[data-close]:hover,.call-close:hover,
+button[data-close-message-search]:hover,button[data-close-emoji-picker]:hover{
+ transform:rotate(90deg) scale(1.09)!important;
+ border-color:color-mix(in srgb,var(--accent) 73%,var(--cyan))!important;
+ background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 46%,var(--panel2)),color-mix(in srgb,var(--cyan) 22%,var(--panel)))!important;
+ box-shadow:0 8px 25px color-mix(in srgb,var(--accent) 22%,#000),0 0 0 5px color-mix(in srgb,var(--accent) 8%,transparent),inset 0 1px #ffffff25;
+}
+.modal-close:active,#settingsModal .modal-close:active,button[data-close]:active,.call-close:active{transform:scale(.9)!important}
+.modal-close:focus-visible,#settingsModal .modal-close:focus-visible,button[data-close]:focus-visible,.call-close:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+
+/* Slowly shifting aurora behind the conversation, without covering controls. */
+.main{isolation:isolate}
+.main:before{
+ content:"";position:absolute;inset:-18%;z-index:0;pointer-events:none;
+ background:
+ radial-gradient(ellipse at 15% 16%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 32%),
+ radial-gradient(ellipse at 83% 22%,color-mix(in srgb,var(--cyan) 12%,transparent),transparent 31%),
+ radial-gradient(ellipse at 48% 88%,color-mix(in srgb,var(--pink) 9%,transparent),transparent 34%);
+ background-size:140% 140%,155% 155%,130% 130%;
+ opacity:.65;will-change:background-position;
+ animation:voltraAuroraDrift3 24s ease-in-out infinite;
+}
+.main>*{position:relative;z-index:1}
+.chat-head{position:relative;overflow:hidden}
+.chat-head:after{
+ content:"";position:absolute;left:-65%;top:0;width:44%;height:1px;
+ background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--cyan) 75%,white),transparent);
+ animation:voltraGlassLine3 8s ease-in-out infinite;pointer-events:none
+}
+.rail-mark{transform-origin:center;transition:transform 250ms cubic-bezier(.18,.85,.32,1.25),filter 250ms ease}
+.rail-mark:hover{animation:voltraRailSpark3 1.1s ease-in-out infinite}
+.pulse-rail .rail-btn{transition:transform 180ms cubic-bezier(.18,.85,.32,1.25),background 180ms ease,border-color 180ms ease,box-shadow 180ms ease}
+.pulse-rail .rail-btn:hover{transform:translateY(-2px) scale(1.045);box-shadow:0 7px 17px #0002}
+.pulse-rail .rail-btn:active{transform:scale(.94)}
+.pulse-rail .rail-btn.active{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 20%,transparent),0 0 18px color-mix(in srgb,var(--accent) 8%,transparent)}
+
+/* Settings feel like a compact, modern control center. */
+#settingsModal.modal:not(.hidden){animation:voltraSettingsBackdrop3 260ms ease both}
+#settingsModal .modal-card{
+ position:relative;overflow-x:hidden;
+ border-radius:27px!important;
+ border:1px solid color-mix(in srgb,var(--accent) 36%,var(--line))!important;
+ background:
+ radial-gradient(ellipse at 0% 0%,color-mix(in srgb,var(--accent) 17%,transparent),transparent 42%),
+ radial-gradient(ellipse at 100% 22%,color-mix(in srgb,var(--cyan) 10%,transparent),transparent 34%),
+ linear-gradient(150deg,color-mix(in srgb,var(--panel2) 95%,#15101f),color-mix(in srgb,var(--bg) 94%,#101b25))!important;
+ box-shadow:0 32px 100px #0008,0 0 0 1px #ffffff07,inset 0 1px #ffffff14!important;
+ animation:voltraSheetIn 340ms cubic-bezier(.2,.8,.2,1) both!important;
+}
+#settingsModal .modal-card:before{
+ content:"";position:absolute;left:-40%;top:0;right:-40%;height:1px;pointer-events:none;
+ background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--cyan) 65%,white),color-mix(in srgb,var(--accent) 75%,white),transparent);
+ animation:voltraGlassLine3 9s ease-in-out infinite
+}
+#settingsModal .modal-card>h2{position:relative;display:block;padding-bottom:12px;margin-bottom:8px}
+#settingsModal .modal-card>h2:after{
+ content:"";display:block;width:82px;height:3px;margin-top:10px;border-radius:99px;
+ background:linear-gradient(90deg,var(--accent),var(--cyan),transparent);background-size:180% 100%;
+ animation:voltraSearchSweep3 4s linear infinite
+}
+#settingsModal .settings-subtitle{max-width:570px}
+#settingsModal .interface-setting-card,#settingsModal .settings-quick-settings{
+ box-shadow:0 8px 24px #00000013,inset 0 1px #ffffff06;
+ transition:transform 220ms ease,border-color 220ms ease,box-shadow 220ms ease;
+}
+#settingsModal .interface-setting-card:hover,#settingsModal .settings-quick-settings:hover{
+ border-color:color-mix(in srgb,var(--accent) 38%,var(--line));
+ box-shadow:0 12px 30px #0002,inset 0 1px #ffffff0a
+}
+#settingsModal .settings-quick-grid>label,
+#settingsModal .settings-quick-grid>.theme-setting{
+ animation:voltraSettingTile3 360ms cubic-bezier(.2,.8,.2,1) both
+}
+#settingsModal .settings-quick-grid>*:nth-child(1){animation-delay:25ms}
+#settingsModal .settings-quick-grid>*:nth-child(2){animation-delay:55ms}
+#settingsModal .settings-quick-grid>*:nth-child(3){animation-delay:85ms}
+#settingsModal .settings-quick-grid>*:nth-child(4){animation-delay:115ms}
+#settingsModal .settings-quick-grid>*:nth-child(5){animation-delay:145ms}
+#settingsModal .settings-quick-grid>*:nth-child(6){animation-delay:175ms}
+#settingsModal details.settings-disclosure{
+ overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 88%,var(--accent));
+ border-radius:15px;background:color-mix(in srgb,var(--panel) 62%,transparent);
+ transition:border-color 180ms ease,background 180ms ease,box-shadow 180ms ease;
+}
+#settingsModal details.settings-disclosure[open]{
+ border-color:color-mix(in srgb,var(--accent) 39%,var(--line));
+ background:color-mix(in srgb,var(--panel2) 70%,transparent);
+ box-shadow:0 8px 24px #0002
+}
+#settingsModal details.settings-disclosure>summary{
+ display:flex;align-items:center;gap:9px;min-height:48px;padding:11px 13px;
+ cursor:pointer;list-style:none;font-weight:800;font-size:12px;
+ transition:color 180ms ease,background 180ms ease;
+}
+#settingsModal details.settings-disclosure>summary::-webkit-details-marker{display:none}
+#settingsModal details.settings-disclosure>summary:after{
+ content:"⌄";display:grid;place-items:center;margin-left:auto;flex:0 0 25px;width:25px;height:25px;
+ border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line));border-radius:50%;
+ color:var(--muted);font-size:17px;transition:transform 220ms cubic-bezier(.18,.85,.32,1.25),background 180ms ease,color 180ms ease
+}
+#settingsModal details.settings-disclosure[open]>summary:after{transform:rotate(180deg);background:color-mix(in srgb,var(--accent) 16%,var(--panel));color:var(--text)}
+#settingsModal details.settings-disclosure>summary:hover{color:var(--text);background:color-mix(in srgb,var(--accent) 6%,transparent)}
+#settingsModal details.settings-disclosure[open]>.settings-disclosure-body{animation:voltraDisclosure3 220ms ease both}
+#settingsModal .settings-quick-grid>label:hover{border-color:color-mix(in srgb,var(--accent) 38%,var(--line));background:color-mix(in srgb,var(--accent) 6%,var(--panel))}
+#settingsModal input[type=checkbox]{cursor:pointer;transition:transform 170ms cubic-bezier(.18,.85,.32,1.25),filter 170ms ease}
+#settingsModal input[type=checkbox]:checked{animation:voltraTogglePop3 220ms cubic-bezier(.18,.85,.32,1.25) both}
+#settingsModal select{transition:border-color 170ms ease,box-shadow 170ms ease,background 170ms ease}
+#settingsModal select:hover{border-color:color-mix(in srgb,var(--accent) 38%,var(--line))}
+#settingsModal .settings-quick-heading{position:relative}
+#settingsModal .settings-quick-heading:after{content:"";display:block;height:1px;margin-top:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 40%,transparent),color-mix(in srgb,var(--cyan) 28%,transparent),transparent)}
+#settingsModal .performance-setting{border-radius:14px;transition:border-color 180ms ease,background 180ms ease}
+#settingsModal .performance-setting:hover{border-color:color-mix(in srgb,var(--cyan) 38%,var(--line));background:color-mix(in srgb,var(--cyan) 5%,var(--panel))}
+#settingsModal .settings-list>section:not(.settings-quick-settings){animation:voltraSettingTile3 300ms ease both}
+
+/* More personality for cards, avatars and tiny status details. */
+.chat-item .avatar,.chat-head .avatar,.me-row .avatar{position:relative;isolation:isolate}
+.chat-item .avatar:hover,.chat-head .avatar:hover,.me-row .avatar:hover{animation:voltraAvatarAura3 1.4s ease-in-out infinite}
+.chat-item.active .avatar{animation:voltraAvatarAura3 2.6s ease-in-out infinite}
+.profile-task-card:hover,.profile-tip-card:hover,.market-card[data-detail]:hover{
+ border-color:color-mix(in srgb,var(--accent) 38%,var(--line));
+}
+.market-card[data-detail]:hover .market-art,.unified-collection .unified-collection-art:hover{
+ animation:voltraGiftPrism3 1.4s ease-in-out infinite
+}
+.post-reaction,.message-reaction-chip,.message-reaction-picker{
+ transition:transform 170ms cubic-bezier(.18,.85,.32,1.25),box-shadow 180ms ease,background 180ms ease;
+}
+.post-reaction.active,.message-reaction-chip.active{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 9%,transparent)}
+.post-reaction:active,.message-reaction-chip:active,.message-reaction-picker:active{transform:scale(.91)}
+.toast.show{animation:voltraToastEnter 240ms cubic-bezier(.2,.8,.2,1) both,voltraToastBreathe3 2.8s ease-in-out 240ms infinite}
+.search:focus-within{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 10%,transparent),0 8px 23px #0002}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
+.corner-friends-btn:hover{animation:voltraActiveHalo 1.5s ease-in-out infinite}
+
+/* A smaller, lighter set of transitions on touch devices. */
+@media(max-width:700px){
+ #settingsModal .modal-card{border-radius:23px!important}
+ #settingsModal .settings-quick-grid{gap:7px}
+ #settingsModal .settings-quick-grid>label,#settingsModal .settings-quick-grid>.theme-setting{padding:10px;min-height:56px}
+ .main:before{opacity:.42;animation-duration:34s}
+ .chat-item.active .avatar{animation:none}
+ .chat-item:hover .avatar{transform:none}
+ .toast.show{animation:voltraToastEnter 220ms ease both}
+}
+@media(prefers-reduced-motion:reduce){
+ .main:before,.chat-head:after,#settingsModal .modal-card:before,#settingsModal .modal-card>h2:after,
+ #settingsModal .settings-quick-grid>label,#settingsModal .settings-quick-grid>.theme-setting,
+ #settingsModal details.settings-disclosure[open]>.settings-disclosure-body,
+ #settingsModal input[type=checkbox]:checked,.chat-item.active .avatar,.chat-item .avatar:hover,
+ .chat-head .avatar:hover,.me-row .avatar:hover,.market-card[data-detail]:hover .market-art,
+ .unified-collection .unified-collection-art:hover,.toast.show,.corner-friends-btn:hover,
+ .modal:not(.hidden) .modal-close,.modal:not(.hidden) button[data-close],
+ .call-overlay:not(.hidden) .call-close{animation:none!important}
+ .modal-close,#settingsModal .modal-close,button[data-close],.call-close{transition:none!important}
+}
