@@ -2210,3 +2210,344 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
  .modal:not(.hidden)>.modal-card>.modal-close{animation:none!important}
  #profileModal .profile-identity-main input,#profileModal .profile-field input,#profileModal .profile-field textarea{transition:none!important}
 }
+
+
+/* Profile & Settings Alignment Pass — consistent fields, cards and rounded controls */
+#profileModal>.modal-card,#settingsModal>.modal-card{
+ box-sizing:border-box;
+}
+#profileModal .profile-form-grid{
+ display:grid!important;
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ align-items:start!important;
+ gap:17px 14px!important;
+}
+#profileModal .profile-form-grid>.profile-field{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr);
+ align-content:start!important;
+ align-self:start!important;
+ justify-items:stretch!important;
+ min-width:0!important;
+ height:auto!important;
+}
+#profileModal .profile-field .auth-label{
+ display:block;
+ min-height:12px;
+ margin:0!important;
+ line-height:1.25;
+}
+#profileModal .profile-field input:not([type=file]){
+ display:block!important;
+ width:100%!important;
+ height:44px!important;
+ min-height:44px!important;
+ max-height:44px!important;
+ box-sizing:border-box!important;
+ align-self:start!important;
+ padding:0 13px!important;
+ line-height:1.25!important;
+}
+#profileModal .profile-field textarea{
+ display:block!important;
+ width:100%!important;
+ min-height:96px!important;
+ box-sizing:border-box!important;
+ align-self:start!important;
+ padding:12px 13px!important;
+ line-height:1.5!important;
+}
+#profileModal .profile-field-help{
+ display:block;
+ max-width:100%;
+ margin:0!important;
+ line-height:1.45!important;
+ overflow-wrap:anywhere;
+}
+#profileModal .profile-field-full{grid-column:1/-1!important}
+#profileModal .profile-identity-card{
+ grid-template-columns:104px minmax(0,1fr)!important;
+ align-items:center!important;
+ gap:18px!important;
+}
+#profileModal .profile-identity-main{
+ align-content:center;
+ justify-items:stretch;
+}
+#profileModal .profile-identity-main #avatarFile{
+ display:block;
+ min-height:43px;
+ padding:6px 8px;
+ border-radius:12px;
+ box-sizing:border-box;
+}
+#profileModal .profile-section-heading{align-items:center!important}
+#profileModal .profile-content-panel .premium-panel,
+#profileModal .profile-content-panel .admin-avatar-panel,
+#profileModal .profile-content-panel .admin-unlock,
+#profileModal .profile-content-panel .push-settings{
+ align-content:start!important;
+ justify-items:stretch!important;
+ min-width:0;
+}
+#profileModal .profile-content-panel .premium-panel>button,
+#profileModal .profile-content-panel .admin-avatar-panel>button,
+#profileModal .profile-content-panel .admin-unlock>button,
+#profileModal .profile-content-panel .push-settings>button{
+ width:100%;
+ min-height:43px;
+ margin-top:3px;
+ border-radius:12px!important;
+}
+#profileModal .profile-content-panel .premium-panel input,
+#profileModal .profile-content-panel .admin-avatar-panel input,
+#profileModal .profile-content-panel .admin-unlock input,
+#profileModal .profile-content-panel .push-settings input{
+ width:100%;
+ min-width:0;
+ max-width:100%;
+ box-sizing:border-box;
+}
+#profileModal .account-session-actions{
+ grid-template-columns:minmax(0,1fr) auto!important;
+ align-items:center!important;
+ gap:10px 14px!important;
+}
+#profileModal .account-session-actions>p{align-self:center}
+#profileModal .account-session-actions .profile-logout-btn{
+ grid-column:2!important;
+ grid-row:1!important;
+ justify-self:end;
+ width:auto!important;
+ min-width:166px;
+ min-height:42px!important;
+ border-radius:13px!important;
+}
+#profileModal #saveProfile{
+ display:block;
+ width:100%;
+ min-height:48px!important;
+ margin-top:1px!important;
+ border-radius:15px!important;
+}
+
+/* Identical rounded close buttons everywhere — no square hover states */
+.modal-close,#settingsModal .modal-close,.modal button[data-close],button[data-close],.call-close{
+ display:grid!important;
+ place-items:center!important;
+ width:40px!important;
+ height:40px!important;
+ min-width:40px!important;
+ min-height:40px!important;
+ padding:0!important;
+ border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line))!important;
+ border-radius:50%!important;
+ background:color-mix(in srgb,var(--panel2) 90%,transparent)!important;
+ color:var(--text)!important;
+ font-size:20px!important;
+ line-height:1!important;
+ box-shadow:0 5px 16px #0002,inset 0 1px #ffffff0a!important;
+ transition:transform 220ms var(--voltra-motion-pop,cubic-bezier(.18,.85,.32,1.25)),background 180ms ease,border-color 180ms ease,box-shadow 180ms ease!important;
+}
+.modal-close:hover,#settingsModal .modal-close:hover,.modal button[data-close]:hover,button[data-close]:hover,.call-close:hover{
+ transform:rotate(90deg) scale(1.07)!important;
+ background:color-mix(in srgb,var(--accent) 20%,var(--panel2))!important;
+ border-color:color-mix(in srgb,var(--accent) 70%,var(--cyan))!important;
+ box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 9%,transparent),0 8px 22px #0003!important;
+}
+.modal-close:active,#settingsModal .modal-close:active,.modal button[data-close]:active,button[data-close]:active,.call-close:active{
+ transform:rotate(90deg) scale(.92)!important;
+}
+#profileModal>.modal-card>.modal-close,#settingsModal>.modal-card>.modal-close{
+ position:absolute!important;
+ top:15px!important;
+ right:15px!important;
+ z-index:30!important;
+}
+
+/* Cleaner, aligned settings page */
+#settingsModal>.modal-card{
+ display:grid;
+ grid-auto-flow:row;
+ align-content:start;
+ gap:13px;
+}
+#settingsModal>.modal-card>h2{margin-bottom:0!important;padding-right:58px}
+#settingsModal .settings-subtitle{margin:0 54px 4px 0!important;max-width:610px}
+#settingsModal .interface-setting-card{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) minmax(210px,.72fr)!important;
+ align-items:center!important;
+ gap:15px!important;
+ margin:0!important;
+ padding:16px!important;
+ border-radius:18px!important;
+}
+#settingsModal .interface-setting-card>div{min-width:0}
+#settingsModal .interface-setting-card b{display:block;line-height:1.35}
+#settingsModal .interface-setting-card p{margin:7px 0 0!important}
+#settingsModal .interface-setting-card .theme-setting,
+#settingsModal .settings-quick-grid .theme-setting{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr);
+ align-content:center;
+ gap:8px!important;
+ min-width:0;
+ margin:0!important;
+}
+#settingsModal .settings-list{display:grid;gap:12px;min-width:0}
+#settingsModal .settings-quick-settings{
+ display:grid!important;
+ gap:14px!important;
+ min-width:0;
+ margin:0!important;
+ padding:16px!important;
+ border-radius:19px!important;
+}
+#settingsModal .settings-quick-heading h3{margin:0 0 5px!important}
+#settingsModal .settings-quick-heading p{margin:0!important}
+#settingsModal .settings-quick-grid{
+ display:grid!important;
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ align-items:stretch!important;
+ gap:10px!important;
+ min-width:0;
+}
+#settingsModal .settings-quick-grid>label,
+#settingsModal .settings-quick-grid>.theme-setting{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:12px;
+ min-width:0;
+ min-height:56px;
+ box-sizing:border-box;
+ margin:0!important;
+ padding:12px 13px!important;
+ border-radius:14px!important;
+ border:1px solid color-mix(in srgb,var(--line) 90%,var(--accent))!important;
+ background:color-mix(in srgb,var(--bg) 66%,var(--panel))!important;
+ color:var(--text);
+ font-size:12px;
+ line-height:1.4;
+}
+#settingsModal .settings-quick-grid>.theme-setting{
+ display:grid!important;
+ align-content:center;
+ justify-content:stretch;
+}
+#settingsModal .settings-quick-grid>label:has(input[type=checkbox]){
+ flex-direction:row;
+}
+#settingsModal .settings-quick-grid>label input[type=checkbox]{
+ width:18px;
+ height:18px;
+ flex:0 0 18px;
+ margin:0;
+ accent-color:var(--accent);
+}
+#settingsModal .settings-quick-grid select,
+#settingsModal .interface-setting-card select{
+ width:100%!important;
+ min-width:0!important;
+ min-height:42px!important;
+ box-sizing:border-box!important;
+ border-radius:11px!important;
+}
+#settingsModal .settings-quick-grid>.performance-setting{
+ grid-column:1/-1!important;
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) auto;
+ align-items:center;
+ gap:12px;
+ min-width:0;
+ margin:0!important;
+ padding:14px!important;
+ border:1px solid color-mix(in srgb,#ffc866 22%,var(--line))!important;
+ border-radius:15px!important;
+ background:color-mix(in srgb,#ffc866 4%,var(--panel))!important;
+}
+#settingsModal .performance-setting>div{min-width:0}
+#settingsModal .performance-setting>label{display:flex;align-items:center;gap:8px;min-width:0;font-size:11px}
+#settingsModal .settings-disclosure{
+ margin:0!important;
+ border:1px solid color-mix(in srgb,var(--line) 90%,var(--accent))!important;
+ border-radius:15px!important;
+ overflow:hidden;
+ background:color-mix(in srgb,var(--panel) 72%,transparent)!important;
+ transition:border-color 190ms ease,box-shadow 190ms ease;
+}
+#settingsModal .settings-disclosure[open]{
+ border-color:color-mix(in srgb,var(--accent) 34%,var(--line))!important;
+ box-shadow:0 8px 25px #0002;
+}
+#settingsModal .settings-disclosure>summary{
+ display:flex;
+ align-items:center;
+ gap:10px;
+ min-height:50px;
+ padding:13px 15px!important;
+ list-style:none;
+ cursor:pointer;
+ font-size:12px;
+ font-weight:800;
+}
+#settingsModal .settings-disclosure>summary::-webkit-details-marker{display:none}
+#settingsModal .settings-disclosure>summary:after{
+ content:"＋";
+ display:grid;
+ place-items:center;
+ width:25px;height:25px;flex:0 0 25px;
+ margin-left:auto;
+ border-radius:50%;
+ background:color-mix(in srgb,var(--accent) 12%,var(--panel2));
+ color:var(--cyan);
+ transition:transform 220ms var(--voltra-motion-spring,cubic-bezier(.2,.8,.2,1)),background 180ms ease;
+}
+#settingsModal .settings-disclosure[open]>summary:after{
+ content:"−";
+ transform:rotate(180deg);
+ background:color-mix(in srgb,var(--accent) 20%,var(--panel2));
+}
+#settingsModal .settings-disclosure>.settings-disclosure-body{
+ display:grid;
+ gap:10px;
+ padding:14px 15px 16px!important;
+ border-top:1px solid color-mix(in srgb,var(--line) 80%,transparent);
+ animation:voltraSurfaceIn 240ms ease both;
+}
+#settingsModal .settings-disclosure-body>button{width:100%;min-height:42px;margin:0;border-radius:12px!important}
+#settingsModal #moderationPanel,#settingsModal #adminGlobalChatPanel,#settingsModal #adminBanPanel{
+ min-width:0;
+ padding:15px;
+ border:1px solid color-mix(in srgb,var(--line) 85%,var(--accent));
+ border-radius:16px;
+ background:color-mix(in srgb,var(--panel) 72%,transparent);
+}
+#settingsModal #moderationPanel h3,#settingsModal #adminGlobalChatPanel h3,#settingsModal #adminBanPanel h3{margin:0 0 7px;font-size:14px}
+#settingsModal #moderationPanel p,#settingsModal #adminGlobalChatPanel p,#settingsModal #adminBanPanel p{line-height:1.5}
+#settingsModal .settings-list>*,#profileModal .profile-content-panel>*{min-width:0}
+#profileModal .profile-panel-tabs,#settingsModal .settings-disclosure,#settingsModal .settings-quick-settings{
+ box-shadow:inset 0 1px #ffffff06;
+}
+
+@media(max-width:700px){
+ #profileModal .profile-form-grid{grid-template-columns:minmax(0,1fr)!important;gap:13px!important}
+ #profileModal .profile-field-full{grid-column:auto!important}
+ #profileModal .profile-identity-card{grid-template-columns:76px minmax(0,1fr)!important;gap:12px!important;padding:13px!important}
+ #profileModal .profile-preview{width:68px!important;height:68px!important;border-radius:22px!important}
+ #profileModal .profile-identity-main h3{font-size:15px!important}
+ #profileModal .account-session-actions{grid-template-columns:minmax(0,1fr)!important;gap:9px!important}
+ #profileModal .account-session-actions .profile-logout-btn{grid-column:1!important;grid-row:auto!important;width:100%!important;min-width:0!important}
+ #settingsModal .interface-setting-card{grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+ #settingsModal .settings-quick-grid{grid-template-columns:minmax(0,1fr)!important}
+ #settingsModal .settings-quick-grid>.performance-setting{grid-column:1!important;grid-template-columns:minmax(0,1fr)!important}
+ #settingsModal .settings-quick-grid>.performance-setting>label{justify-content:flex-start}
+ #settingsModal .modal-close,#profileModal .modal-close{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important}
+ #settingsModal>.modal-card>h2,#profileModal>.modal-card>h2{padding-right:50px}
+}
+@media(prefers-reduced-motion:reduce){
+ #profileModal .profile-panel-tab,#profileModal .profile-field input,#profileModal .profile-field textarea,
+ #settingsModal .settings-disclosure,#settingsModal .settings-disclosure>summary:after{transition:none!important}
+ #settingsModal .settings-disclosure>.settings-disclosure-body{animation:none!important}
+}
