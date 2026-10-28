@@ -217,7 +217,7 @@ const GIFT_VARIANT_MATERIALS=['Глянцевая эмаль','Галактич�
  const patterns=['none','stars','waves','grid','diamonds','runes','bats','spiderweb','leaves','sparkles'];
  const rarities=['Обычный','Обычный','Необычный','Необычный','Редкий','Редкий','Эпический','Эпический','Легендарный','Мифический'];
  let changed=false;
- for(let i=0;i<120;i++){
+ for(let i=0;i<75;i++){
   const n=i+1,id='voltra-lightning-'+String(n).padStart(3,'0'),row=Math.floor(i/10),col=i%10;
   let g=store.collectibleGifts.find(x=>x.id===id);
   if(!g){
@@ -229,6 +229,21 @@ const GIFT_VARIANT_MATERIALS=['Глянцевая эмаль','Галактич�
   if(!Number.isSafeInteger(g.remaining)||g.remaining<0){g.remaining=100;changed=true}
  }
  if(changed)save();
+}
+
+
+ // Keep the public Lightning collection at 75 designs; retain variants already owned or listed.
+ {
+  const protectedIds=new Set();
+  for(const u of (store.users||[])) for(const id of (Array.isArray(u.ownedGifts)?u.ownedGifts:[])) protectedIds.add(String(id));
+  for(const g of (store.giftInstances||[])) if(g.baseGiftId) protectedIds.add(String(g.baseGiftId));
+  for(const l of (store.giftResaleListings||[])) for(const k of ['giftId','collectibleGiftId','baseGiftId']) if(l[k]) protectedIds.add(String(l[k]));
+  const before=store.collectibleGifts.length;
+  store.collectibleGifts=store.collectibleGifts.filter(g=>{
+   const m=String(g.id||'').match(/^voltra-lightning-(\\d{3})$/);
+   return !m||Number(m[1])<=75||protectedIds.has(String(g.id));
+  });
+  if(store.collectibleGifts.length!==before)save();
 }
 
 
@@ -318,7 +333,7 @@ if(!store.giftPricingV2){
    else gift.price=intPrice(between(n,55,60,200000,1000000));
    if(gift.rarity==='Легендарный')gift.recommendedPriceCat=1200;
   }else if(id.startsWith('halloween-pumpkin-')||id.startsWith('voltra-bat-')||id.startsWith('voltra-lightning-')||gift.collection==='lightning'){
-   const total=id.startsWith('halloween-pumpkin-')?60:id.startsWith('voltra-bat-')?100:120;
+   const total=id.startsWith('halloween-pumpkin-')?60:id.startsWith('voltra-bat-')?100:id.startsWith('voltra-lightning-')?75:120;
    gift.price=tierPrice(gift,n,total);
   }
  }
