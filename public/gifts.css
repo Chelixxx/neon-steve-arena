@@ -584,3 +584,175 @@ body.volt-viewer-open{overflow:hidden}
 @media(max-width:700px){.gift3d-viewer{justify-content:center;gap:0;padding:calc(62px + env(safe-area-inset-top)) 13px calc(18px + env(safe-area-inset-bottom))}.gift3d-hint{max-width:92vw;margin-bottom:4px;font-size:9px;letter-spacing:.8px}.gift3d-stage{width:min(88vw,390px);height:min(88vw,390px);max-height:42dvh;max-height:42svh}.gift3d-object{width:min(58vw,238px);height:min(58vw,238px)}.gift3d-object-face.gift3d-custom-face{padding:8px}.gift3d-name{max-width:90vw;margin-top:10px;font-size:clamp(20px,6vw,26px)}.gift3d-rarity{max-width:92vw;margin-top:8px;border-radius:14px;font-size:10px}.gift3d-zoom{width:min(340px,92vw);margin-top:16px}.gift3d-zoom button{flex-basis:44px;width:44px;height:44px}#gift3dClose{top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right))}}
 @media(max-height:650px) and (max-width:700px){.gift3d-viewer{padding-top:calc(54px + env(safe-area-inset-top));padding-bottom:calc(8px + env(safe-area-inset-bottom))}.gift3d-stage{max-height:37dvh;max-height:37svh}.gift3d-object{width:min(48vw,210px);height:min(48vw,210px)}.gift3d-name{font-size:20px;margin-top:4px}.gift3d-rarity{margin-top:4px;padding:5px 9px}.gift3d-zoom{margin-top:8px}}
 @media(prefers-reduced-motion:reduce){.gift3d-stage,.gift3d-name,.gift3d-rarity,.gift3d-zoom{animation:none!important}}
+
+
+/* VOLTRA gift gallery refresh: clearer rarity, more depth and legible cards */
+.gift-catalog{
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:12px;
+ padding:8px 3px 16px;
+ max-height:55vh;
+ overscroll-behavior:contain;
+}
+.gift-card{
+ position:relative;
+ isolation:isolate;
+ min-width:0;
+ overflow:hidden;
+ gap:9px;
+ padding:11px 9px 10px;
+ border:1px solid #8d83be35;
+ border-radius:18px;
+ text-align:center;
+ background:radial-gradient(ellipse at 50% 0%,#9d83ff17,transparent 56%),linear-gradient(155deg,#1d2033 0%,#151827 68%,#111622 100%);
+ box-shadow:inset 0 1px #ffffff12,0 7px 21px #0002;
+ transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease,background .22s ease;
+}
+.gift-card::before{
+ content:"";
+ position:absolute;
+ inset:0 0 auto;
+ height:2px;
+ opacity:.7;
+ pointer-events:none;
+ background:linear-gradient(90deg,transparent,#9a81ff,#5ce4e5,transparent);
+}
+.gift-card:hover{
+ transform:translateY(-3px);
+ border-color:#9b84ff8a;
+ box-shadow:inset 0 1px #ffffff18,0 13px 30px #0005,0 0 18px #8b70ff12;
+ background:radial-gradient(ellipse at 50% 0%,#a68aff24,transparent 59%),linear-gradient(155deg,#23253b,#151827 68%,#111622);
+}
+.gift-card .gift-art{
+ position:relative;
+ isolation:isolate;
+ display:grid;
+ place-items:center;
+ width:100%;
+ aspect-ratio:1.04;
+ min-height:84px;
+ overflow:hidden;
+ border:1px solid #ffffff13;
+ border-radius:14px;
+ font-size:clamp(32px,4vw,44px);
+ background:radial-gradient(circle at 50% 30%,#aaa0ff20,transparent 60%),linear-gradient(145deg,#29243e,#101522 78%);
+ box-shadow:inset 0 1px #ffffff0b,0 5px 14px #0002;
+}
+.gift-card .gift-art::after{
+ content:"";
+ position:absolute;
+ z-index:2;
+ inset:0;
+ border-radius:inherit;
+ pointer-events:none;
+ background:linear-gradient(135deg,#ffffff12,transparent 37%,transparent 70%,#a9a2ff08);
+}
+.gift-card .gift-art>svg,
+.gift-card .gift-art>img{
+ display:block;
+ width:100%;
+ height:100%;
+ min-width:0;
+ min-height:0;
+ object-fit:contain;
+}
+.gift-card .gift-art .gift-layer-spark{z-index:3;right:7px;top:4px;color:#fff4d9;text-shadow:0 0 10px #ffffffa0;pointer-events:none}
+.gift-card b{
+ width:100%;
+ min-width:0;
+ overflow-wrap:anywhere;
+ font-size:12px;
+ line-height:1.35;
+ font-weight:850;
+ color:#f2f0ff;
+}
+.gift-card small{
+ font-size:10px;
+ line-height:1.35;
+ color:#bdc0d8;
+}
+.gift-price{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ width:100%;
+ min-height:27px;
+ padding:5px 7px;
+ border:1px solid #6fe8db20;
+ border-radius:9px;
+ color:#8cf6e6;
+ font-size:11px;
+ font-weight:900;
+ background:linear-gradient(100deg,#44e1cc0c,#8c70ff0d);
+}
+.gift-card button{
+ width:100%;
+ min-height:33px;
+ padding:8px 6px;
+ border:1px solid #ffffff12;
+ border-radius:10px;
+ color:#fff;
+ background:linear-gradient(110deg,#8767ef,#49cbd5);
+ box-shadow:inset 0 1px #ffffff38,0 4px 10px #0002;
+ font-size:11px;
+ font-weight:850;
+ letter-spacing:.01em;
+ transition:filter .18s,transform .18s,opacity .18s;
+}
+.gift-card button:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px)}
+.gift-card button.secondary{background:#ffffff09;border-color:#ffffff20;box-shadow:none}
+.gift-card button:disabled{opacity:.5;cursor:not-allowed;filter:saturate(.55)}
+.gift-card.rarity-rare{border-color:#63a9ff45}
+.gift-card.rarity-epic{border-color:#ad79ff55}
+.gift-card.rarity-legendary{border-color:#ffc76566;background:radial-gradient(ellipse at 50% 0%,#ffcb6d18,transparent 58%),linear-gradient(155deg,#292331,#151827 68%,#111622)}
+.gift-card.rarity-mythic{border-color:#ff79d255;background:radial-gradient(ellipse at 50% 0%,#ff75d31e,transparent 58%),linear-gradient(155deg,#2d2037,#151827 68%,#111622)}
+.gift-card.rarity-rare .gift-price{color:#8dc4ff;border-color:#63a9ff30}
+.gift-card.rarity-epic .gift-price{color:#d5aaff;border-color:#ad79ff36}
+.gift-card.rarity-legendary .gift-price{color:#ffda8b;border-color:#ffc76540}
+.gift-card.rarity-mythic .gift-price{color:#ff9bdc;border-color:#ff79d240}
+.pumpkin-feature{
+ display:grid;
+ grid-template-columns:84px minmax(0,1fr) auto;
+ align-items:center;
+ gap:13px;
+ width:100%;
+ padding:11px 14px;
+ margin:0 0 10px;
+ overflow:hidden;
+ border:1px solid #9582ff4d;
+ border-radius:17px;
+ text-align:left;
+ color:#f8f6ff;
+ background:radial-gradient(ellipse at 5% 0%,#a58aff20,transparent 48%),linear-gradient(125deg,#232039,#151827 72%,#13232b);
+ box-shadow:inset 0 1px #ffffff12,0 7px 20px #0002;
+ transition:transform .2s,border-color .2s,box-shadow .2s;
+}
+.pumpkin-feature:hover{transform:translateY(-2px);border-color:#b6a0ff99;box-shadow:0 12px 30px #0004}
+.pumpkin-feature>svg,.pumpkin-feature .gift-layer-main{width:84px;height:68px;object-fit:contain;display:grid;place-items:center;font-size:38px;overflow:hidden;border-radius:12px}
+.pumpkin-feature>span:not(.gift-layer-main){display:grid;gap:5px;min-width:0}
+.pumpkin-feature b{font-size:14px;line-height:1.3}
+.pumpkin-feature small{font-size:11px;line-height:1.4;color:#c3c5dc}
+.pumpkin-feature strong{font-size:11px;white-space:nowrap;color:#c6baff;border:1px solid #9d87ff45;background:#ffffff06;padding:8px 10px;border-radius:10px}
+.unified-collection .pumpkin-tile{
+ border:1px solid #ffffff17;
+ border-radius:15px;
+ padding:9px;
+ background:radial-gradient(ellipse at 50% 0%,#9a83ff13,transparent 60%),linear-gradient(150deg,#202236,#131725);
+ box-shadow:inset 0 1px #ffffff0a,0 5px 14px #0002;
+ transition:transform .18s,border-color .18s,box-shadow .18s;
+}
+.unified-collection .pumpkin-tile:hover{transform:translateY(-2px);border-color:#a994ff8a;box-shadow:0 9px 20px #0004}
+.unified-collection .pumpkin-detail{border-radius:18px;border-color:#ffffff1a;background:radial-gradient(ellipse at 0 0,#9278ff14,transparent 55%),#111522}
+@media(max-width:660px){
+ .gift-catalog{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ .gift-card{padding:8px 6px;gap:7px;border-radius:14px}
+ .gift-card .gift-art{min-height:72px;border-radius:11px;font-size:34px}
+ .gift-card b{font-size:11px}
+ .gift-card small{font-size:9px}
+ .gift-card button{font-size:10px;min-height:31px}
+ .pumpkin-feature{grid-template-columns:65px minmax(0,1fr);gap:9px;padding:9px}
+ .pumpkin-feature>svg,.pumpkin-feature .gift-layer-main{width:65px;height:60px;font-size:31px}
+ .pumpkin-feature strong{grid-column:2;justify-self:start;padding:6px 8px}
+}
+@media(max-width:360px){.gift-catalog{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.gift-card,.gift-card button,.pumpkin-feature,.unified-collection .pumpkin-tile{transition:none!important}}
