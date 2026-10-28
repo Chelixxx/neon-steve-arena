@@ -1506,7 +1506,7 @@ wss.on('connection',(ws,req)=>{
   }
   if(m.t==='message-reaction'){
    const id=typeof m.id==='string'?m.id:'',emoji=String(m.emoji||'');
-   const allowedEmojis=['👍','❤️','😂','😮','😢','🔥','🎉','👎'];
+   const allowedEmojis=['👍','❤️','😂','😮','😢','🔥','🎉','👎','🥰','😍','😘','🤣','😊','😁','🤔','🤯','🥳','😭','😡','🤬','👏','🙏','🤝','💯','💔','❤️‍🔥','💖','💕','💜','💙','💚','🧡','🖤','🤍','💋','✨','🌟','⭐','⚡','🎊','🎁','🏆','💪','👌','🙌','🫶','👀','🤗','😎','🤩','😴','🤮','🤡','💀','👻','🤖','🐱','🐸','🍿','☕','🍓','🍕','🚀'];
    const target=store.messages.find(x=>x.id===id);
    if(!target){send(ws,{t:'error',message:'Сообщение не найдено'});return}
    if(!allowedEmojis.includes(emoji)){send(ws,{t:'error',message:'Эта реакция не поддерживается'});return}
