@@ -142,6 +142,40 @@ for(const u of store.users){
  if(store.collectibleGifts.length!==before) save();
 }
 
+
+// Remove the Sakura Bloom collection completely. If a variant is already owned,
+// convert that exact record into a regular gift at the same price so inventory is preserved.
+{
+ const isSakura=g=>/sakura|сакур/i.test([g?.id,g?.name,g?.collection,g?.baseGiftId].filter(Boolean).join(' '));
+ const ownedIds=new Set();
+ for(const u of (store.users||[])) for(const id of (Array.isArray(u.ownedGifts)?u.ownedGifts:[])) ownedIds.add(String(id));
+ for(const l of (store.giftResaleListings||[])) if(l.status!=='sold') for(const k of ['giftId','collectibleGiftId','baseGiftId']) if(l[k]) ownedIds.add(String(l[k]));
+ const replacements=store.collectibleGifts.filter(isSakura);
+ let changed=false;
+ for(const g of replacements){
+  if(!ownedIds.has(String(g.id))){continue}
+  const oldPrice=Number(g.price)||0;
+  const template=GIFT_CATALOG.filter(x=>!x.collectible&&!x.ownedInstance&&!isTestGift(x)).sort((a,b)=>Math.abs(Number(a.price||0)-oldPrice)-Math.abs(Number(b.price||0)-oldPrice))[0];
+  if(template){
+   for(const k of ['name','emoji','rarity','image','skin','material','background','pattern','effect','intensity','shape']){
+    if(template[k]!==undefined)g[k]=template[k];
+   }
+  }else{
+   g.name='Подарок-сюрприз';g.emoji='🎁';
+  }
+  g.price=oldPrice;
+  g.collectible=false;
+  g.ownedInstance=false;
+  for(const k of ['collection','variant','edition','totalSupply','remaining','baseGiftId']) delete g[k];
+  changed=true;
+ }
+ const before=store.collectibleGifts.length;
+ store.collectibleGifts=store.collectibleGifts.filter(g=>!isSakura(g)||ownedIds.has(String(g.id)));
+ // Owned variants were converted above; remove any Sakura records regardless of former collection metadata.
+ store.collectibleGifts=store.collectibleGifts.filter(g=>!isSakura(g));
+ if(changed||store.collectibleGifts.length!==before)save();
+}
+
 function allGiftCatalog(){return [...GIFT_CATALOG.filter(g=>g.id!=='gift-013'&&!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id))&&!/\s+(?:[2-9]|\d{2,})$/.test(String(g.name||''))),...store.collectibleGifts.filter(g=>!isTestGift(g)&&!TEST_GIFT_IDS.has(String(g.id)))]}
 
 function upgraderPrice(gift){
