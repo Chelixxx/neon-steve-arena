@@ -146,7 +146,7 @@ for(const u of store.users){
 // Remove the Sakura Bloom collection completely. If a variant is already owned,
 // convert that exact record into a regular gift at the same price so inventory is preserved.
 {
- const isSakura=g=>/sakura|сакур/i.test([g?.id,g?.name,g?.collection,g?.baseGiftId].filter(Boolean).join(' '));
+ const isSakura=g=>!g?.sakuraReplacement&&/sakura|сакур/i.test([g?.id,g?.name,g?.collection,g?.baseGiftId].filter(Boolean).join(' '));
  const ownedIds=new Set();
  for(const u of (store.users||[])) for(const id of (Array.isArray(u.ownedGifts)?u.ownedGifts:[])) ownedIds.add(String(id));
  for(const l of (store.giftResaleListings||[])) if(l.status!=='sold') for(const k of ['giftId','collectibleGiftId','baseGiftId']) if(l[k]) ownedIds.add(String(l[k]));
@@ -166,6 +166,7 @@ for(const u of store.users){
   g.price=oldPrice;
   g.collectible=false;
   g.ownedInstance=false;
+  g.sakuraReplacement=true;
   for(const k of ['collection','variant','edition','totalSupply','remaining','baseGiftId']) delete g[k];
   changed=true;
  }
