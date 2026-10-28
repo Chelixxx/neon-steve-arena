@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-let state=null,lastReveal=null,busy=false,lastTarget=null;
+let state=null,lastReveal=null,busy=false,lastTarget=null,adminNote='';
 const rarityOrder=['common','uncommon','rare','epic','legendary','mythic'];
 function odds(value){return (Number(value||0)/100).toLocaleString('ru-RU',{maximumFractionDigits:2})+'%'}
 function duration(ms){const sec=Math.max(0,Math.ceil(Number(ms||0)/1000));if(!sec)return'Готово';const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;if(h)return h+' ч '+(m?m+' мин':'');if(m)return m+' мин';return s+' сек'}
@@ -16,6 +16,11 @@ async function api(path,body){
 function renderOdds(c){
  const labels=state?.rarityLabels||{};
  return '<details class="drop-odds"><summary>Шансы дропа</summary><div class="drop-odds-grid">'+rarityOrder.map(r=>'<span class="'+rarityKey(r)+'">'+esc((state?.rarityEmojis||{})[r]||'✦')+' '+esc(labels[r]||r)+'</span><b>'+odds(c.odds?.[r])+'</b>').join('')+'</div><small>Вероятности суммируются до 100%. Бросок рассчитывает сервер.</small></details>';
+}
+function renderAdminSettings(){
+ if(!state?.canConfigure)return'';
+ const cases=state.cases||[],labels=state.rarityLabels||{},upgrade=state.upgradeOdds||{};
+ return '<details class="drop-admin-settings"><summary>⚙️ Настроить шансы · администратор</summary><p>Эти вероятности относятся только к бесплатным косметическим предметам. Сумма шансов каждого кейса должна быть ровно 100%.</p><div class="drop-admin-case-grid">'+cases.map(c=>'<section class="drop-admin-case"><h4>'+esc(c.emoji||'📦')+' '+esc(c.name)+' кейс</h4><div class="drop-admin-input-grid">'+rarityOrder.map(r=>'<label><span>'+esc(labels[r]||r)+' (%)</span><input type="number" min="0" max="100" step="0.01" data-drop-setting-case="'+esc(c.id)+'" data-drop-setting-rarity="'+r+'" value="'+(Number(c.odds?.[r]||0)/100).toFixed(2)+'"></label>').join('')+'</div></section>').join('')+'</div><h4>Шансы апгрейда</h4><div class="drop-admin-input-grid drop-upgrade-admin-grid">'+rarityOrder.filter(r=>(state.nextRarity||{})[r]).map(r=>'<label><span>'+esc(labels[r]||r)+' → '+esc(labels[state.nextRarity[r]]||state.nextRarity[r])+' (%)</span><input type="number" min="0" max="100" step="1" data-drop-upgrade-chance="'+r+'" value="'+Number(upgrade[r]||0)+'"></label>').join('')+'</div><button type="button" class="primary drop-save-settings" data-drop-save-settings '+(busy?'disabled':'')+'>Сохранить шансы</button><small id="dropAdminStatus" class="drop-admin-status">'+esc(adminNote)+'</small></details>';
 }
 function renderReveal(){
  if(!lastReveal)return'';
@@ -44,7 +49,7 @@ function render(target){
     const nextRarity=next[item.rarity],chance=upgradeOdds[item.rarity]||0;
     return '<article class="drop-item-card '+rarityKey(item.rarity)+'"><div class="drop-item-icon">'+esc(item.emoji||'✦')+'</div><div class="drop-item-copy"><span class="drop-rarity-pill '+rarityKey(item.rarity)+'">'+esc(labels[item.rarity]||item.rarity)+'</span><b>'+esc(item.name)+'</b><small>Косметический дроп · не продаётся</small></div><div class="drop-item-actions">'+(nextRarity?'<button type="button" class="secondary drop-upgrade-button" data-drop-upgrade="'+esc(item.instanceId)+'" '+(busy?'disabled':'')+'>Улучшить · '+chance+'%</button>':'<span class="drop-max-rarity">✦ MAX</span>')+'<button type="button" class="drop-discard-button" data-drop-discard="'+esc(item.instanceId)+'" '+(busy?'disabled':'')+'>Убрать</button>'+'</div></article>';
   }).join('')+'</div>':'<div class="drop-empty"><span>🪄</span><b>Коллекция пока пустая</b><p>Открой бесплатный кейс — первый косметический дроп ждёт тебя.</p></div>')+
-  '</section><footer class="drop-bot-footer"><span>Открыто кейсов: <b>'+Number(state.totalOpened||0)+'</b></span><span>Попыток апгрейда: <b>'+Number(state.upgradesAttempted||0)+'</b></span><span>Без ставок и обмена на валюту</span></footer></div>';
+  '</section>'+renderAdminSettings()+'<footer class="drop-bot-footer"><span>Открыто кейсов: <b>'+Number(state.totalOpened||0)+'</b></span><span>Попыток апгрейда: <b>'+Number(state.upgradesAttempted||0)+'</b></span><span>Без ставок и обмена на валюту</span></footer></div>';
 }
 async function refresh(target){
  target=target||lastTarget||$('messages');if(!target)return;lastTarget=target;
@@ -77,6 +82,21 @@ document.addEventListener('click',async event=>{
   try{const data=await api('/api/drop/discard',{instanceId:discardButton.dataset.dropDiscard});state=data.state;lastReveal=null;render(lastTarget)}
   catch(error){await refresh(lastTarget);if(lastTarget){const note=document.createElement('div');note.className='drop-inline-error';note.textContent=error.message||'Не удалось убрать предмет';lastTarget.querySelector('.drop-bot-shell')?.prepend(note)}}
   finally{busy=false;if(lastTarget)render(lastTarget)}
+  return;
+ }
+ const settingsButton=event.target.closest('[data-drop-save-settings]');
+ if(settingsButton){
+  event.preventDefault();if(busy)return;
+  busy=true;settingsButton.disabled=true;adminNote='';
+  try{
+   const cases={};
+   document.querySelectorAll('[data-drop-setting-case]').forEach(input=>{const id=input.dataset.dropSettingCase,rarity=input.dataset.dropSettingRarity;if(!cases[id])cases[id]={};cases[id][rarity]=Number(input.value)});
+   const upgradeOdds={mythic:Number(state?.upgradeOdds?.mythic)||0};
+   document.querySelectorAll('[data-drop-upgrade-chance]').forEach(input=>{upgradeOdds[input.dataset.dropUpgradeChance]=Number(input.value)});
+   const data=await api('/api/drop/settings',{cases,upgradeOdds});
+   state=data.state;lastReveal=null;adminNote='✅ Шансы сохранены';
+  }catch(error){adminNote=error.message||'Не удалось сохранить шансы'}
+  finally{busy=false;render(lastTarget)}
   return;
  }
  const upgradeButton=event.target.closest('[data-drop-upgrade]');
