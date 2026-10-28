@@ -139,7 +139,7 @@ function upgraderPublicGift(gift){
 }
 function giftUpgradeChance(source,target){
  const sourcePrice=Math.max(15,upgraderPrice(source)),targetPrice=Math.max(15,upgraderPrice(target));
- if(target?.collection==='galaxy-heart'||String(target?.id||'').startsWith('voltra-galaxy-heart-'))return 1;
+ if(String(target?.id||'')==='voltra-galaxy-heart-500'||upgraderPrice(target)>=99999999)return 1;
  return Math.max(1,Math.min(35,Math.floor(35*sourcePrice/targetPrice)));
 }
 function publicGiftUpgraderState(uid){
