@@ -1375,3 +1375,50 @@ body{overflow:hidden}
 @media(min-width:701px){
  .bottom-nav{grid-template-columns:repeat(4,minmax(0,1fr))!important;padding:8px 9px}
 }
+
+
+/* Compact bottom navigation: icons at rest, floating labels on hover/tap */
+.bottom-nav{overflow:visible!important}
+.bottom-nav-btn{position:relative;overflow:visible!important;isolation:isolate}
+.bottom-nav-btn>span{line-height:1}
+.bottom-nav-btn>small{
+ position:absolute;
+ left:50%;
+ bottom:calc(100% + 10px);
+ z-index:50;
+ width:max-content;
+ max-width:min(180px,65vw);
+ overflow:visible;
+ padding:8px 11px;
+ border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));
+ border-radius:10px;
+ background:color-mix(in srgb,var(--panel) 96%,#000);
+ color:var(--text);
+ font-size:11px;
+ font-weight:800;
+ line-height:1.15;
+ white-space:nowrap;
+ text-overflow:clip;
+ box-shadow:0 8px 24px #0004;
+ opacity:0;
+ visibility:hidden;
+ pointer-events:none;
+ transform:translate(-50%,5px);
+ transition:opacity .14s ease,transform .14s ease,visibility .14s;
+}
+.bottom-nav-btn:hover>small,
+.bottom-nav-btn:focus-visible>small,
+.bottom-nav-btn.nav-label-peek>small{
+ opacity:1;
+ visibility:visible;
+ transform:translate(-50%,0);
+}
+.bottom-nav-btn:hover{z-index:6}
+.bottom-nav-btn.active:hover{transform:none}
+@media(hover:none){
+ .bottom-nav-btn:hover>small{opacity:0;visibility:hidden;transform:translate(-50%,5px)}
+ .bottom-nav-btn.nav-label-peek>small{opacity:1;visibility:visible;transform:translate(-50%,0)}
+}
+@media(prefers-reduced-motion:reduce){
+ .bottom-nav-btn>small{transition:none}
+}
