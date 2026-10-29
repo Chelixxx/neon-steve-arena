@@ -2696,3 +2696,6 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 .message .gift-purchase-ribbon{padding:8px 10px;border-radius:10px;background:#ffffff12;color:#9af8ff;font-size:12px;font-weight:700}
 .message .gift-purchase-note{padding:8px 10px;border-radius:10px;background:#080d1b44;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:600px){.message .gift-purchase-card{max-width:calc(100vw - 94px);min-width:min(230px,100%);padding:10px}.message .gift-purchase-emoji{flex-basis:54px;width:54px;height:54px}}
+
+/* VOLTRA mobile chat back button: keep it above header overlays and reliably tappable. */
+@media(max-width:700px){.chat-head{position:relative;z-index:1000}.chat-head #back{position:relative;z-index:1001;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;flex:0 0 44px;width:44px;height:44px;min-width:44px}}
