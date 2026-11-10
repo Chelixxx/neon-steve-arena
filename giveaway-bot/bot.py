@@ -9,14 +9,15 @@ from telegram.ext import Application, CommandHandler, MessageHandler, ContextTyp
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
 OWNER_ID = int(OWNER_ID_RAW) if OWNER_ID_RAW.isdigit() else None
-WIN_CHANCE = float(os.getenv("WIN_CHANCE", "0.07"))
 PHOTO_FILE_ID = os.getenv("GIVEAWAY_PHOTO_FILE_ID", "").strip()
+MIN_MESSAGES = 1
+MAX_MESSAGES = 15
 IMAGE_PATH = Path(__file__).parent / "assets" / "giveaway.jpg"
 
 CAPTION = (
     "🎉 Поздравляю!\n"
     "🎁 Ты выиграл Мишка 🧸 от @Chelixxx\n"
-    "✅ Подарок отправлен.\n\n"
+    "✅ Организатор свяжется с тобой для выдачи подарка.\n\n"
     "🚨 Пишите сообщения в чате и получайте возможность так же залутать подарки!\n\n"
     "🎀 Также вы можете выбить мишку у @aftter в его чате — @chatikloxssy"
 )
@@ -43,6 +44,24 @@ async def save_owner_photo_id(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
 
+async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    chat = update.effective_chat
+    msg = update.effective_message
+    if not msg or not user or not OWNER_ID or user.id != OWNER_ID:
+        return
+    if not chat or chat.type not in ("group", "supergroup"):
+        await msg.reply_text("Команду /giveaway_status используй в группе.")
+        return
+
+    count = context.chat_data.get("message_count", 0)
+    target = context.chat_data.get("message_target")
+    if target is None:
+        target = random.randint(MIN_MESSAGES, MAX_MESSAGES)
+        context.chat_data["message_target"] = target
+    await msg.reply_text(f"🎲 Счётчик розыгрыша: {count}/{target} сообщений.")
+
+
 async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     user = update.effective_user
@@ -50,8 +69,18 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not msg or not user or user.is_bot or not chat:
         return
 
-    # Every eligible group message is an independent free 7% giveaway roll.
-    if random.random() >= WIN_CHANCE:
+    # One random target per round, independently for each group.
+    target = context.chat_data.get("message_target")
+    if target is None:
+        target = random.randint(MIN_MESSAGES, MAX_MESSAGES)
+        context.chat_data["message_target"] = target
+        context.chat_data["message_count"] = 0
+
+    context.chat_data["message_count"] = context.chat_data.get("message_count", 0) + 1
+    count = context.chat_data["message_count"]
+    log.info("Group %s giveaway progress: %s/%s", chat.id, count, target)
+
+    if count < target:
         return
 
     username = f"@{user.username}" if user.username else f"{user.full_name} (без username)"
@@ -68,6 +97,11 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         log.exception("Could not post winner announcement")
         return
+
+    # Start a fresh round only after the announcement was successfully sent.
+    context.chat_data["message_count"] = 0
+    context.chat_data["message_target"] = random.randint(MIN_MESSAGES, MAX_MESSAGES)
+    log.info("New giveaway round in %s: next target=%s", chat.id, context.chat_data["message_target"])
 
     if OWNER_ID:
         try:
@@ -86,18 +120,20 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    if not 0 < WIN_CHANCE <= 1:
-        raise SystemExit("WIN_CHANCE must be > 0 and <= 1")
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("giveaway_status", giveaway_status))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO, save_owner_photo_id))
-    app.add_handler(
-        MessageHandler(
-            filters.ChatType.GROUPS & (filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.ALL),
-            on_group_message,
-        )
+    group_messages = (
+        (filters.TEXT & ~filters.COMMAND)
+        | filters.PHOTO
+        | filters.VIDEO
+        | filters.Document.ALL
     )
-    log.info("Giveaway bot is running; win chance=%s", WIN_CHANCE)
+    app.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & group_messages, on_group_message)
+    )
+    log.info("Giveaway bot is running; random message target=%s-%s", MIN_MESSAGES, MAX_MESSAGES)
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
