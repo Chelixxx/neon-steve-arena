@@ -4,7 +4,7 @@ import random
 from pathlib import Path
 
 from telegram import Update, ReactionTypeEmoji
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters, PicklePersistence
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
@@ -61,44 +61,44 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def setchat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def say_to_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    msg = update.effective_message
     chat = update.effective_chat
-    msg = update.effective_message
     if not msg or not user or not OWNER_ID or user.id != OWNER_ID:
         return
-    if not chat or chat.type not in ("group", "supergroup"):
-        await msg.reply_text("Команду /setchat нужно отправить в нужной группе.")
-        return
-    context.bot_data["announcement_chat_id"] = chat.id
-    await msg.reply_text(
-        "✅ Эта группа выбрана для твоих сообщений от лица бота. "
-        "Теперь напиши мне в личку: /say текст сообщения"
-    )
-
-
-async def say_to_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    msg = update.effective_message
-    if not msg or not user or not OWNER_ID or user.id != OWNER_ID:
-        return
-    if not update.effective_chat or update.effective_chat.type != "private":
+    if not chat or chat.type != "private":
         await msg.reply_text("Команду /say используй в личке с ботом.")
         return
+
     text_to_send = " ".join(context.args).strip()
     if not text_to_send:
         await msg.reply_text("Напиши текст так: /say Всем привет! 👋")
         return
-    target_chat_id = context.bot_data.get("announcement_chat_id")
-    if not target_chat_id:
-        await msg.reply_text("Сначала отправь /setchat в нужной группе.")
+
+    group_ids = sorted(context.bot_data.get("known_group_ids", set()))
+    if not group_ids:
+        await msg.reply_text(
+            "Пока не знаю ни одной группы. Бот должен получить хотя бы одно сообщение "
+            "в каждой группе, куда он добавлен."
+        )
         return
-    try:
-        await context.bot.send_message(chat_id=target_chat_id, text=text_to_send)
-        await msg.reply_text("✅ Сообщение отправлено в группу от лица бота.")
-    except Exception:
-        log.exception("Could not send owner's message to group")
-        await msg.reply_text("❌ Не получилось отправить. Проверь, что бот ещё есть в группе и может писать.")
+
+    sent = 0
+    failed = 0
+    for group_id in group_ids:
+        try:
+            await context.bot.send_message(chat_id=group_id, text=text_to_send)
+            sent += 1
+        except Exception:
+            failed += 1
+            log.exception("Could not broadcast to group %s", group_id)
+
+    await msg.reply_text(
+        f"📨 Рассылка завершена.\\n"
+        f"✅ Отправлено в групп: {sent}\\n"
+        f"⚠️ Не удалось отправить: {failed}"
+    )
 
 
 async def save_owner_photo_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -136,6 +136,10 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     if not msg or not user or user.is_bot or not chat:
         return
+
+    # Remember every group where the bot receives a user message.
+    known_group_ids = context.bot_data.setdefault("known_group_ids", set())
+    known_group_ids.add(chat.id)
 
     # One random target per round, independently for each group.
     target = context.chat_data.get("message_target")
@@ -200,11 +204,11 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    persistence = PicklePersistence(filepath="giveaway_bot_data.pickle", update_interval=5)
+    app = Application.builder().token(BOT_TOKEN).persistence(persistence).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
-    app.add_handler(CommandHandler("setchat", setchat))
-    app.add_handler(CommandHandler("say", say_to_group))
+    app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO, save_owner_photo_id))
     group_messages = (
         (filters.TEXT & ~filters.COMMAND)
