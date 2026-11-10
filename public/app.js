@@ -972,6 +972,7 @@ document.addEventListener('click',e=>{
  const button=e.target.closest('[data-nav-action]');
  if(!button)return;
  const action=button.dataset.navAction;
+ if(action==='profile'){e.preventDefault();e.stopImmediatePropagation();openProfile();return}
  if(action==='bots'){e.preventDefault();e.stopImmediatePropagation();showModal('botsModal');loadCommunity();return}
  if(action==='settings'){e.preventDefault();e.stopImmediatePropagation();showModal('settingsModal');loadCommunity();return}
  if(action==='gifts'){e.preventDefault();e.stopImmediatePropagation();const trigger=document.getElementById('openGifts');if(trigger)trigger.click();else showModal('giftsModal');return}
