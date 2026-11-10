@@ -61,6 +61,46 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def setchat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    chat = update.effective_chat
+    msg = update.effective_message
+    if not msg or not user or not OWNER_ID or user.id != OWNER_ID:
+        return
+    if not chat or chat.type not in ("group", "supergroup"):
+        await msg.reply_text("Команду /setchat нужно отправить в нужной группе.")
+        return
+    context.bot_data["announcement_chat_id"] = chat.id
+    await msg.reply_text(
+        "✅ Эта группа выбрана для твоих сообщений от лица бота. "
+        "Теперь напиши мне в личку: /say текст сообщения"
+    )
+
+
+async def say_to_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    msg = update.effective_message
+    if not msg or not user or not OWNER_ID or user.id != OWNER_ID:
+        return
+    if not update.effective_chat or update.effective_chat.type != "private":
+        await msg.reply_text("Команду /say используй в личке с ботом.")
+        return
+    text_to_send = " ".join(context.args).strip()
+    if not text_to_send:
+        await msg.reply_text("Напиши текст так: /say Всем привет! 👋")
+        return
+    target_chat_id = context.bot_data.get("announcement_chat_id")
+    if not target_chat_id:
+        await msg.reply_text("Сначала отправь /setchat в нужной группе.")
+        return
+    try:
+        await context.bot.send_message(chat_id=target_chat_id, text=text_to_send)
+        await msg.reply_text("✅ Сообщение отправлено в группу от лица бота.")
+    except Exception:
+        log.exception("Could not send owner's message to group")
+        await msg.reply_text("❌ Не получилось отправить. Проверь, что бот ещё есть в группе и может писать.")
+
+
 async def save_owner_photo_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or not OWNER_ID or user.id != OWNER_ID:
@@ -163,6 +203,8 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
+    app.add_handler(CommandHandler("setchat", setchat))
+    app.add_handler(CommandHandler("say", say_to_group))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO, save_owner_photo_id))
     group_messages = (
         (filters.TEXT & ~filters.COMMAND)
