@@ -1,0 +1,3 @@
+[submodule "android-client/Telegram-FOSS"]
+	path = android-client/Telegram-FOSS
+	url = https://github.com/Telegram-FOSS-Team/Telegram-FOSS.git
