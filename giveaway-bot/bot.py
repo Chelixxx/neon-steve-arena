@@ -3,7 +3,7 @@ import os
 import random
 from pathlib import Path
 
-from telegram import Update
+from telegram import Update, ReactionTypeEmoji
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
@@ -109,6 +109,14 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log.info("Group %s giveaway progress: %s/%s", chat.id, count, target)
 
     if count < target:
+        try:
+            await context.bot.set_message_reaction(
+                chat_id=chat.id,
+                message_id=msg.message_id,
+                reaction=[ReactionTypeEmoji("👎")],
+            )
+        except Exception:
+            log.exception("Could not react to non-winning message")
         return
 
     username = f"@{user.username}" if user.username else f"{user.full_name} (без username)"
