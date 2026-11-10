@@ -95,8 +95,8 @@ async def say_to_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log.exception("Could not broadcast to group %s", group_id)
 
     await msg.reply_text(
-        f"📨 Рассылка завершена.\\n"
-        f"✅ Отправлено в групп: {sent}\\n"
+        f"📨 Рассылка завершена.\n"
+        f"✅ Отправлено в групп: {sent}\n"
         f"⚠️ Не удалось отправить: {failed}"
     )
 
