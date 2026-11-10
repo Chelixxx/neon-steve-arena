@@ -14,13 +14,41 @@ MIN_MESSAGES = 1
 MAX_MESSAGES = 15
 IMAGE_PATH = Path(__file__).parent / "assets" / "giveaway.jpg"
 
-CAPTION = (
-    "🎉 Поздравляю!\n"
-    "🎁 Ты выиграл Мишка 🧸 от @Chelixxx\n"
-    "✅ Организатор свяжется с тобой для выдачи подарка.\n\n"
-    "🚨 Пишите сообщения в чате и получайте возможность так же залутать подарки!\n\n"
-    "🎀 Также вы можете выбить мишку у @aftter в его чате — @chatikloxssy"
-)
+PRIZES = [
+    (81, "bear", "🧸 МИШКА", (
+        "🎉 Поздравляю!\\n"
+        "🎁 Ты выиграл Мишку 🧸 от @Chelixxx\\n"
+        "✅ Организатор свяжется с тобой для выдачи подарка.\\n\\n"
+        "🚨 Пишите сообщения в чате и получайте возможность тоже выиграть подарок!\\n\\n"
+        "🎀 Также вы можете выбить подарок у @aftter в его чате — @chatikloxssy"
+    )),
+    (10, "bouquet", "💐 БУКЕТ — ДЖЕКПОТ", (
+        "💐 ВОТ ЭТО УДАЧА!\\n"
+        "🎁 Ты сорвал ДЖЕКПОТ и выиграл БУКЕТ! 🌹\\n"
+        "👑 Такой выигрыш выпадает не каждый день!\\n"
+        "✅ Организатор свяжется с тобой для выдачи подарка.\\n\\n"
+        "🚨 Продолжайте писать — впереди ещё розыгрыши!\\n"
+        "🎀 @chatikloxssy"
+    )),
+    (9, "heart", "💝 СЕРДЕЧКО — ДЖЕКПОТ", (
+        "💗 НЕВЕРОЯТНО!\\n"
+        "🎁 Ты выиграл ДЖЕКПОТ — СЕРДЕЧКО! 💝\\n"
+        "✨ Сегодня удача явно на твоей стороне!\\n"
+        "✅ Организатор свяжется с тобой для выдачи подарка.\\n\\n"
+        "🚨 Пишите сообщения, участвуйте в розыгрышах и ловите подарки!\\n"
+        "🎀 @chatikloxssy"
+    )),
+]
+
+
+def choose_prize():
+    roll = random.randrange(100)
+    cumulative = 0
+    for weight, key, title, caption in PRIZES:
+        cumulative += weight
+        if roll < cumulative:
+            return key, title, caption
+    return PRIZES[0][1:]
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("giveaway")
@@ -86,14 +114,17 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = f"@{user.username}" if user.username else f"{user.full_name} (без username)"
     group_name = chat.title or str(chat.id)
 
+    prize_key, prize_title, caption = choose_prize()
+    log.info("Winner %s in group %s won %s", user.id, chat.id, prize_key)
+
     try:
         if PHOTO_FILE_ID:
-            await msg.reply_photo(photo=PHOTO_FILE_ID, caption=CAPTION)
+            await msg.reply_photo(photo=PHOTO_FILE_ID, caption=caption)
         elif IMAGE_PATH.is_file():
             with IMAGE_PATH.open("rb") as photo:
-                await msg.reply_photo(photo=photo, caption=CAPTION)
+                await msg.reply_photo(photo=photo, caption=caption)
         else:
-            await msg.reply_text(CAPTION)
+            await msg.reply_text(caption)
     except Exception:
         log.exception("Could not post winner announcement")
         return
@@ -112,6 +143,7 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"👤 Участник: {username}\n"
                     f"💬 Группа: {group_name}\n"
                     f"🆔 Telegram ID: {user.id}\n"
+                    f"🎁 Приз: {prize_title}\n"
                     "🎁 Выдачу реального подарка подтверди вручную."
                 ),
             )
@@ -133,7 +165,10 @@ def main():
     app.add_handler(
         MessageHandler(filters.ChatType.GROUPS & group_messages, on_group_message)
     )
-    log.info("Giveaway bot is running; random message target=%s-%s", MIN_MESSAGES, MAX_MESSAGES)
+    log.info(
+        "Giveaway bot is running; message target=%s-%s; prize weights: bear=81%%, bouquet=10%%, heart=9%%",
+        MIN_MESSAGES, MAX_MESSAGES
+    )
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
