@@ -10,6 +10,7 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
 OWNER_ID = int(OWNER_ID_RAW) if OWNER_ID_RAW.isdigit() else None
 WIN_CHANCE = float(os.getenv("WIN_CHANCE", "0.07"))
+PHOTO_FILE_ID = os.getenv("GIVEAWAY_PHOTO_FILE_ID", "").strip()
 IMAGE_PATH = Path(__file__).parent / "assets" / "giveaway.jpg"
 
 CAPTION = (
@@ -31,6 +32,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def save_owner_photo_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not user or not OWNER_ID or user.id != OWNER_ID:
+        return
+    photo_id = update.effective_message.photo[-1].file_id
+    await update.effective_message.reply_text(
+        "Фото получено. Скопируй этот ID в Railway → Variables как GIVEAWAY_PHOTO_FILE_ID:\n\n"
+        + photo_id
+    )
+
+
 async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     user = update.effective_user
@@ -38,7 +50,7 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not msg or not user or user.is_bot or not chat:
         return
 
-    # Each eligible group message is an independent 7% free giveaway roll.
+    # Every eligible group message is an independent free 7% giveaway roll.
     if random.random() >= WIN_CHANCE:
         return
 
@@ -46,7 +58,9 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     group_name = chat.title or str(chat.id)
 
     try:
-        if IMAGE_PATH.is_file():
+        if PHOTO_FILE_ID:
+            await msg.reply_photo(photo=PHOTO_FILE_ID, caption=CAPTION)
+        elif IMAGE_PATH.is_file():
             with IMAGE_PATH.open("rb") as photo:
                 await msg.reply_photo(photo=photo, caption=CAPTION)
         else:
@@ -76,6 +90,7 @@ def main():
         raise SystemExit("WIN_CHANCE must be > 0 and <= 1")
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO, save_owner_photo_id))
     app.add_handler(
         MessageHandler(
             filters.ChatType.GROUPS & (filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.ALL),
