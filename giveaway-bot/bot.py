@@ -4,6 +4,7 @@ import random
 from pathlib import Path
 
 from telegram import Update, ReactionTypeEmoji
+from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters, PicklePersistence
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
@@ -78,7 +79,12 @@ async def say_to_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     target_chat = "@freegiftsgroup"
     try:
-        await context.bot.send_message(chat_id=target_chat, text=text_to_send)
+        await context.bot.send_message(
+            chat_id=target_chat,
+            text=text_to_send,
+            parse_mode=ParseMode.MARKDOWN,
+            disable_web_page_preview=True,
+        )
         await msg.reply_text("✅ Сообщение отправлено в @freegiftsgroup от лица бота.")
     except Exception:
         log.exception("Could not send owner's message to @freegiftsgroup")
