@@ -76,29 +76,16 @@ async def say_to_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.reply_text("Напиши текст так: /say Всем привет! 👋")
         return
 
-    group_ids = sorted(context.bot_data.get("known_group_ids", set()))
-    if not group_ids:
+    target_chat = "@freegiftsgroup"
+    try:
+        await context.bot.send_message(chat_id=target_chat, text=text_to_send)
+        await msg.reply_text("✅ Сообщение отправлено в @freegiftsgroup от лица бота.")
+    except Exception:
+        log.exception("Could not send owner's message to @freegiftsgroup")
         await msg.reply_text(
-            "Пока не знаю ни одной группы. Бот должен получить хотя бы одно сообщение "
-            "в каждой группе, куда он добавлен."
+            "❌ Не получилось отправить. Проверь, что бот добавлен в @freegiftsgroup "
+            "и ему разрешено отправлять сообщения."
         )
-        return
-
-    sent = 0
-    failed = 0
-    for group_id in group_ids:
-        try:
-            await context.bot.send_message(chat_id=group_id, text=text_to_send)
-            sent += 1
-        except Exception:
-            failed += 1
-            log.exception("Could not broadcast to group %s", group_id)
-
-    await msg.reply_text(
-        f"📨 Рассылка завершена.\n"
-        f"✅ Отправлено в групп: {sent}\n"
-        f"⚠️ Не удалось отправить: {failed}"
-    )
 
 
 async def save_owner_photo_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
