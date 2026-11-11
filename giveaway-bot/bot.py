@@ -12,8 +12,8 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
 OWNER_ID = int(OWNER_ID_RAW) if OWNER_ID_RAW.isdigit() else None
 PHOTO_FILE_ID = os.getenv("GIVEAWAY_PHOTO_FILE_ID", "").strip()
-MIN_MESSAGES = 1
-MAX_MESSAGES = 15
+MIN_MESSAGES = 5
+MAX_MESSAGES = 25
 IMAGE_PATH = Path(__file__).parent / "assets" / "giveaway.jpg"
 
 PRIZES = [
@@ -43,7 +43,7 @@ PRIZES = [
     (1, "nft", "⚔️ NFT LIGHT SWORD", (
         "⚔️ НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\n"
         "🎁 Твой приз — [NFT Light Sword](https://t.me/nft/LightSword-36379)\n"
-        "👑 Во время специального бонуса шанс выпадения — 100%!\n"
+        ""
         "✅ Организатор свяжется с тобой для выдачи подарка."
     )),
 ]
