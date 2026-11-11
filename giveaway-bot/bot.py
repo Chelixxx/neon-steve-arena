@@ -88,12 +88,21 @@ async def deliver_prize(context: ContextTypes.DEFAULT_TYPE, user_id: int, prize_
     return True, f"Подарок отправлен автоматически за {price} ⭐."
 
 
-def choose_prize(context: ContextTypes.DEFAULT_TYPE):
-    # During /boost, the bear has exactly a 50% chance.
-    if context.bot_data.get("bear_boost_until", 0) > time.time():
-        if random.random() < 0.5:
+def choose_prize(context: ContextTypes.DEFAULT_TYPE, chat_data: dict):
+    # During /boost, alternate: one normal prize, then a guaranteed bear.
+    boost_until = context.bot_data.get("bear_boost_until", 0)
+    if boost_until > time.time():
+        session = context.bot_data.get("bear_boost_session", boost_until)
+        if chat_data.get("bear_boost_session") != session:
+            chat_data["bear_boost_session"] = session
+            chat_data["bear_boost_next_bear"] = False
+
+        if chat_data.get("bear_boost_next_bear", False):
+            chat_data["bear_boost_next_bear"] = False
             bear = next(item for item in PRIZES if item[1] == "bear")
             return bear[1], bear[2], bear[3]
+
+        chat_data["bear_boost_next_bear"] = True
         other_prizes = [item for item in PRIZES if item[1] != "bear"]
         total_weight = sum(item[0] for item in other_prizes)
         roll = random.randrange(total_weight)
@@ -357,7 +366,8 @@ async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_group_link(msg)
         return
     context.bot_data["bear_boost_until"] = time.time() + 3 * 60
-    await msg.reply_text("🧸 Буст Мишек активирован на 3 минуты! Шанс Мишки — ровно 50%.")
+    context.bot_data["bear_boost_session"] = context.bot_data["bear_boost_until"]
+    await msg.reply_text("🧸 Буст Мишек активирован на 3 минуты! Каждый второй завершённый розыгрыш гарантированно выдаёт Мишку.")
 
 
 async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -423,7 +433,7 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = f"@{user.username}" if user.username else f"{user.full_name} (без username)"
     group_name = chat.title or str(chat.id)
 
-    prize_key, prize_title, caption = choose_prize(context)
+    prize_key, prize_title, caption = choose_prize(context, context.chat_data)
     log.info("Winner %s in group %s won %s", user.id, chat.id, prize_key)
 
     # The owner participates in the public draw, but does not receive a paid gift.
@@ -432,6 +442,9 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     delivery_note = "Владелец выиграл: реальный подарок не отправлялся."
     if OWNER_ID and user.id == OWNER_ID:
         log.info("Owner %s won %s; skipping gift delivery", user.id, prize_key)
+    elif prize_key == "bear" and context.bot_data.get("bear_boost_until", 0) > time.time():
+        delivery_note = "Мишка объявлен; выдача вручную владельцем."
+        log.info("Bear boost winner %s; automatic gift delivery skipped for manual handoff", user.id)
     else:
         try:
             delivery_ok, delivery_note = await deliver_prize(context, user.id, prize_key)
