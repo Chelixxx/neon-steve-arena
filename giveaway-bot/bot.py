@@ -4,9 +4,9 @@ import random
 import time
 from pathlib import Path
 
-from telegram import Update, ReactionTypeEmoji, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ReactionTypeEmoji, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from telegram.constants import ParseMode
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters, PicklePersistence
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, PreCheckoutQueryHandler, ContextTypes, filters, PicklePersistence
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
@@ -155,6 +155,7 @@ def ignored_menu(context: ContextTypes.DEFAULT_TYPE) -> InlineKeyboardMarkup:
     for user_id, label in list(users.items())[:30]:
         rows.append([InlineKeyboardButton(f"Убрать: {label} ({user_id})", callback_data=f"ignored:remove:{user_id}")])
     rows.append([InlineKeyboardButton("💰 Баланс Stars бота", callback_data="balance:show")])
+    rows.append([InlineKeyboardButton("⭐ Пополнить Stars", callback_data="balance:topup_help")])
     rows.append([InlineKeyboardButton("📜 История Stars", callback_data="balance:history")])
     rows.append([InlineKeyboardButton("🔄 Обновить список", callback_data="ignored:refresh")])
     return InlineKeyboardMarkup(rows)
@@ -226,6 +227,120 @@ async def ignored_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
         users.pop(user_id, None)
     await query.edit_message_text(ignored_panel_text(context), reply_markup=ignored_menu(context))
 
+
+
+async def topup_help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+    if not is_owner(update):
+        await query.answer("Нет доступа.", show_alert=True)
+        return
+    await query.answer()
+    await query.message.reply_text(
+        "Чтобы выставить счёт на пополнение, отправь команду в личке с ботом:\\n"
+        "/topup 15\\n\\n"
+        "Заменяй 15 на нужное число Stars. Оплата произойдёт только после нажатия Pay и подтверждения в Telegram."
+    )
+
+
+async def create_owner_topup(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    chat = update.effective_chat
+    msg = update.effective_message
+    if not user or not OWNER_ID or user.id != OWNER_ID or not chat or chat.type != "private":
+        if msg:
+            await msg.reply_text("Пополнение доступно только владельцу в личке с ботом.")
+        return
+    if len(context.args) != 1 or not context.args[0].isdigit():
+        await msg.reply_text("Формат: /topup 15")
+        return
+    amount = int(context.args[0])
+    if amount < 1 or amount > 1000:
+        await msg.reply_text("Можно выставить счёт от 1 до 1000 Stars за раз.")
+        return
+
+    payload = f"owner_topup:{OWNER_ID}:{amount}:{random.getrandbits(48):012x}"
+    try:
+        await context.bot.send_invoice(
+            chat_id=OWNER_ID,
+            title="Пополнение Stars бота",
+            description=f"Зачислить {amount} Telegram Stars на баланс розыгрышного бота.",
+            payload=payload,
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice("Пополнение баланса бота", amount)],
+        )
+        await msg.reply_text(
+            f"🧾 Счёт на {amount} ⭐ отправлен выше. Баланс пополнится только после успешной оплаты в Telegram."
+        )
+    except Exception:
+        log.exception("Could not create owner Stars top-up invoice")
+        await msg.reply_text("❌ Telegram не смог создать счёт. Баланс не изменён.")
+
+
+async def precheckout_topup(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.pre_checkout_query
+    if not query:
+        return
+    try:
+        parts = (query.invoice_payload or "").split(":")
+        valid = (
+            len(parts) == 4
+            and parts[0] == "owner_topup"
+            and OWNER_ID is not None
+            and query.from_user.id == OWNER_ID
+            and int(parts[1]) == OWNER_ID
+            and int(parts[2]) == query.total_amount
+            and query.currency == "XTR"
+            and 1 <= query.total_amount <= 1000
+        )
+    except (ValueError, TypeError):
+        valid = False
+    await query.answer(
+        ok=valid,
+        error_message=None if valid else "Этот счёт недействителен или не предназначен для вашего аккаунта.",
+    )
+
+
+async def successful_topup(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    user = update.effective_user
+    payment = msg.successful_payment if msg else None
+    if not payment or not user:
+        return
+    parts = (payment.invoice_payload or "").split(":")
+    valid = (
+        len(parts) == 4
+        and parts[0] == "owner_topup"
+        and OWNER_ID is not None
+        and user.id == OWNER_ID
+        and parts[1].isdigit()
+        and int(parts[1]) == OWNER_ID
+        and parts[2].isdigit()
+        and int(parts[2]) == payment.total_amount
+        and payment.currency == "XTR"
+    )
+    if not valid:
+        log.error("Received unexpected Stars payment; charge=%s", payment.telegram_payment_charge_id)
+        await msg.reply_text("⚠️ Получен платёж с неожиданными параметрами. Обратись к поддержке бота.")
+        return
+    log.info(
+        "Owner top-up paid: amount=%s XTR charge_id=%s",
+        payment.total_amount,
+        payment.telegram_payment_charge_id,
+    )
+    try:
+        balance = await context.bot.get_my_star_balance()
+        amount = getattr(balance, "amount", None)
+        balance_text = f"\\nТекущий баланс бота: {amount} ⭐" if amount is not None else ""
+    except Exception:
+        log.exception("Top-up succeeded but balance refresh failed")
+        balance_text = ""
+    await msg.reply_text(
+        f"✅ Оплата подтверждена Telegram: +{payment.total_amount} ⭐ на баланс бота."
+        f"{balance_text}\\nID операции сохранён в журнале."
+    )
 
 
 async def balance_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -454,8 +569,12 @@ def main():
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
     app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(CommandHandler("panel", panel))
+    app.add_handler(CommandHandler("topup", create_owner_topup))
+    app.add_handler(PreCheckoutQueryHandler(precheckout_topup))
+    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.SUCCESSFUL_PAYMENT, successful_topup))
     app.add_handler(CommandHandler("ignore", ignore_user))
     app.add_handler(CallbackQueryHandler(balance_callback, pattern=r"^balance:show$"))
+    app.add_handler(CallbackQueryHandler(topup_help_callback, pattern=r"^balance:topup_help$"))
     app.add_handler(CallbackQueryHandler(star_history_callback, pattern=r"^balance:history$"))
     app.add_handler(CallbackQueryHandler(ignored_menu_callback, pattern=r"^ignored:"))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO, save_owner_photo_id))
