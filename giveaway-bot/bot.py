@@ -62,10 +62,37 @@ log = logging.getLogger("giveaway")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.effective_message.reply_text(
-        "Я работаю 🎁 Добавь меня в группу. Владелец должен нажать /start в личке, "
-        "а Privacy Mode нужно отключить через @BotFather → /setprivacy → Disable."
-    )
+    msg = update.effective_message
+    if not msg:
+        return
+    if is_owner(update):
+        await msg.reply_text(
+            "🛠 Админ-панель розыгрыша\\n\\n"
+            "Управляй исключёнными пользователями и настройками бота.",
+            reply_markup=ignored_menu(context),
+        )
+    else:
+        await msg.reply_text(
+            "🎁 Все розыгрыши проходят в нашей группе!",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🎁 Перейти в группу с раздачей", url="https://t.me/freegiftsgroup")
+            ]]),
+        )
+
+
+async def private_redirect(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if is_owner(update):
+        await update.effective_message.reply_text(
+            ignored_panel_text(context),
+            reply_markup=ignored_menu(context),
+        )
+    else:
+        await update.effective_message.reply_text(
+            "🎁 Бот используется для розыгрышей в группе.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🎁 Группа с раздачей", url="https://t.me/freegiftsgroup")
+            ]]),
+        )
 
 
 def is_owner(update: Update) -> bool:
@@ -99,6 +126,12 @@ def ignored_panel_text(context: ContextTypes.DEFAULT_TYPE) -> str:
 
 async def panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update):
+        await update.effective_message.reply_text(
+            "🎁 Админ-меню доступно только владельцу. Все розыгрыши проходят в группе.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🎁 Группа с раздачей", url="https://t.me/freegiftsgroup")
+            ]]),
+        )
         return
     if update.effective_chat.type != "private":
         await update.effective_message.reply_text("Открой меню в личке с ботом: /panel")
@@ -108,6 +141,12 @@ async def panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def ignore_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update):
+        await update.effective_message.reply_text(
+            "🎁 Управление ботом доступно только владельцу. Присоединяйся к группе с раздачей!",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🎁 Группа с раздачей", url="https://t.me/freegiftsgroup")
+            ]]),
+        )
         return
     msg = update.effective_message
     if not msg or not msg.reply_to_message or not msg.reply_to_message.from_user:
@@ -293,6 +332,7 @@ def main():
     app.add_handler(CommandHandler("ignore", ignore_user))
     app.add_handler(CallbackQueryHandler(ignored_menu_callback, pattern=r"^ignored:"))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO, save_owner_photo_id))
+    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.PHOTO, private_redirect))
     group_messages = (
         (filters.TEXT & ~filters.COMMAND)
         | filters.PHOTO
