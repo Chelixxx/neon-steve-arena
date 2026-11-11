@@ -48,8 +48,8 @@ PRIZES = [
     )),
 
     (1, "inputkey", "🔑 NFT INPUT KEY", (
-        "🔑 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\\n"
-        "🎁 Твой приз — [NFT InputKey](https://t.me/nft/InputKey-72263)\\n"
+        "🔑 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\n"
+        "🎁 Твой приз — [NFT InputKey](https://t.me/nft/InputKey-72263)\n"
         "✅ Организатор свяжется с тобой для выдачи подарка."
     )),]
 
@@ -124,7 +124,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if is_owner(update):
         await msg.reply_text(
-            "🛠 Админ-панель розыгрыша\\n\\n"
+            "🛠 Админ-панель розыгрыша\n\n"
             "Управляй исключёнными пользователями и настройками бота.",
             reply_markup=ignored_menu(context),
         )
@@ -254,7 +254,7 @@ async def balance_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if amount is None:
             text = "Не удалось прочитать баланс: Telegram вернул неизвестный формат."
         else:
-            text = f"💰 Баланс Stars бота: {amount} ⭐\\n\\nЛичный баланс владельца не затрагивается."
+            text = f"💰 Баланс Stars бота: {amount} ⭐\n\nЛичный баланс владельца не затрагивается."
     except Exception:
         log.exception("Could not fetch bot Star balance")
         text = "❌ Не удалось получить баланс Stars бота. Проверь поддержку метода Telegram и повтори позже."
@@ -283,7 +283,7 @@ async def star_history_callback(update: Update, context: ContextTypes.DEFAULT_TY
                 date = getattr(tx, "date", None)
                 date_text = date.strftime("%d.%m.%Y %H:%M") if date else "дата неизвестна"
                 lines.append(f"{direction} {amount} ⭐ — {date_text}")
-            text = "\\n".join(lines)
+            text = "\n".join(lines)
     except Exception:
         log.exception("Could not fetch bot Star transactions")
         text = "❌ Telegram не вернул историю Stars. Попробуй позже."
