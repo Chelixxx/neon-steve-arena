@@ -90,12 +90,12 @@ async def admin(request):
     if not user or not OWNER_ID or int(user.get("id",0)) != OWNER_ID:
         return web.json_response({"error":"Доступ только владельцу."},status=403)
     try:
-        action = (await request.json()).get("action")
+        payload = await request.json()
+        action = payload.get("action")
     except Exception:
         return web.json_response({"error":"Некорректный запрос."},status=400)
     app = request.app["bot_app"]
     if action == "chance_save":
-        payload = await request.json()
         mode = payload.get("mode")
         weights = payload.get("weights")
         keys = ("bear", "bouquet", "heart", "nft", "inputkey")
