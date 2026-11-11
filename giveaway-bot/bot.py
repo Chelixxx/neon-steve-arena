@@ -342,6 +342,15 @@ async def save_owner_photo_id(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
 
+async def nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    if not is_owner(update):
+        await send_group_link(msg)
+        return
+    context.bot_data["nft_boost_until"] = time.time() + 3 * 60
+    await msg.reply_text("⚔️ NFT-буст активирован на 3 минуты! 100% шанс на NFT: Light Sword и InputKey — 50/50.")
+
+
 async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not is_owner(update):
@@ -470,6 +479,7 @@ def main():
     persistence = PicklePersistence(filepath="giveaway_bot_data.pickle", update_interval=5)
     app = Application.builder().token(BOT_TOKEN).persistence(persistence).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("nftboost", nft_boost))
     app.add_handler(CommandHandler("boost", bear_boost))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
     app.add_handler(CommandHandler("say", say_to_groups))
