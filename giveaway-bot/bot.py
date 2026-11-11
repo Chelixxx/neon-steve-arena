@@ -84,6 +84,12 @@ async def deliver_prize(context: ContextTypes.DEFAULT_TYPE, user_id: int, prize_
 
 
 def choose_prize(context: ContextTypes.DEFAULT_TYPE):
+    # During an active boost, every draw selects the NFT jackpot.
+    if context.bot_data.get("nft_boost_until", 0) > time.time():
+        nft_prize = next((item for item in PRIZES if item[1] == "nft"), None)
+        if nft_prize:
+            return nft_prize[1], nft_prize[2], nft_prize[3]
+
     roll = random.randrange(100)
     cumulative = 0
     for weight, key, title, caption in PRIZES:
@@ -447,10 +453,17 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log.exception("Could not notify owner")
 
 
+async def start_nft_boost(app: Application):
+    # Start the requested five-minute boost as soon as the new deployment is ready.
+    app.bot_data["nft_boost_until"] = time.time() + 5 * 60
+    log.info("NFT boost activated for 5 minutes on startup")
+
+
 def main():
     persistence = PicklePersistence(filepath="giveaway_bot_data.pickle", update_interval=5)
-    app = Application.builder().token(BOT_TOKEN).persistence(persistence).build()
+    app = Application.builder().token(BOT_TOKEN).persistence(persistence).post_init(start_nft_boost).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("nftboost", nft_boost))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
     app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(CommandHandler("panel", panel))
