@@ -13,6 +13,7 @@ from telegram import WebAppInfo
 
 from telegram import Update, ReactionTypeEmoji, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
+from miniapp_server import start_server, stop_server
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters, PicklePersistence
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
@@ -537,7 +538,7 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     persistence = PicklePersistence(filepath="giveaway_bot_data.pickle", update_interval=5)
-    app = Application.builder().token(BOT_TOKEN).persistence(persistence).build()
+    app = Application.builder().token(BOT_TOKEN).persistence(persistence).post_init(start_server).post_shutdown(stop_server).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("nftboost", nft_boost))
     app.add_handler(CommandHandler("boost", bear_boost))
