@@ -155,6 +155,7 @@ def ignored_menu(context: ContextTypes.DEFAULT_TYPE) -> InlineKeyboardMarkup:
     for user_id, label in list(users.items())[:30]:
         rows.append([InlineKeyboardButton(f"Убрать: {label} ({user_id})", callback_data=f"ignored:remove:{user_id}")])
     rows.append([InlineKeyboardButton("💰 Баланс Stars бота", callback_data="balance:show")])
+    rows.append([InlineKeyboardButton("📜 История Stars", callback_data="balance:history")])
     rows.append([InlineKeyboardButton("🔄 Обновить список", callback_data="ignored:refresh")])
     return InlineKeyboardMarkup(rows)
 
@@ -245,6 +246,35 @@ async def balance_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         log.exception("Could not fetch bot Star balance")
         text = "❌ Не удалось получить баланс Stars бота. Проверь поддержку метода Telegram и повтори позже."
+    await query.edit_message_text(text, reply_markup=ignored_menu(context))
+
+
+
+async def star_history_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+    if not is_owner(update):
+        await query.answer("Нет доступа.", show_alert=True)
+        return
+    await query.answer()
+    try:
+        result = await context.bot.get_star_transactions(limit=10)
+        transactions = getattr(result, "transactions", ())
+        if not transactions:
+            text = "📜 История Stars пока пуста."
+        else:
+            lines = ["📜 Последние операции Stars бота:"]
+            for tx in transactions:
+                direction = "➕" if getattr(tx, "amount", 0) > 0 else "➖"
+                amount = abs(getattr(tx, "amount", 0))
+                date = getattr(tx, "date", None)
+                date_text = date.strftime("%d.%m.%Y %H:%M") if date else "дата неизвестна"
+                lines.append(f"{direction} {amount} ⭐ — {date_text}")
+            text = "\\n".join(lines)
+    except Exception:
+        log.exception("Could not fetch bot Star transactions")
+        text = "❌ Telegram не вернул историю Stars. Попробуй позже."
     await query.edit_message_text(text, reply_markup=ignored_menu(context))
 
 
@@ -426,6 +456,7 @@ def main():
     app.add_handler(CommandHandler("panel", panel))
     app.add_handler(CommandHandler("ignore", ignore_user))
     app.add_handler(CallbackQueryHandler(balance_callback, pattern=r"^balance:show$"))
+    app.add_handler(CallbackQueryHandler(star_history_callback, pattern=r"^balance:history$"))
     app.add_handler(CallbackQueryHandler(ignored_menu_callback, pattern=r"^ignored:"))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO, save_owner_photo_id))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.PHOTO, private_redirect))
