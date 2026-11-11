@@ -12,8 +12,8 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
 OWNER_ID = int(OWNER_ID_RAW) if OWNER_ID_RAW.isdigit() else None
 PHOTO_FILE_ID = os.getenv("GIVEAWAY_PHOTO_FILE_ID", "").strip()
-MIN_MESSAGES = 1
-MAX_MESSAGES = 10
+MIN_MESSAGES = 3
+MAX_MESSAGES = 20
 IMAGE_PATH = Path(__file__).parent / "assets" / "giveaway.jpg"
 
 PRIZES = [
@@ -89,12 +89,19 @@ async def deliver_prize(context: ContextTypes.DEFAULT_TYPE, user_id: int, prize_
 
 
 def choose_prize(context: ContextTypes.DEFAULT_TYPE):
-    # During an active boost, choose either NFT with equal probability.
-    if context.bot_data.get("nft_boost_until", 0) > time.time():
-        nft_prizes = [item for item in PRIZES if item[1] in ("nft", "inputkey")]
-        if nft_prizes:
-            selected = random.choice(nft_prizes)
-            return selected[1], selected[2], selected[3]
+    # During /boost, the bear has exactly a 50% chance.
+    if context.bot_data.get("bear_boost_until", 0) > time.time():
+        if random.random() < 0.5:
+            bear = next(item for item in PRIZES if item[1] == "bear")
+            return bear[1], bear[2], bear[3]
+        other_prizes = [item for item in PRIZES if item[1] != "bear"]
+        total_weight = sum(item[0] for item in other_prizes)
+        roll = random.randrange(total_weight)
+        cumulative = 0
+        for weight, key, title, caption in other_prizes:
+            cumulative += weight
+            if roll < cumulative:
+                return key, title, caption
 
     roll = random.randrange(100)
     cumulative = 0
@@ -335,13 +342,13 @@ async def save_owner_photo_id(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
 
-async def nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not is_owner(update):
         await send_group_link(msg)
         return
-    context.bot_data["nft_boost_until"] = time.time() + 3 * 60
-    await msg.reply_text("⚔️ NFT-буст активирован на 3 минуты! 100% шанс на NFT: Light Sword и InputKey — 50/50.")
+    context.bot_data["bear_boost_until"] = time.time() + 3 * 60
+    await msg.reply_text("🧸 Буст Мишек активирован на 3 минуты! Шанс Мишки — ровно 50%.")
 
 
 async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -459,17 +466,11 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log.exception("Could not notify owner")
 
 
-async def start_nft_boost(app: Application):
-    # Start the requested five-minute boost as soon as the new deployment is ready.
-    app.bot_data["nft_boost_until"] = time.time() + 5 * 60
-    log.info("NFT boost activated for 5 minutes on startup")
-
-
 def main():
     persistence = PicklePersistence(filepath="giveaway_bot_data.pickle", update_interval=5)
-    app = Application.builder().token(BOT_TOKEN).persistence(persistence).post_init(start_nft_boost).build()
+    app = Application.builder().token(BOT_TOKEN).persistence(persistence).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("nftboost", nft_boost))
+    app.add_handler(CommandHandler("boost", bear_boost))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
     app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(CommandHandler("panel", panel))
