@@ -54,6 +54,14 @@ PRIZES = [
     )),]
 
 
+PRIZE_LABELS = {
+    "bear": "🧸 Мишка",
+    "bouquet": "💐 Букет",
+    "heart": "💝 Сердечко",
+    "nft": "⚔️ Light Sword",
+    "inputkey": "🔑 InputKey",
+}
+
 GIFT_EMOJI = {
     "bear": "🧸",
     "bouquet": "💐",
@@ -348,6 +356,37 @@ async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await msg.reply_text("🧸 Буст Мишек активирован на 3 минуты! Каждое второе сообщение в группе гарантированно запускает выпадение Мишки.")
 
 
+async def top_wins(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    chat = update.effective_chat
+    if not msg or not chat or chat.type not in ("group", "supergroup"):
+        if msg:
+            await msg.reply_text("Команда /top работает в группе розыгрыша.")
+        return
+
+    stats = context.chat_data.get("prize_wins", {})
+    ranked = sorted(stats.items(), key=lambda item: item[1].get("total", 0), reverse=True)
+    if not ranked:
+        await msg.reply_text("🏆 Топ пока пуст — выигравших ещё нет!")
+        return
+
+    medals = ["🥇", "🥈", "🥉"]
+    lines = ["🏆 ТОП ПОБЕДИТЕЛЕЙ ЭТОЙ ГРУППЫ", ""]
+    for index, (user_id, data) in enumerate(ranked[:10]):
+        medal = medals[index] if index < len(medals) else f"{index + 1}."
+        name = data.get("name") or f"ID {user_id}"
+        total = data.get("total", 0)
+        prize_counts = data.get("prizes", {})
+        breakdown = " · ".join(
+            f"{PRIZE_LABELS.get(key, key)}: {count}"
+            for key, count in sorted(prize_counts.items()) if count
+        )
+        lines.append(f"{medal} {name} — {total} побед")
+        if breakdown:
+            lines.append(f"   {breakdown}")
+    await msg.reply_text("\n".join(lines))
+
+
 async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     chat = update.effective_chat
@@ -465,6 +504,15 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log.exception("Could not post winner announcement")
         return
 
+    # Count only wins whose announcement was successfully posted.
+    wins = context.chat_data.setdefault("prize_wins", {})
+    user_key = str(user.id)
+    entry = wins.setdefault(user_key, {"name": username, "total": 0, "prizes": {}})
+    entry["name"] = username
+    entry["total"] = entry.get("total", 0) + 1
+    prize_counts = entry.setdefault("prizes", {})
+    prize_counts[prize_key] = prize_counts.get(prize_key, 0) + 1
+
     # Start a fresh round only after the announcement was successfully sent.
     context.chat_data["message_count"] = 0
     context.chat_data["message_target"] = random.randint(MIN_MESSAGES, MAX_MESSAGES)
@@ -494,6 +542,7 @@ def main():
     app.add_handler(CommandHandler("nftboost", nft_boost))
     app.add_handler(CommandHandler("boost", bear_boost))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
+    app.add_handler(CommandHandler("top", top_wins))
     app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(CommandHandler("panel", panel))
     app.add_handler(CommandHandler("ignore", ignore_user))
