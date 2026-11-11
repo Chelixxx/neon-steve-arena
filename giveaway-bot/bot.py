@@ -17,14 +17,14 @@ MAX_MESSAGES = 15
 IMAGE_PATH = Path(__file__).parent / "assets" / "giveaway.jpg"
 
 PRIZES = [
-    (80, "bear", "🧸 МИШКА", (
+    (97, "bear", "🧸 МИШКА", (
         "🎉 Поздравляю!\n"
         "🎁 Ты выиграл Мишку 🧸 от @Chelixxx\n"
         "✅ Организатор свяжется с тобой для выдачи подарка.\n\n"
         "🚨 Пишите сообщения в чате и получайте возможность тоже выиграть подарок!\n\n"
         "🎀 Также вы можете выбить подарок у @aftter в его чате — @chatikloxssy"
     )),
-    (10, "bouquet", "💐 БУКЕТ — ДЖЕКПОТ", (
+    (1, "bouquet", "💐 БУКЕТ — ДЖЕКПОТ", (
         "💐 ВОТ ЭТО УДАЧА!\n"
         "🎁 Ты сорвал ДЖЕКПОТ и выиграл БУКЕТ! 🌹\n"
         "👑 Такой выигрыш выпадает не каждый день!\n"
@@ -32,7 +32,7 @@ PRIZES = [
         "🚨 Продолжайте писать — впереди ещё розыгрыши!\n"
         "🎀 @chatikloxssy"
     )),
-    (9, "heart", "💝 СЕРДЕЧКО — ДЖЕКПОТ", (
+    (1, "heart", "💝 СЕРДЕЧКО — ДЖЕКПОТ", (
         "💗 НЕВЕРОЯТНО!\n"
         "🎁 Ты выиграл ДЖЕКПОТ — СЕРДЕЧКО! 💝\n"
         "✨ Сегодня удача явно на твоей стороне!\n"
@@ -50,8 +50,6 @@ PRIZES = [
 
 
 def choose_prize(context: ContextTypes.DEFAULT_TYPE):
-    if time.time() < context.bot_data.get("nft_boost_until", 0):
-        return PRIZES[3][1:]
     roll = random.randrange(100)
     cumulative = 0
     for weight, key, title, caption in PRIZES:
@@ -350,12 +348,8 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     persistence = PicklePersistence(filepath="giveaway_bot_data.pickle", update_interval=5)
     app = Application.builder().token(BOT_TOKEN).persistence(persistence).build()
-    # Temporary guaranteed NFT window: starts when this deployment boots and lasts 5 minutes.
-    app.bot_data["nft_boost_until"] = time.time() + 5 * 60
-    log.info("NFT prize boost activated for 5 minutes (100%% chance)")
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
-    app.add_handler(CommandHandler("nftboost", nft_boost))
     app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(CommandHandler("panel", panel))
     app.add_handler(CommandHandler("ignore", ignore_user))
@@ -372,7 +366,7 @@ def main():
         MessageHandler(filters.ChatType.GROUPS & group_messages, on_group_message)
     )
     log.info(
-        "Giveaway bot is running; message target=%s-%s; prize weights: bear=80%%, bouquet=10%%, heart=9%%, nft=1%%",
+        "Giveaway bot is running; message target=%s-%s; prize weights: bear=97%%, bouquet=1%%, heart=1%%, nft=1%%",
         MIN_MESSAGES, MAX_MESSAGES
     )
     app.run_polling(allowed_updates=Update.ALL_TYPES)
