@@ -71,7 +71,17 @@ async def data(request):
         "profile":profile,"rank":rank,
         "top":[{"id":key,**value} for key,value in top],"prize_labels":LABELS,
         "boosts":{"bear_seconds":max(0,int(app.bot_data.get("bear_boost_until",0)-time.time())),"nft_seconds":max(0,int(app.bot_data.get("nft_boost_until",0)-time.time()))},
-        "ignored_count":len(app.bot_data.get("ignored_users",{})) if owner else 0
+        "ignored_count":len(app.bot_data.get("ignored_users",{})) if owner else 0,
+        "chance_settings": ({
+            "default": app.bot_data.get("chance_default", {"bear":96,"bouquet":1,"heart":1,"nft":1,"inputkey":1}),
+            "temporary": app.bot_data.get("chance_temporary"),
+            "users": app.bot_data.get("chance_users", {}),
+            "known_users": sorted(
+                [{"id":str(v.get("id",k)),"name":v.get("name","Участник"),"username":v.get("username","")}
+                 for k,v in app.bot_data.get("known_users",{}).items()],
+                key=lambda x:x["name"].lower()
+            )
+        } if owner else None)
     })
 
 
@@ -84,6 +94,49 @@ async def admin(request):
     except Exception:
         return web.json_response({"error":"Некорректный запрос."},status=400)
     app = request.app["bot_app"]
+    if action == "chance_save":
+        payload = await request.json()
+        mode = payload.get("mode")
+        weights = payload.get("weights")
+        keys = ("bear", "bouquet", "heart", "nft", "inputkey")
+        if not isinstance(weights, dict) or set(weights) != set(keys):
+            return web.json_response({"error":"Нужно задать шансы для всех пяти призов."},status=400)
+        try:
+            weights = {key:int(weights[key]) for key in keys}
+        except (TypeError, ValueError):
+            return web.json_response({"error":"Шансы должны быть целыми числами."},status=400)
+        if any(v < 0 or v > 100 for v in weights.values()) or sum(weights.values()) != 100:
+            return web.json_response({"error":"Сумма всех шансов должна быть ровно 100%."},status=400)
+        minutes = payload.get("minutes", 0)
+        try:
+            minutes = int(minutes)
+        except (TypeError, ValueError):
+            return web.json_response({"error":"Укажи длительность в минутах."},status=400)
+        if mode in ("temporary", "user_temporary") and not 1 <= minutes <= 43200:
+            return web.json_response({"error":"Временная настройка: от 1 минуты до 30 дней."},status=400)
+        if mode == "default":
+            app.bot_data["chance_default"] = weights
+            message = "Постоянные шансы для всех сохранены."
+        elif mode == "temporary":
+            app.bot_data["chance_temporary"] = {"weights":weights,"until":time.time()+minutes*60}
+            message = f"Общие шансы применяются {minutes} мин., затем вернутся постоянные."
+        elif mode in ("user", "user_temporary"):
+            target = str(payload.get("user_id", "")).strip()
+            if not target.isdigit() or target not in app.bot_data.get("known_users", {}):
+                return web.json_response({"error":"Выбери участника, которого бот уже видел в группе."},status=400)
+            record = {"weights":weights}
+            if mode == "user_temporary":
+                record["until"] = time.time()+minutes*60
+            app.bot_data.setdefault("chance_users", {})[target] = record
+            person = app.bot_data["known_users"][target].get("name","Участник")
+            message = f"Персональные шансы для {person} сохранены."
+        elif mode == "user_remove":
+            target = str(payload.get("user_id", "")).strip()
+            app.bot_data.setdefault("chance_users", {}).pop(target, None)
+            message = "Персональные шансы удалены."
+        else:
+            return web.json_response({"error":"Неизвестный режим настройки."},status=400)
+        return web.json_response({"ok":True,"message":message})
     if action == "bear_boost":
         app.bot_data["bear_boost_until"] = time.time()+180
         app.bot_data["bear_boost_session"] = app.bot_data["bear_boost_until"]
