@@ -3,9 +3,9 @@ import os
 import random
 from pathlib import Path
 
-from telegram import Update, ReactionTypeEmoji
+from telegram import Update, ReactionTypeEmoji, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters, PicklePersistence
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters, PicklePersistence
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
@@ -16,7 +16,7 @@ MAX_MESSAGES = 15
 IMAGE_PATH = Path(__file__).parent / "assets" / "giveaway.jpg"
 
 PRIZES = [
-    (81, "bear", "🧸 МИШКА", (
+    (80, "bear", "🧸 МИШКА", (
         "🎉 Поздравляю!\n"
         "🎁 Ты выиграл Мишку 🧸 от @Chelixxx\n"
         "✅ Организатор свяжется с тобой для выдачи подарка.\n\n"
@@ -39,6 +39,12 @@ PRIZES = [
         "🚨 Пишите сообщения, участвуйте в розыгрышах и ловите подарки!\n"
         "🎀 @chatikloxssy"
     )),
+    (1, "nft", "⚔️ NFT LIGHT SWORD", (
+        "⚔️ НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\n"
+        "🎁 Твой приз — [NFT Light Sword](https://t.me/nft/LightSword-36379)\n"
+        "👑 Шанс выпадения этого приза — всего 1%!\n"
+        "✅ Организатор свяжется с тобой для выдачи подарка."
+    )),
 ]
 
 
@@ -60,6 +66,79 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Я работаю 🎁 Добавь меня в группу. Владелец должен нажать /start в личке, "
         "а Privacy Mode нужно отключить через @BotFather → /setprivacy → Disable."
     )
+
+
+def is_owner(update: Update) -> bool:
+    user = update.effective_user
+    return bool(user and OWNER_ID and user.id == OWNER_ID)
+
+
+def ignored_users(context: ContextTypes.DEFAULT_TYPE) -> dict:
+    return context.bot_data.setdefault("ignored_users", {})
+
+
+def ignored_menu(context: ContextTypes.DEFAULT_TYPE) -> InlineKeyboardMarkup:
+    users = ignored_users(context)
+    rows = []
+    for user_id, label in list(users.items())[:30]:
+        rows.append([InlineKeyboardButton(f"Убрать: {label} ({user_id})", callback_data=f"ignored:remove:{user_id}")])
+    rows.append([InlineKeyboardButton("🔄 Обновить список", callback_data="ignored:refresh")])
+    return InlineKeyboardMarkup(rows)
+
+
+def ignored_panel_text(context: ContextTypes.DEFAULT_TYPE) -> str:
+    users = ignored_users(context)
+    names = "\n".join(f"• {label} — ID {uid}" for uid, label in list(users.items())[:30])
+    return (
+        f"🛠 Панель розыгрыша\n\nВ игнор-листе: {len(users)}\n"
+        f"{names or 'Список пуст.'}\n\n"
+        "Добавление: ответь на сообщение пользователя в группе командой /ignore.\n"
+        "Исключённые пользователи получают 👎, их сообщения не засчитываются и они не выигрывают."
+    )
+
+
+async def panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_owner(update):
+        return
+    if update.effective_chat.type != "private":
+        await update.effective_message.reply_text("Открой меню в личке с ботом: /panel")
+        return
+    await update.effective_message.reply_text(ignored_panel_text(context), reply_markup=ignored_menu(context))
+
+
+async def ignore_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_owner(update):
+        return
+    msg = update.effective_message
+    if not msg or not msg.reply_to_message or not msg.reply_to_message.from_user:
+        await msg.reply_text("Ответь командой /ignore на сообщение пользователя, которого нужно исключить.")
+        return
+    target = msg.reply_to_message.from_user
+    if target.is_bot or (OWNER_ID and target.id == OWNER_ID):
+        await msg.reply_text("Этого пользователя нельзя добавить в игнор-лист.")
+        return
+    users = ignored_users(context)
+    users[target.id] = f"@{target.username}" if target.username else target.full_name
+    await msg.reply_text(f"🚫 {users[target.id]} добавлен в игнор-лист. Его сообщения не влияют на розыгрыш.")
+
+
+async def ignored_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+    if not is_owner(update):
+        await query.answer("Нет доступа.", show_alert=True)
+        return
+    await query.answer()
+    data = query.data or ""
+    users = ignored_users(context)
+    if data.startswith("ignored:remove:"):
+        try:
+            user_id = int(data.rsplit(":", 1)[1])
+        except ValueError:
+            return
+        users.pop(user_id, None)
+    await query.edit_message_text(ignored_panel_text(context), reply_markup=ignored_menu(context))
 
 
 async def say_to_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -130,6 +209,14 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not msg or not user or user.is_bot or not chat:
         return
 
+    excluded = ignored_users(context)
+    if user.id in excluded:
+        try:
+            await context.bot.set_message_reaction(chat_id=chat.id, message_id=msg.message_id, reaction=[ReactionTypeEmoji("👎")])
+        except Exception:
+            log.exception("Could not react to ignored user's message")
+        return
+
     # Remember every group where the bot receives a user message.
     known_group_ids = context.bot_data.setdefault("known_group_ids", set())
     known_group_ids.add(chat.id)
@@ -164,12 +251,12 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         if PHOTO_FILE_ID:
-            await msg.reply_photo(photo=PHOTO_FILE_ID, caption=caption)
+            await msg.reply_photo(photo=PHOTO_FILE_ID, caption=caption, parse_mode=ParseMode.MARKDOWN)
         elif IMAGE_PATH.is_file():
             with IMAGE_PATH.open("rb") as photo:
                 await msg.reply_photo(photo=photo, caption=caption)
         else:
-            await msg.reply_text(caption)
+            await msg.reply_text(caption, parse_mode=ParseMode.MARKDOWN)
     except Exception:
         log.exception("Could not post winner announcement")
         return
@@ -202,6 +289,9 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
     app.add_handler(CommandHandler("say", say_to_groups))
+    app.add_handler(CommandHandler("panel", panel))
+    app.add_handler(CommandHandler("ignore", ignore_user))
+    app.add_handler(CallbackQueryHandler(ignored_menu_callback, pattern=r"^ignored:"))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO, save_owner_photo_id))
     group_messages = (
         (filters.TEXT & ~filters.COMMAND)
@@ -213,7 +303,7 @@ def main():
         MessageHandler(filters.ChatType.GROUPS & group_messages, on_group_message)
     )
     log.info(
-        "Giveaway bot is running; message target=%s-%s; prize weights: bear=81%%, bouquet=10%%, heart=9%%",
+        "Giveaway bot is running; message target=%s-%s; prize weights: bear=80%%, bouquet=10%%, heart=9%%, nft=1%%",
         MIN_MESSAGES, MAX_MESSAGES
     )
     app.run_polling(allowed_updates=Update.ALL_TYPES)
