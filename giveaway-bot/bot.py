@@ -12,12 +12,12 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
 OWNER_ID = int(OWNER_ID_RAW) if OWNER_ID_RAW.isdigit() else None
 PHOTO_FILE_ID = os.getenv("GIVEAWAY_PHOTO_FILE_ID", "").strip()
-MIN_MESSAGES = 5
-MAX_MESSAGES = 25
+MIN_MESSAGES = 1
+MAX_MESSAGES = 10
 IMAGE_PATH = Path(__file__).parent / "assets" / "giveaway.jpg"
 
 PRIZES = [
-    (97, "bear", "🧸 МИШКА", (
+    (96, "bear", "🧸 МИШКА", (
         "🎉 Поздравляю!\n"
         "🎁 Ты выиграл Мишку 🧸 от @Chelixxx\n"
         "✅ Организатор свяжется с тобой для выдачи подарка.\n\n"
@@ -46,7 +46,12 @@ PRIZES = [
         ""
         "✅ Организатор свяжется с тобой для выдачи подарка."
     )),
-]
+
+    (1, "inputkey", "🔑 NFT INPUT KEY", (
+        "🔑 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\\n"
+        "🎁 Твой приз — [NFT InputKey](https://t.me/nft/InputKey-72263)\\n"
+        "✅ Организатор свяжется с тобой для выдачи подарка."
+    )),]
 
 
 GIFT_EMOJI = {
@@ -84,11 +89,12 @@ async def deliver_prize(context: ContextTypes.DEFAULT_TYPE, user_id: int, prize_
 
 
 def choose_prize(context: ContextTypes.DEFAULT_TYPE):
-    # During an active boost, every draw selects the NFT jackpot.
+    # During an active boost, choose either NFT with equal probability.
     if context.bot_data.get("nft_boost_until", 0) > time.time():
-        nft_prize = next((item for item in PRIZES if item[1] == "nft"), None)
-        if nft_prize:
-            return nft_prize[1], nft_prize[2], nft_prize[3]
+        nft_prizes = [item for item in PRIZES if item[1] in ("nft", "inputkey")]
+        if nft_prizes:
+            selected = random.choice(nft_prizes)
+            return selected[1], selected[2], selected[3]
 
     roll = random.randrange(100)
     cumulative = 0
@@ -335,7 +341,7 @@ async def nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_group_link(msg)
         return
     context.bot_data["nft_boost_until"] = time.time() + 5 * 60
-    await msg.reply_text("⚔️ NFT Light Sword активирован с шансом 100% на следующие 5 минут!")
+    await msg.reply_text("⚔️ NFT-буст активирован на 5 минут! Light Sword и InputKey — 50/50 при каждом розыгрыше.")
 
 
 async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -483,7 +489,7 @@ def main():
         MessageHandler(filters.ChatType.GROUPS & group_messages, on_group_message)
     )
     log.info(
-        "Giveaway bot is running; message target=%s-%s; prize weights: bear=97%%, bouquet=1%%, heart=1%%, nft=1%%",
+        "Giveaway bot is running; message target=%s-%s; prize weights: bear=96%%, bouquet=1%%, heart=1%%, LightSword=1%%, InputKey=1%%",
         MIN_MESSAGES, MAX_MESSAGES
     )
     app.run_polling(allowed_updates=Update.ALL_TYPES)
