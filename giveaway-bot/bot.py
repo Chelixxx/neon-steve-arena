@@ -344,6 +344,7 @@ async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     context.bot_data["bear_boost_until"] = time.time() + 3 * 60
     context.bot_data["bear_boost_session"] = context.bot_data["bear_boost_until"]
+    context.bot_data["bear_boost_message_count"] = 0
     await msg.reply_text("🧸 Буст Мишек активирован на 3 минуты! Каждое второе сообщение в группе гарантированно запускает выпадение Мишки.")
 
 
