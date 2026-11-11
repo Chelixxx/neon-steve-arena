@@ -61,6 +61,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger("giveaway")
 
 
+async def send_group_link(message):
+    if message:
+        await message.reply_text(
+            "🎁 Все розыгрыши проходят в нашей группе!",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🎁 Перейти в группу с раздачей", url="https://t.me/freegiftsgroup")
+            ]]),
+        )
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not msg:
@@ -185,6 +195,7 @@ async def say_to_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     chat = update.effective_chat
     if not msg or not user or not OWNER_ID or user.id != OWNER_ID:
+        await send_group_link(msg)
         return
     if not chat or chat.type != "private":
         await msg.reply_text("Команду /say используй в личке с ботом.")
@@ -215,6 +226,7 @@ async def say_to_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def save_owner_photo_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or not OWNER_ID or user.id != OWNER_ID:
+        await send_group_link(update.effective_message)
         return
     photo_id = update.effective_message.photo[-1].file_id
     await update.effective_message.reply_text(
@@ -228,6 +240,7 @@ async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     msg = update.effective_message
     if not msg or not user or not OWNER_ID or user.id != OWNER_ID:
+        await send_group_link(msg)
         return
     if not chat or chat.type not in ("group", "supergroup"):
         await msg.reply_text("Команду /giveaway_status используй в группе.")
