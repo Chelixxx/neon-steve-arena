@@ -49,6 +49,40 @@ PRIZES = [
 ]
 
 
+GIFT_EMOJI = {
+    "bear": "🧸",
+    "bouquet": "💐",
+    "heart": "💝",
+}
+
+
+async def deliver_prize(context: ContextTypes.DEFAULT_TYPE, user_id: int, prize_key: str) -> tuple[bool, str]:
+    """Send a regular Telegram gift using only the bot's own Stars balance."""
+    if prize_key not in GIFT_EMOJI:
+        return False, "Этот приз — коллекционный NFT; обычный sendGift его не передаёт."
+
+    gifts = await context.bot.get_available_gifts()
+    target_emoji = GIFT_EMOJI[prize_key]
+    gift = next(
+        (
+            item for item in gifts.gifts
+            if getattr(getattr(item, "sticker", None), "emoji", None) == target_emoji
+        ),
+        None,
+    )
+    if gift is None:
+        return False, f"В каталоге бота сейчас нет подарка с эмодзи {target_emoji}."
+
+    balance = await context.bot.get_my_star_balance()
+    balance_amount = getattr(balance, "amount", 0)
+    price = getattr(gift, "star_count", 0)
+    if price > balance_amount:
+        return False, f"Недостаточно Stars у бота: нужно {price}, доступно {balance_amount}."
+
+    await context.bot.send_gift(user_id=user_id, gift_id=gift.id)
+    return True, f"Подарок отправлен автоматически за {price} ⭐."
+
+
 def choose_prize(context: ContextTypes.DEFAULT_TYPE):
     roll = random.randrange(100)
     cumulative = 0
@@ -334,12 +368,27 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     prize_key, prize_title, caption = choose_prize(context)
     log.info("Winner %s in group %s won %s", user.id, chat.id, prize_key)
 
+    # The owner participates in the public draw, but does not receive a paid gift.
+    # Other winners receive a regular Telegram gift from the bot's own Stars balance.
+    delivery_ok = False
+    delivery_note = "Владелец выиграл: реальный подарок не отправлялся."
+    if OWNER_ID and user.id == OWNER_ID:
+        log.info("Owner %s won %s; skipping gift delivery", user.id, prize_key)
+    else:
+        try:
+            delivery_ok, delivery_note = await deliver_prize(context, user.id, prize_key)
+            if not delivery_ok:
+                log.warning("Gift delivery unavailable for winner %s: %s", user.id, delivery_note)
+        except Exception as exc:
+            delivery_note = f"Ошибка отправки подарка: {exc}"
+            log.exception("Could not deliver gift to winner %s", user.id)
+
     try:
         if PHOTO_FILE_ID:
             await msg.reply_photo(photo=PHOTO_FILE_ID, caption=caption, parse_mode=ParseMode.MARKDOWN)
         elif IMAGE_PATH.is_file():
             with IMAGE_PATH.open("rb") as photo:
-                await msg.reply_photo(photo=photo, caption=caption)
+                await msg.reply_photo(photo=photo, caption=caption, parse_mode=ParseMode.MARKDOWN)
         else:
             await msg.reply_text(caption, parse_mode=ParseMode.MARKDOWN)
     except Exception:
@@ -361,7 +410,7 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"💬 Группа: {group_name}\n"
                     f"🆔 Telegram ID: {user.id}\n"
                     f"🎁 Приз: {prize_title}\n"
-                    "🎁 Выдачу реального подарка подтверди вручную."
+                    f"📦 Выдача: {delivery_note}"
                 ),
             )
         except Exception:
