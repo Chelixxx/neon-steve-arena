@@ -89,29 +89,6 @@ async def deliver_prize(context: ContextTypes.DEFAULT_TYPE, user_id: int, prize_
 
 
 def choose_prize(context: ContextTypes.DEFAULT_TYPE, chat_data: dict):
-    # During /boost, alternate: one normal prize, then a guaranteed bear.
-    boost_until = context.bot_data.get("bear_boost_until", 0)
-    if boost_until > time.time():
-        session = context.bot_data.get("bear_boost_session", boost_until)
-        if chat_data.get("bear_boost_session") != session:
-            chat_data["bear_boost_session"] = session
-            chat_data["bear_boost_next_bear"] = False
-
-        if chat_data.get("bear_boost_next_bear", False):
-            chat_data["bear_boost_next_bear"] = False
-            bear = next(item for item in PRIZES if item[1] == "bear")
-            return bear[1], bear[2], bear[3]
-
-        chat_data["bear_boost_next_bear"] = True
-        other_prizes = [item for item in PRIZES if item[1] != "bear"]
-        total_weight = sum(item[0] for item in other_prizes)
-        roll = random.randrange(total_weight)
-        cumulative = 0
-        for weight, key, title, caption in other_prizes:
-            cumulative += weight
-            if roll < cumulative:
-                return key, title, caption
-
     roll = random.randrange(100)
     cumulative = 0
     for weight, key, title, caption in PRIZES:
@@ -367,7 +344,7 @@ async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     context.bot_data["bear_boost_until"] = time.time() + 3 * 60
     context.bot_data["bear_boost_session"] = context.bot_data["bear_boost_until"]
-    await msg.reply_text("🧸 Буст Мишек активирован на 3 минуты! Каждый второй завершённый розыгрыш гарантированно выдаёт Мишку.")
+    await msg.reply_text("🧸 Буст Мишек активирован на 3 минуты! Каждое второе сообщение в группе гарантированно запускает выпадение Мишки.")
 
 
 async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -408,32 +385,53 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     known_group_ids = context.bot_data.setdefault("known_group_ids", set())
     known_group_ids.add(chat.id)
 
-    # One random target per round, independently for each group.
-    target = context.chat_data.get("message_target")
-    if target is None:
-        target = random.randint(MIN_MESSAGES, MAX_MESSAGES)
-        context.chat_data["message_target"] = target
-        context.chat_data["message_count"] = 0
+    # During /boost, every second incoming group message wins a bear.
+    bear_boost_active = context.bot_data.get("bear_boost_until", 0) > time.time()
+    forced_bear = False
+    if bear_boost_active:
+        boost_count = context.chat_data.get("bear_boost_message_count", 0) + 1
+        context.chat_data["bear_boost_message_count"] = boost_count
+        if boost_count % 2 == 1:
+            try:
+                await context.bot.set_message_reaction(
+                    chat_id=chat.id,
+                    message_id=msg.message_id,
+                    reaction=[ReactionTypeEmoji("👎")],
+                )
+            except Exception:
+                log.exception("Could not react to non-winning boost message")
+            return
+        forced_bear = True
+    else:
+        # Normal giveaway: one random target per round, independently for each group.
+        target = context.chat_data.get("message_target")
+        if target is None:
+            target = random.randint(MIN_MESSAGES, MAX_MESSAGES)
+            context.chat_data["message_target"] = target
+            context.chat_data["message_count"] = 0
 
-    context.chat_data["message_count"] = context.chat_data.get("message_count", 0) + 1
-    count = context.chat_data["message_count"]
-    log.info("Group %s giveaway progress: %s/%s", chat.id, count, target)
+        context.chat_data["message_count"] = context.chat_data.get("message_count", 0) + 1
+        count = context.chat_data["message_count"]
+        log.info("Group %s giveaway progress: %s/%s", chat.id, count, target)
 
-    if count < target:
-        try:
-            await context.bot.set_message_reaction(
-                chat_id=chat.id,
-                message_id=msg.message_id,
-                reaction=[ReactionTypeEmoji("👎")],
-            )
-        except Exception:
-            log.exception("Could not react to non-winning message")
-        return
-
+        if count < target:
+            try:
+                await context.bot.set_message_reaction(
+                    chat_id=chat.id,
+                    message_id=msg.message_id,
+                    reaction=[ReactionTypeEmoji("👎")],
+                )
+            except Exception:
+                log.exception("Could not react to non-winning message")
+            return
     username = f"@{user.username}" if user.username else f"{user.full_name} (без username)"
     group_name = chat.title or str(chat.id)
 
-    prize_key, prize_title, caption = choose_prize(context, context.chat_data)
+    if forced_bear:
+        bear = next(item for item in PRIZES if item[1] == "bear")
+        prize_key, prize_title, caption = bear[1], bear[2], bear[3]
+    else:
+        prize_key, prize_title, caption = choose_prize(context, context.chat_data)
     log.info("Winner %s in group %s won %s", user.id, chat.id, prize_key)
 
     # The owner participates in the public draw, but does not receive a paid gift.
