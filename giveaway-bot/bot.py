@@ -104,11 +104,22 @@ async def deliver_prize(context: ContextTypes.DEFAULT_TYPE, user_id: int, prize_
     return True, f"Подарок отправлен автоматически за {price} ⭐."
 
 
-def choose_prize(context: ContextTypes.DEFAULT_TYPE, chat_data: dict):
+def choose_prize(context: ContextTypes.DEFAULT_TYPE, chat_data: dict, user_id: int | None = None):
+    defaults = {key: weight for weight, key, _, _ in PRIZES}
+    now = time.time()
+    settings = context.bot_data
+    weights = settings.get("chance_default", defaults)
+    temporary = settings.get("chance_temporary")
+    if temporary and temporary.get("until", 0) > now:
+        weights = temporary.get("weights", weights)
+    if user_id is not None:
+        personal = settings.get("chance_users", {}).get(str(user_id))
+        if personal and (not personal.get("until") or personal["until"] > now):
+            weights = personal.get("weights", weights)
     roll = random.randrange(100)
     cumulative = 0
-    for weight, key, title, caption in PRIZES:
-        cumulative += weight
+    for _, key, title, caption in PRIZES:
+        cumulative += int(weights.get(key, defaults[key]))
         if roll < cumulative:
             return key, title, caption
     return PRIZES[0][1:]
@@ -197,7 +208,9 @@ async def panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != "private":
         await update.effective_message.reply_text("Открой меню в личке с ботом: /panel")
         return
-    await update.effective_message.reply_text(ignored_panel_text(context), reply_markup=ignored_menu(context))
+    rows = [[InlineKeyboardButton("✨ Открыть Mini App", web_app=WebAppInfo(url=os.getenv("MINI_APP_URL", "https://giveaway-bot-hidden-production.up.railway.app")))]]
+    rows.extend(ignored_menu(context).inline_keyboard)
+    await update.effective_message.reply_text(ignored_panel_text(context), reply_markup=InlineKeyboardMarkup(rows))
 
 
 async def ignore_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -422,9 +435,16 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log.exception("Could not react to ignored user's message")
         return
 
-    # Remember every group where the bot receives a user message.
+    # Remember groups and real participants seen by the bot for owner-only targeting.
     known_group_ids = context.bot_data.setdefault("known_group_ids", set())
     known_group_ids.add(chat.id)
+    known_users = context.bot_data.setdefault("known_users", {})
+    known_users[str(user.id)] = {
+        "id": user.id,
+        "name": user.full_name,
+        "username": user.username or "",
+        "last_chat_id": chat.id,
+    }
 
     # During /boost, every second incoming group message wins a bear.
     bear_boost_active = context.bot_data.get("bear_boost_until", 0) > time.time()
@@ -472,7 +492,7 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bear = next(item for item in PRIZES if item[1] == "bear")
         prize_key, prize_title, caption = bear[1], bear[2], bear[3]
     else:
-        prize_key, prize_title, caption = choose_prize(context, context.chat_data)
+        prize_key, prize_title, caption = choose_prize(context, context.chat_data, user.id)
     log.info("Winner %s in group %s won %s", user.id, chat.id, prize_key)
 
     # The owner participates in the public draw, but does not receive a paid gift.
