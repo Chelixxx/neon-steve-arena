@@ -1,8 +1,15 @@
 import logging
+import hashlib
+import hmac
+import json
+import urllib.parse
 import os
 import random
 import time
 from pathlib import Path
+
+from aiohttp import web
+from telegram import WebAppInfo
 
 from telegram import Update, ReactionTypeEmoji, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
@@ -123,19 +130,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not msg:
         return
-    if is_owner(update):
-        await msg.reply_text(
-            "🛠 Админ-панель розыгрыша\n\n"
-            "Управляй исключёнными пользователями и настройками бота.",
-            reply_markup=ignored_menu(context),
-        )
-    else:
-        await msg.reply_text(
-            "🎁 Все розыгрыши проходят в нашей группе!",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🎁 Перейти в группу с раздачей", url="https://t.me/freegiftsgroup")
-            ]]),
-        )
+    url = os.getenv("MINI_APP_URL", "").strip()
+    greeting = "🛠 Панель владельца Челикс Гифтс" if is_owner(update) else "🎁 Профиль, рейтинг и история твоих побед"
+    buttons = [[InlineKeyboardButton("🎁 Группа с розыгрышами", url="https://t.me/freegiftsgroup")]]
+    if url:
+        buttons.insert(0, [InlineKeyboardButton("✨ Открыть Mini App", web_app=WebAppInfo(url=url))])
+    await msg.reply_text(greeting, reply_markup=InlineKeyboardMarkup(buttons))
 
 
 async def private_redirect(update: Update, context: ContextTypes.DEFAULT_TYPE):
