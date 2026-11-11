@@ -43,7 +43,7 @@ PRIZES = [
     (1, "nft", "⚔️ NFT LIGHT SWORD", (
         "⚔️ НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\n"
         "🎁 Твой приз — [NFT Light Sword](https://t.me/nft/LightSword-36379)\n"
-        "👑 Шанс выпадения этого приза — всего 1%!\n"
+        "👑 Во время специального бонуса шанс выпадения — 100%!\n"
         "✅ Организатор свяжется с тобой для выдачи подарка."
     )),
 ]
@@ -238,6 +238,15 @@ async def save_owner_photo_id(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
 
+async def nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    if not is_owner(update):
+        await send_group_link(msg)
+        return
+    context.bot_data["nft_boost_until"] = time.time() + 5 * 60
+    await msg.reply_text("⚔️ NFT Light Sword активирован с шансом 100% на следующие 5 минут!")
+
+
 async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     chat = update.effective_chat
@@ -346,6 +355,7 @@ def main():
     log.info("NFT prize boost activated for 5 minutes (100%% chance)")
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
+    app.add_handler(CommandHandler("nftboost", nft_boost))
     app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(CommandHandler("panel", panel))
     app.add_handler(CommandHandler("ignore", ignore_user))
