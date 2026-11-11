@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+import time
 from pathlib import Path
 
 from telegram import Update, ReactionTypeEmoji, InlineKeyboardButton, InlineKeyboardMarkup
@@ -48,7 +49,9 @@ PRIZES = [
 ]
 
 
-def choose_prize():
+def choose_prize(context: ContextTypes.DEFAULT_TYPE):
+    if time.time() < context.bot_data.get("nft_boost_until", 0):
+        return PRIZES[3][1:]
     roll = random.randrange(100)
     cumulative = 0
     for weight, key, title, caption in PRIZES:
@@ -298,7 +301,7 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = f"@{user.username}" if user.username else f"{user.full_name} (без username)"
     group_name = chat.title or str(chat.id)
 
-    prize_key, prize_title, caption = choose_prize()
+    prize_key, prize_title, caption = choose_prize(context)
     log.info("Winner %s in group %s won %s", user.id, chat.id, prize_key)
 
     try:
@@ -338,6 +341,9 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     persistence = PicklePersistence(filepath="giveaway_bot_data.pickle", update_interval=5)
     app = Application.builder().token(BOT_TOKEN).persistence(persistence).build()
+    # Temporary guaranteed NFT window: starts when this deployment boots and lasts 5 minutes.
+    app.bot_data["nft_boost_until"] = time.time() + 5 * 60
+    log.info("NFT prize boost activated for 5 minutes (100%% chance)")
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
     app.add_handler(CommandHandler("say", say_to_groups))
