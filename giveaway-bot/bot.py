@@ -340,8 +340,8 @@ async def nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update):
         await send_group_link(msg)
         return
-    context.bot_data["nft_boost_until"] = time.time() + 5 * 60
-    await msg.reply_text("⚔️ NFT-буст активирован на 5 минут! Light Sword и InputKey — 50/50 при каждом розыгрыше.")
+    context.bot_data["nft_boost_until"] = time.time() + 3 * 60
+    await msg.reply_text("⚔️ NFT-буст активирован на 3 минуты! 100% шанс на NFT: Light Sword и InputKey — 50/50.")
 
 
 async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
