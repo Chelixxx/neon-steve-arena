@@ -121,9 +121,14 @@ async def admin(request):
             app.bot_data["chance_temporary"] = {"weights":weights,"until":time.time()+minutes*60}
             message = f"Общие шансы применяются {minutes} мин., затем вернутся постоянные."
         elif mode in ("user", "user_temporary"):
-            target = str(payload.get("user_id", "")).strip()
-            if not target.isdigit() or target not in app.bot_data.get("known_users", {}):
-                return web.json_response({"error":"Выбери участника, которого бот уже видел в группе."},status=400)
+            username = str(payload.get("username", "")).strip().lstrip("@").lower()
+            if not username:
+                return web.json_response({"error":"Введи @username участника."},status=400)
+            known = app.bot_data.get("known_users", {})
+            target = next((uid for uid, person in known.items()
+                           if str(person.get("username", "")).lstrip("@").lower() == username), None)
+            if not target:
+                return web.json_response({"error":f"@{username} пока не найден. Пусть участник напишет любое сообщение в группе, затем попробуй снова."},status=404)
             record = {"weights":weights}
             if mode == "user_temporary":
                 record["until"] = time.time()+minutes*60
@@ -131,9 +136,14 @@ async def admin(request):
             person = app.bot_data["known_users"][target].get("name","Участник")
             message = f"Персональные шансы для {person} сохранены."
         elif mode == "user_remove":
-            target = str(payload.get("user_id", "")).strip()
+            username = str(payload.get("username", "")).strip().lstrip("@").lower()
+            known = app.bot_data.get("known_users", {})
+            target = next((uid for uid, person in known.items()
+                           if str(person.get("username", "")).lstrip("@").lower() == username), None)
+            if not target:
+                return web.json_response({"error":f"@{username or 'username'} не найден среди участников, которых видел бот."},status=404)
             app.bot_data.setdefault("chance_users", {}).pop(target, None)
-            message = "Персональные шансы удалены."
+            message = f"Персональные шансы для @{username} удалены."
         else:
             return web.json_response({"error":"Неизвестный режим настройки."},status=400)
         return web.json_response({"ok":True,"message":message})
