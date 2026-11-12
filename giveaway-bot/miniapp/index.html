@@ -18,7 +18,7 @@ button.secondary{background:#ffffff12;border:1px solid #ffffff16}button:disabled
 <div id="notice" class="notice hidden"></div>
 <section class="card"><h2>👤 Твой профиль</h2><div class="stats"><div class="stat"><div id="wins" class="num">—</div><div class="muted">Побед</div></div><div class="stat"><div id="rank" class="num">—</div><div class="muted">Место в рейтинге</div></div></div><div id="breakdown" class="sub" style="margin-top:12px">Пока нет побед</div></section>
 <section class="card"><h2>🏆 Рейтинг участников</h2><div id="top" class="sub">Загружаем рейтинг…</div></section>
-<section id="admin" class="card hidden"><h2>🛠 Меню владельца</h2><div class="stats"><div class="stat"><div id="bear" class="num">0:00</div><div class="muted">Буст Мишек</div></div><div class="stat"><div id="nft" class="num">0:00</div><div class="muted">NFT-буст</div></div></div><button id="bearBtn">🧸 Включить буст Мишек · 3 мин</button><button id="nftBtn">⚔️ Включить NFT-буст · 3 дня</button><button id="stopBtn" class="secondary">Остановить бусты</button><div id="adminInfo" class="sub"></div>
+<section id="admin" class="card hidden"><h2>🛠 Меню владельца</h2><div class="stats"><div class="stat"><div id="bear" class="num">0:00</div><div class="muted">Буст Мишек</div></div><div class="stat"><div id="nft" class="num">0:00</div><div class="muted">NFT-буст</div></div></div><button id="bearBtn">🧸 Включить буст Мишек · 3 мин</button><button id="nftBtn">⚔️ Включить NFT-буст · 3 дня</button><button id="superNftBtn">💎⚡ Супер-NFT-буст · 3 мин</button><button id="stopBtn" class="secondary">Остановить бусты</button><div id="adminInfo" class="sub"></div>
 <div style="height:1px;background:#ffffff18;margin:18px 0"></div>
 <h2>🎲 Настройка шансов</h2>
 <div class="muted" style="margin-bottom:10px">Сумма вероятностей шести призов должна быть ровно 100%. Персональные настройки участника имеют приоритет над общими.</div>
@@ -51,7 +51,7 @@ $("admin").classList.toggle("hidden",!u.is_owner);if(u.is_owner){$("bear").textC
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 async function act(action){try{const d=await api("/api/admin",{action});notice(d.message);await load()}catch(e){notice(e.message)}}
 async function load(){try{if(!init)throw Error("Открой Mini App через кнопку в Telegram.");render(await api("/api/data"))}catch(e){notice(e.message)}}
-$("bearBtn").onclick=()=>act("bear_boost");$("nftBtn").onclick=()=>act("nft_boost");$("stopBtn").onclick=()=>act("stop_boosts");
+$("bearBtn").onclick=()=>act("bear_boost");$("nftBtn").onclick=()=>act("nft_boost");$("superNftBtn").onclick=()=>act("super_nft_boost");$("stopBtn").onclick=()=>act("stop_boosts");
 $("chanceMode").onchange=updateChanceMode;
 function chancePayload(mode){const weights={};for(const k of Object.keys(prizeNames)){const v=Number($("chance-"+k).value);if(!Number.isInteger(v)||v<0||v>100)throw Error("Каждый шанс должен быть целым числом от 0 до 100.");weights[k]=v}if(Object.values(weights).reduce((a,b)=>a+b,0)!==100)throw Error("Сумма шансов должна быть ровно 100%. Сейчас: "+Object.values(weights).reduce((a,b)=>a+b,0)+"%.");return {action:"chance_save",mode,weights,username:$("chanceUsername").value.trim().replace(/^@/,""),minutes:Number($("chanceMinutes").value)}}
 $("saveChanceBtn").onclick=async()=>{try{const mode=$("chanceMode").value;const d=await api("/api/admin",chancePayload(mode));notice(d.message);await load()}catch(e){notice(e.message)}};
