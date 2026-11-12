@@ -221,7 +221,11 @@ async def admin(request):
     return web.json_response({"ok":True,"message":message})
 
 
+_miniapp_runner = None
+
+
 async def start_server(bot_app):
+    global _miniapp_runner
     app = web.Application(client_max_size=8192)
     app["bot_app"] = bot_app
     app.router.add_get("/", index)
@@ -234,10 +238,11 @@ async def start_server(bot_app):
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT","8080")))
     await site.start()
-    bot_app.bot_data["miniapp_runner"] = runner
+    _miniapp_runner = runner
 
 
 async def stop_server(bot_app):
-    runner = bot_app.bot_data.get("miniapp_runner")
-    if runner:
-        await runner.cleanup()
+    global _miniapp_runner
+    if _miniapp_runner:
+        await _miniapp_runner.cleanup()
+        _miniapp_runner = None
