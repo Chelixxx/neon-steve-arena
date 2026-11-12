@@ -119,12 +119,7 @@ async def spin(request):
     roll = __import__("random").randrange(100)
     if roll < 5:
         prize = "bear"
-        message = "🧸 Поздравляем! В ежедневной рулетке выпал Мишка. Бот отправил тебе уведомление; организатор свяжется для выдачи."
-    elif roll < 6:
-        prize = __import__("random").choice(["nft", "inputkey", "cupid"])
-        nft_names = {"nft":"Light Sword","inputkey":"InputKey","cupid":"Cupid Charm"}
-        nft_urls = {"nft":"https://t.me/nft/LightSword-36379","inputkey":"https://t.me/nft/InputKey-72263","cupid":"https://t.me/nft/CupidCharm-14434"}
-        message = f"💎 РЕДКИЙ ДРОП! Тебе выпал NFT {nft_names[prize]} на 1 день аренды: {nft_urls[prize]}. Напиши организатору для получения."
+        message = "🧸 Поздравляем! Ты выиграл Мишку в ежедневной рулетке. Организатор свяжется для выдачи."
     else:
         prize = "none"
         message = "🍀 Сегодня без выигрыша. Новая бесплатная попытка будет доступна завтра!"
