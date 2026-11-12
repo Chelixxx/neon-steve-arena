@@ -89,6 +89,45 @@ async def data(request):
     })
 
 
+
+async def spin(request):
+    user = auth(request)
+    if not user:
+        return web.json_response({"error":"Открой сайт через Mini App в Telegram."}, status=401)
+    app = request.app["bot_app"]
+    uid = str(user["id"])
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    spins = app.bot_data.setdefault("daily_site_spins", {})
+    if spins.get(uid) == today:
+        return web.json_response({"error":"Сегодняшняя попытка уже использована. Возвращайся завтра."}, status=409)
+    spins[uid] = today
+    roll = __import__("random").randrange(100)
+    if roll < 5:
+        prize = "bear"
+        message = "🧸 Поздравляем! В ежедневной рулетке выпал Мишка. Бот отправил тебе уведомление; организатор свяжется для выдачи."
+    elif roll < 6:
+        prize = __import__("random").choice(["nft", "inputkey", "cupid"])
+        nft_names = {"nft":"Light Sword","inputkey":"InputKey","cupid":"Cupid Charm"}
+        nft_urls = {"nft":"https://t.me/nft/LightSword-36379","inputkey":"https://t.me/nft/InputKey-72263","cupid":"https://t.me/nft/CupidCharm-14434"}
+        message = f"💎 РЕДКИЙ ДРОП! Тебе выпал NFT {nft_names[prize]} на 1 день аренды: {nft_urls[prize]}. Напиши организатору для получения."
+    else:
+        prize = "none"
+        message = "🍀 Сегодня без выигрыша. Новая бесплатная попытка будет доступна завтра!"
+    try:
+        if prize == "bear":
+            sent, detail = await __import__("bot").deliver_prize(
+                __import__("telegram.ext", fromlist=["ContextTypes"]).ContextTypes.DEFAULT_TYPE, int(uid), "bear"
+            )
+    except Exception:
+        # Gift API or bot balance may not permit automatic delivery; notify and let owner arrange it.
+        message += " Автоматическая отправка подарка не подтвердилась — организатор проверит выдачу."
+    try:
+        await app.bot.send_message(chat_id=int(uid), text=message, disable_web_page_preview=True)
+    except Exception:
+        message += " Не удалось написать в личку: открой бота и нажми Start."
+    return web.json_response({"ok":True,"prize":prize,"message":message})
+
+
 async def admin(request):
     user = auth(request)
     if not user or not OWNER_ID or int(user.get("id",0)) != OWNER_ID:
@@ -180,6 +219,7 @@ async def start_server(bot_app):
     app.router.add_get("/app", miniapp)
     app.router.add_get("/api/data", data)
     app.router.add_post("/api/admin", admin)
+    app.router.add_post("/api/spin", spin)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT","8080")))
