@@ -51,20 +51,20 @@ PRIZES = [
     (1, "nft", "⚔️ NFT LIGHT SWORD", (
         "⚔️ НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\n"
         "🎁 Твой приз — [NFT Light Sword](https://t.me/nft/LightSword-36379)\n"
-        ""
+        "⏳ Коллекционный подарок будет закреплён за тобой на 3 дня.\n"
         "✅ Организатор свяжется с тобой для выдачи подарка."
     )),
 
     (1, "inputkey", "🔑 NFT INPUT KEY", (
-        "🔑 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\\n"
-        "🎁 Твой приз — [NFT InputKey](https://t.me/nft/InputKey-72263)\\n"
-        "⏳ Коллекционный подарок будет закреплён за тобой на 3 дня.\\n"
+        "🔑 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\n"
+        "🎁 Твой приз — [NFT InputKey](https://t.me/nft/InputKey-72263)\n"
+        "⏳ Коллекционный подарок будет закреплён за тобой на 3 дня.\n"
         "✅ Организатор свяжется с тобой для выдачи подарка."
     )),
     (1, "cupid", "💗 NFT CUPID CHARM", (
-        "💗 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ НОВЫЙ NFT-ДЖЕКПОТ!\\n"
-        "🎁 Твой приз — [NFT Cupid Charm](https://t.me/nft/CupidCharm-14434)\\n"
-        "⏳ Коллекционный подарок будет закреплён за тобой на 3 дня.\\n"
+        "💗 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ НОВЫЙ NFT-ДЖЕКПОТ!\n"
+        "🎁 Твой приз — [NFT Cupid Charm](https://t.me/nft/CupidCharm-14434)\n"
+        "⏳ Коллекционный подарок будет закреплён за тобой на 3 дня.\n"
         "✅ Организатор свяжется с тобой для выдачи подарка."
     )),]
 
@@ -123,6 +123,10 @@ def choose_prize(context: ContextTypes.DEFAULT_TYPE, chat_data: dict, user_id: i
         personal = settings.get("chance_users", {}).get(str(user_id))
         if personal and (not personal.get("until") or personal["until"] > now):
             weights = personal.get("weights", weights)
+    if settings.get("nft_boost_until", 0) > now:
+        key = random.choice(["nft", "inputkey", "cupid"])
+        prize = next(item for item in PRIZES if item[1] == key)
+        return prize[1], prize[2], prize[3]
     roll = random.randrange(100)
     cumulative = 0
     for _, key, title, caption in PRIZES:
