@@ -100,7 +100,7 @@ async def admin(request):
         weights = payload.get("weights")
         keys = ("bear", "bouquet", "heart", "nft", "inputkey", "cupid")
         if not isinstance(weights, dict) or set(weights) != set(keys):
-            return web.json_response({"error":"Нужно задать шансы для всех пяти призов."},status=400)
+            return web.json_response({"error":"Нужно задать шансы для всех шести призов."},status=400)
         try:
             weights = {key:int(weights[key]) for key in keys}
         except (TypeError, ValueError):
