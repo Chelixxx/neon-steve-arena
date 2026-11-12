@@ -113,14 +113,11 @@ async def spin(request):
     else:
         prize = "none"
         message = "🍀 Сегодня без выигрыша. Новая бесплатная попытка будет доступна завтра!"
-    try:
-        if prize == "bear":
-            sent, detail = await __import__("bot").deliver_prize(
-                __import__("telegram.ext", fromlist=["ContextTypes"]).ContextTypes.DEFAULT_TYPE, int(uid), "bear"
-            )
-    except Exception:
-        # Gift API or bot balance may not permit automatic delivery; notify and let owner arrange it.
-        message += " Автоматическая отправка подарка не подтвердилась — организатор проверит выдачу."
+    if prize == "bear" and OWNER_ID:
+        try:
+            await app.bot.send_message(chat_id=OWNER_ID, text="🎁 Ежедневная рулетка: " + user.get("first_name", "Участник") + " (ID " + uid + ") выиграл Мишку. Нужна выдача.")
+        except Exception:
+            pass
     try:
         await app.bot.send_message(chat_id=int(uid), text=message, disable_web_page_preview=True)
     except Exception:
