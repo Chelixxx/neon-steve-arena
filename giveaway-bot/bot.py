@@ -74,7 +74,8 @@ PRIZE_LABELS = {
     "bouquet": "💐 Букет",
     "heart": "💝 Сердечко",
     "nft": "⚔️ Light Sword",
-    "inputkey": "🔑 InputKey",\n    "cupid": "💗 Cupid Charm",
+    "inputkey": "🔑 InputKey",
+    "cupid": "💗 Cupid Charm",
 }
 
 GIFT_EMOJI = {
