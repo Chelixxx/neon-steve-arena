@@ -157,6 +157,7 @@ async def admin(request):
         message = "NFT-буст включён на 3 дня. В розыгрышах выпадают Light Sword, InputKey или Cupid Charm."
     elif action == "super_nft_boost":
         app.bot_data["super_nft_boost_until"] = time.time()+180
+        app.bot_data["super_nft_boost_session"] = app.bot_data["super_nft_boost_until"]
         message = "Супер-NFT-буст включён на 3 минуты: каждый второй пост выигрывает NFT."
     elif action == "stop_boosts":
         app.bot_data["bear_boost_until"] = 0
