@@ -25,7 +25,7 @@ MAX_MESSAGES = 20
 IMAGE_PATH = Path(__file__).parent / "assets" / "giveaway.jpg"
 
 PRIZES = [
-    (96, "bear", "🧸 МИШКА", (
+    (95, "bear", "🧸 МИШКА", (
         "🎉 Поздравляю!\n"
         "🎁 Ты выиграл Мишку 🧸 от @Chelixxx\n"
         "✅ Организатор свяжется с тобой для выдачи подарка.\n\n"
@@ -56,8 +56,15 @@ PRIZES = [
     )),
 
     (1, "inputkey", "🔑 NFT INPUT KEY", (
-        "🔑 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\n"
-        "🎁 Твой приз — [NFT InputKey](https://t.me/nft/InputKey-72263)\n"
+        "🔑 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ NFT-ДЖЕКПОТ!\\n"
+        "🎁 Твой приз — [NFT InputKey](https://t.me/nft/InputKey-72263)\\n"
+        "⏳ Коллекционный подарок будет закреплён за тобой на 3 дня.\\n"
+        "✅ Организатор свяжется с тобой для выдачи подарка."
+    )),
+    (1, "cupid", "💗 NFT CUPID CHARM", (
+        "💗 НЕВЕРОЯТНО! ТЕБЕ ВЫПАЛ НОВЫЙ NFT-ДЖЕКПОТ!\\n"
+        "🎁 Твой приз — [NFT Cupid Charm](https://t.me/nft/CupidCharm-14434)\\n"
+        "⏳ Коллекционный подарок будет закреплён за тобой на 3 дня.\\n"
         "✅ Организатор свяжется с тобой для выдачи подарка."
     )),]
 
@@ -67,7 +74,7 @@ PRIZE_LABELS = {
     "bouquet": "💐 Букет",
     "heart": "💝 Сердечко",
     "nft": "⚔️ Light Sword",
-    "inputkey": "🔑 InputKey",
+    "inputkey": "🔑 InputKey",\n    "cupid": "💗 Cupid Charm",
 }
 
 GIFT_EMOJI = {
@@ -355,8 +362,8 @@ async def nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update):
         await send_group_link(msg)
         return
-    context.bot_data["nft_boost_until"] = time.time() + 3 * 60
-    await msg.reply_text("⚔️ NFT-буст активирован на 3 минуты! 100% шанс на NFT: Light Sword и InputKey — 50/50.")
+    context.bot_data["nft_boost_until"] = time.time() + 3 * 24 * 60 * 60
+    await msg.reply_text("💎 NFT-буст активирован на 3 дня! Каждый выигрыш в этот период — случайный NFT: Light Sword, InputKey или Cupid Charm.")
 
 
 async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -364,7 +371,7 @@ async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update):
         await send_group_link(msg)
         return
-    context.bot_data["bear_boost_until"] = time.time() + 3 * 60
+    context.bot_data["bear_boost_until"] = time.time() + 3 * 24 * 60 * 60
     context.bot_data["bear_boost_session"] = context.bot_data["bear_boost_until"]
     context.bot_data["bear_boost_message_count"] = 0
     await msg.reply_text("🧸 Буст Мишек активирован на 3 минуты! Каждое второе сообщение в группе гарантированно запускает выпадение Мишки.")
@@ -582,7 +589,7 @@ def main():
         MessageHandler(filters.ChatType.GROUPS & group_messages, on_group_message)
     )
     log.info(
-        "Giveaway bot is running; message target=%s-%s; prize weights: bear=96%%, bouquet=1%%, heart=1%%, LightSword=1%%, InputKey=1%%",
+        "Giveaway bot is running; message target=%s-%s; prize weights: bear=95%%, bouquet=1%%, heart=1%%, LightSword=1%%, InputKey=1%%, CupidCharm=1%%",
         MIN_MESSAGES, MAX_MESSAGES
     )
     app.run_polling(allowed_updates=Update.ALL_TYPES)
