@@ -18,7 +18,7 @@ button.secondary{background:#ffffff12;border:1px solid #ffffff16}button:disabled
 <div id="notice" class="notice hidden"></div>
 <section class="card"><h2>👤 Твой профиль</h2><div class="stats"><div class="stat"><div id="wins" class="num">—</div><div class="muted">Побед</div></div><div class="stat"><div id="rank" class="num">—</div><div class="muted">Место в рейтинге</div></div></div><div id="breakdown" class="sub" style="margin-top:12px">Пока нет побед</div></section>
 <section class="card"><h2>🏆 Рейтинг участников</h2><div id="top" class="sub">Загружаем рейтинг…</div></section>
-<section id="admin" class="card hidden"><h2>🛠 Меню владельца</h2><div class="stats"><div class="stat"><div id="bear" class="num">0:00</div><div class="muted">Буст Мишек</div></div><div class="stat"><div id="nft" class="num">0:00</div><div class="muted">NFT-буст</div></div></div><button id="bearBtn">🧸 Включить буст Мишек · 3 мин</button><button id="nftBtn">⚔️ Включить NFT-буст · 3 дня</button><button id="superNftBtn">💎⚡ Супер-NFT-буст · 3 мин</button><button id="stopBtn" class="secondary">Остановить бусты</button><div id="adminInfo" class="sub"></div>
+<section id="admin" class="card hidden"><h2>🛠 Меню владельца</h2><div class="stats"><div class="stat"><div id="bear" class="num">0:00</div><div class="muted">Буст Мишек</div></div><div class="stat"><div id="nft" class="num">0:00</div><div class="muted">NFT-буст · 3 дня</div></div><div class="stat"><div id="superNft" class="num">0:00</div><div class="muted">Супер-NFT-буст · 3 мин</div></div></div><button id="bearBtn">🧸 Включить буст Мишек · 3 мин</button><button id="nftBtn">⚔️ Включить NFT-буст · 3 дня</button><button id="superNftBtn">💎⚡ Супер-NFT-буст · 3 мин</button><button id="stopBtn" class="secondary">Остановить бусты</button><div id="adminInfo" class="sub"></div>
 <div style="height:1px;background:#ffffff18;margin:18px 0"></div>
 <h2>🎲 Настройка шансов</h2>
 <div class="muted" style="margin-bottom:10px">Сумма вероятностей шести призов должна быть ровно 100%. Персональные настройки участника имеют приоритет над общими.</div>
@@ -37,7 +37,7 @@ const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
 const $=id=>document.getElementById(id), init=tg?.initData||"";
 function notice(s){$("notice").textContent=s;$("notice").classList.remove("hidden")}
 async function api(path,body){const r=await fetch(path,{method:body?"POST":"GET",headers:{"Content-Type":"application/json","X-Telegram-Init-Data":init},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||"Ошибка запроса");return d}
-function timer(n){return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")}
+function timer(n){if(n>=3600)return Math.floor(n/3600)+":"+String(Math.floor(n%3600/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")}
 const prizeNames={bear:"🧸 Мишка",bouquet:"💐 Букет",heart:"💝 Сердечко",nft:"⚔️ NFT Light Sword",inputkey:"🔑 NFT InputKey",cupid:"💗 NFT Cupid Charm"};
 
 function buildChanceFields(weights){$("chanceFields").innerHTML=Object.entries(prizeNames).map(([k,label])=>'<label class="muted" for="chance-'+k+'">'+label+' · %</label><input id="chance-'+k+'" type="number" min="0" max="100" value="'+Number(weights?.[k]??0)+'" style="width:100%;padding:12px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:5px 0 10px">').join("")}
@@ -47,7 +47,7 @@ function render(d){const u=d.user;$("hello").textContent=(u.username?"@"+u.usern
 $("wins").textContent=d.profile.total||0;const idx=d.top.findIndex(x=>String(x.id)===String(u.id));$("rank").textContent=idx<0?"—":"#"+(idx+1);
 const labels=d.prize_labels||{};const parts=Object.entries(d.profile.prizes||{}).map(([k,v])=>(labels[k]||k)+": "+v);$("breakdown").textContent=parts.join(" · ")||"Твои победы появятся здесь";
 $("top").innerHTML=d.top.length?d.top.map((x,i)=>'<div class="person"><span>'+(["🥇","🥈","🥉"][i]||("#"+(i+1)))+" "+escapeHtml(x.name)+'</span><b>'+x.total+'</b></div>').join(""):"Пока нет победителей";
-$("admin").classList.toggle("hidden",!u.is_owner);if(u.is_owner){$("bear").textContent=timer(d.boosts.bear_seconds);$("nft").textContent=timer(d.boosts.nft_seconds);$("adminInfo").textContent="В игнор-листе: "+d.ignored_count;renderChance(d.chance_settings)}}
+$("admin").classList.toggle("hidden",!u.is_owner);if(u.is_owner){$("bear").textContent=timer(d.boosts.bear_seconds);$("nft").textContent=timer(d.boosts.nft_seconds);$("superNft").textContent=timer(d.boosts.super_nft_seconds||0);$("adminInfo").textContent="В игнор-листе: "+d.ignored_count;renderChance(d.chance_settings)}}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 async function act(action){try{const d=await api("/api/admin",{action});notice(d.message);await load()}catch(e){notice(e.message)}}
 async function load(){try{if(!init)throw Error("Открой Mini App через кнопку в Telegram.");render(await api("/api/data"))}catch(e){notice(e.message)}}
