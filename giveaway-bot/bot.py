@@ -402,11 +402,11 @@ async def save_owner_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "filename": filename, "mime_type": mime, "updated_at": time.time()
     }
     await msg.reply_text(
-        "✅ Медиа сохранено для сайта!\\n"
-        f"Ключ: {key}\\n"
-        f"Формат: {mime}\\n"
-        f"Открыть: https://giveaway-bot-hidden-production.up.railway.app/media/{key}\\n\\n"
-        "Чтобы заменить файл, отправь новый с тем же ключом в подписи.\\n"
+        "✅ Медиа сохранено для сайта!\n"
+        f"Ключ: {key}\n"
+        f"Формат: {mime}\n"
+        f"Открыть: https://giveaway-bot-hidden-production.up.railway.app/media/{key}\n\n"
+        "Чтобы заменить файл, отправь новый с тем же ключом в подписи.\n"
         "Примеры подписей: bear_gift, cupid_charm, heart_gift, ice_cream_gift."
     )
 
