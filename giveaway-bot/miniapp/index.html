@@ -18,10 +18,10 @@ button.secondary{background:#ffffff12;border:1px solid #ffffff16}button:disabled
 <div id="notice" class="notice hidden"></div>
 <section class="card"><h2>👤 Твой профиль</h2><div class="stats"><div class="stat"><div id="wins" class="num">—</div><div class="muted">Побед</div></div><div class="stat"><div id="rank" class="num">—</div><div class="muted">Место в рейтинге</div></div></div><div id="breakdown" class="sub" style="margin-top:12px">Пока нет побед</div></section>
 <section class="card"><h2>🏆 Рейтинг участников</h2><div id="top" class="sub">Загружаем рейтинг…</div></section>
-<section id="admin" class="card hidden"><h2>🛠 Меню владельца</h2><div class="stats"><div class="stat"><div id="bear" class="num">0:00</div><div class="muted">Буст Мишек</div></div><div class="stat"><div id="nft" class="num">0:00</div><div class="muted">NFT-буст</div></div></div><button id="bearBtn">🧸 Включить буст Мишек · 3 мин</button><button id="nftBtn">⚔️ Включить NFT-буст · 3 мин</button><button id="stopBtn" class="secondary">Остановить бусты</button><div id="adminInfo" class="sub"></div>
+<section id="admin" class="card hidden"><h2>🛠 Меню владельца</h2><div class="stats"><div class="stat"><div id="bear" class="num">0:00</div><div class="muted">Буст Мишек</div></div><div class="stat"><div id="nft" class="num">0:00</div><div class="muted">NFT-буст</div></div></div><button id="bearBtn">🧸 Включить буст Мишек · 3 мин</button><button id="nftBtn">⚔️ Включить NFT-буст · 3 дня</button><button id="stopBtn" class="secondary">Остановить бусты</button><div id="adminInfo" class="sub"></div>
 <div style="height:1px;background:#ffffff18;margin:18px 0"></div>
 <h2>🎲 Настройка шансов</h2>
-<div class="muted" style="margin-bottom:10px">Сумма вероятностей пяти призов должна быть ровно 100%. Персональные настройки участника имеют приоритет над общими.</div>
+<div class="muted" style="margin-bottom:10px">Сумма вероятностей шести призов должна быть ровно 100%. Персональные настройки участника имеют приоритет над общими.</div>
 <div id="chanceFields"></div>
 <label class="muted" for="chanceMode">К кому применить</label>
 <select id="chanceMode" style="width:100%;padding:13px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:7px 0 12px">
@@ -38,7 +38,7 @@ const $=id=>document.getElementById(id), init=tg?.initData||"";
 function notice(s){$("notice").textContent=s;$("notice").classList.remove("hidden")}
 async function api(path,body){const r=await fetch(path,{method:body?"POST":"GET",headers:{"Content-Type":"application/json","X-Telegram-Init-Data":init},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||"Ошибка запроса");return d}
 function timer(n){return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")}
-const prizeNames={bear:"🧸 Мишка",bouquet:"💐 Букет",heart:"💝 Сердечко",nft:"⚔️ NFT Light Sword",inputkey:"🔑 NFT InputKey"};
+const prizeNames={bear:"🧸 Мишка",bouquet:"💐 Букет",heart:"💝 Сердечко",nft:"⚔️ NFT Light Sword",inputkey:"🔑 NFT InputKey",cupid:"💗 NFT Cupid Charm"};
 
 function buildChanceFields(weights){$("chanceFields").innerHTML=Object.entries(prizeNames).map(([k,label])=>'<label class="muted" for="chance-'+k+'">'+label+' · %</label><input id="chance-'+k+'" type="number" min="0" max="100" value="'+Number(weights?.[k]??0)+'" style="width:100%;padding:12px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:5px 0 10px">').join("")}
 function updateChanceMode(){const m=$("chanceMode").value;$("targetWrap").classList.toggle("hidden",!m.startsWith("user"));$("durationWrap").classList.toggle("hidden",!m.endsWith("temporary"))}
