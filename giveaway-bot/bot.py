@@ -169,7 +169,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     greeting = "🛠 Панель владельца Челикс Гифтс" if is_owner(update) else "🎁 Профиль, рейтинг и история твоих побед"
     buttons = [[InlineKeyboardButton("🎁 Группа с розыгрышами", url="https://t.me/freegiftsgroup")]]
     if url:
-        buttons.insert(0, [InlineKeyboardButton("✨ Открыть Mini App", web_app=WebAppInfo(url=url))])
+        buttons.insert(0, [InlineKeyboardButton("🎡 Сайт и ежедневная рулетка", web_app=WebAppInfo(url=url.replace("/app", "")))])
+        if is_owner(update):
+            buttons.insert(1, [InlineKeyboardButton("🛠 Панель владельца", web_app=WebAppInfo(url=url))])
     await msg.reply_text(greeting, reply_markup=InlineKeyboardMarkup(buttons))
 
 
