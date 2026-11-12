@@ -387,6 +387,11 @@ async def save_owner_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         media = msg.document
         filename = media.file_name or "document"
         mime = media.mime_type or "application/octet-stream"
+        lower_name = filename.lower()
+        if lower_name.endswith(".gif"):
+            mime = "image/gif"
+        elif lower_name.endswith(".mp4"):
+            mime = "video/mp4"
     if not media:
         return
     import re
@@ -411,6 +416,243 @@ async def save_owner_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+
+async def nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    if not is_owner(update):
+        await send_group_link(msg)
+        return
+    context.bot_data["nft_boost_until"] = time.time() + 3 * 24 * 60 * 60
+    await msg.reply_text("💎 NFT-буст активирован на 3 дня! Каждый выигрыш в этот период — случайный NFT: Light Sword, InputKey или Cupid Charm.")
+
+
+async def super_nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    if not is_owner(update):
+        await send_group_link(msg)
+        return
+    context.bot_data["super_nft_boost_until"] = time.time() + 3 * 60
+    context.bot_data["super_nft_boost_session"] = context.bot_data["super_nft_boost_until"]
+    await msg.reply_text("💎⚡ СУПЕР-NFT-БУСТ активирован на 3 минуты! Каждое второе сообщение в группе выигрывает случайный NFT: Light Sword, InputKey или Cupid Charm.")
+
+
+async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    if not is_owner(update):
+        await send_group_link(msg)
+        return
+    context.bot_data["bear_boost_until"] = time.time() + 3 * 60
+    context.bot_data["bear_boost_session"] = context.bot_data["bear_boost_until"]
+    context.bot_data["bear_boost_message_count"] = 0
+    await msg.reply_text("🧸 Буст Мишек активирован на 3 минуты! Каждое второе сообщение в группе гарантированно запускает выпадение Мишки.")
+
+
+async def top_wins(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    chat = update.effective_chat
+    if not msg or not chat or chat.type not in ("group", "supergroup"):
+        if msg:
+            await msg.reply_text("Команда /top работает в группе розыгрыша.")
+        return
+
+    stats = context.chat_data.get("prize_wins", {})
+    ranked = sorted(stats.items(), key=lambda item: item[1].get("total", 0), reverse=True)
+    if not ranked:
+        await msg.reply_text("🏆 Топ пока пуст — выигравших ещё нет!")
+        return
+
+    medals = ["🥇", "🥈", "🥉"]
+    lines = ["🏆 ТОП ПОБЕДИТЕЛЕЙ ЭТОЙ ГРУППЫ", ""]
+    for index, (user_id, data) in enumerate(ranked[:10]):
+        medal = medals[index] if index < len(medals) else f"{index + 1}."
+        name = data.get("name") or f"ID {user_id}"
+        total = data.get("total", 0)
+        prize_counts = data.get("prizes", {})
+        breakdown = " · ".join(
+            f"{PRIZE_LABELS.get(key, key)}: {count}"
+            for key, count in sorted(prize_counts.items()) if count
+        )
+        lines.append(f"{medal} {name} — {total} побед")
+        if breakdown:
+            lines.append(f"   {breakdown}")
+    await msg.reply_text("\n".join(lines))
+
+
+async def giveaway_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    chat = update.effective_chat
+    msg = update.effective_message
+    if not msg or not user or not OWNER_ID or user.id != OWNER_ID:
+        await send_group_link(msg)
+        return
+    if not chat or chat.type not in ("group", "supergroup"):
+        await msg.reply_text("Команду /giveaway_status используй в группе.")
+        return
+
+    count = context.chat_data.get("message_count", 0)
+    target = context.chat_data.get("message_target")
+    if target is None:
+        target = random.randint(MIN_MESSAGES, MAX_MESSAGES)
+        context.chat_data["message_target"] = target
+    await msg.reply_text(f"🎲 Счётчик розыгрыша: {count}/{target} сообщений.")
+
+
+async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    user = update.effective_user
+    chat = update.effective_chat
+    if not msg or not user or user.is_bot or not chat:
+        return
+
+    excluded = ignored_users(context)
+    if user.id in excluded:
+        try:
+            await context.bot.set_message_reaction(chat_id=chat.id, message_id=msg.message_id, reaction=[ReactionTypeEmoji("👎")])
+        except Exception:
+            log.exception("Could not react to ignored user's message")
+        return
+
+    # Remember groups and real participants seen by the bot for owner-only targeting.
+    known_group_ids = context.bot_data.setdefault("known_group_ids", set())
+    known_group_ids.add(chat.id)
+    known_users = context.bot_data.setdefault("known_users", {})
+    known_users[str(user.id)] = {
+        "id": user.id,
+        "name": user.full_name,
+        "username": user.username or "",
+        "last_chat_id": chat.id,
+    }
+
+    # Super NFT boost takes priority: every second group message wins an NFT.
+    super_nft_active = context.bot_data.get("super_nft_boost_until", 0) > time.time()
+    forced_nft = False
+    bear_boost_active = context.bot_data.get("bear_boost_until", 0) > time.time()
+    forced_bear = False
+    if super_nft_active:
+        session = context.bot_data.get("super_nft_boost_session", 0)
+        if context.chat_data.get("super_nft_boost_session") != session:
+            context.chat_data["super_nft_boost_session"] = session
+            context.chat_data["super_nft_boost_message_count"] = 0
+        boost_count = context.chat_data.get("super_nft_boost_message_count", 0) + 1
+        context.chat_data["super_nft_boost_message_count"] = boost_count
+        if boost_count % 2 == 1:
+            try:
+                await context.bot.set_message_reaction(chat_id=chat.id, message_id=msg.message_id, reaction=[ReactionTypeEmoji("👎")])
+            except Exception:
+                log.exception("Could not react to non-winning super NFT boost message")
+            return
+        forced_nft = True
+    elif bear_boost_active:
+        boost_count = context.chat_data.get("bear_boost_message_count", 0) + 1
+        context.chat_data["bear_boost_message_count"] = boost_count
+        if boost_count % 2 == 1:
+            try:
+                await context.bot.set_message_reaction(
+                    chat_id=chat.id,
+                    message_id=msg.message_id,
+                    reaction=[ReactionTypeEmoji("👎")],
+                )
+            except Exception:
+                log.exception("Could not react to non-winning boost message")
+            return
+        forced_bear = True
+    else:
+        # Normal giveaway: one random target per round, independently for each group.
+        target = context.chat_data.get("message_target")
+        if target is None:
+            target = random.randint(MIN_MESSAGES, MAX_MESSAGES)
+            context.chat_data["message_target"] = target
+            context.chat_data["message_count"] = 0
+
+        context.chat_data["message_count"] = context.chat_data.get("message_count", 0) + 1
+        count = context.chat_data["message_count"]
+        log.info("Group %s giveaway progress: %s/%s", chat.id, count, target)
+
+        if count < target:
+            try:
+                await context.bot.set_message_reaction(
+                    chat_id=chat.id,
+                    message_id=msg.message_id,
+                    reaction=[ReactionTypeEmoji("👎")],
+                )
+            except Exception:
+                log.exception("Could not react to non-winning message")
+            return
+    username = f"@{user.username}" if user.username else f"{user.full_name} (без username)"
+    group_name = chat.title or str(chat.id)
+
+    if forced_nft:
+        prize_key = random.choice(["nft", "inputkey", "cupid"])
+        nft = next(item for item in PRIZES if item[1] == prize_key)
+        prize_title = nft[2]
+        caption = nft_rental_caption(prize_key, nft[3])
+    elif forced_bear:
+        bear = next(item for item in PRIZES if item[1] == "bear")
+        prize_key, prize_title, caption = bear[1], bear[2], bear[3]
+    else:
+        prize_key, prize_title, caption = choose_prize(context, context.chat_data, user.id)
+    log.info("Winner %s in group %s won %s", user.id, chat.id, prize_key)
+
+    # The owner participates in the public draw, but does not receive a paid gift.
+    # Other winners receive a regular Telegram gift from the bot's own Stars balance.
+    delivery_ok = False
+    delivery_note = "Владелец выиграл: реальный подарок не отправлялся."
+    if OWNER_ID and user.id == OWNER_ID:
+        log.info("Owner %s won %s; skipping gift delivery", user.id, prize_key)
+    elif prize_key == "bear" and context.bot_data.get("bear_boost_until", 0) > time.time():
+        delivery_note = "Мишка объявлен; выдача вручную владельцем."
+        log.info("Bear boost winner %s; automatic gift delivery skipped for manual handoff", user.id)
+    else:
+        try:
+            delivery_ok, delivery_note = await deliver_prize(context, user.id, prize_key)
+            if not delivery_ok:
+                log.warning("Gift delivery unavailable for winner %s: %s", user.id, delivery_note)
+        except Exception as exc:
+            delivery_note = f"Ошибка отправки подарка: {exc}"
+            log.exception("Could not deliver gift to winner %s", user.id)
+
+    try:
+        if PHOTO_FILE_ID:
+            await msg.reply_photo(photo=PHOTO_FILE_ID, caption=caption, parse_mode=ParseMode.MARKDOWN)
+        elif IMAGE_PATH.is_file():
+            with IMAGE_PATH.open("rb") as photo:
+                await msg.reply_photo(photo=photo, caption=caption, parse_mode=ParseMode.MARKDOWN)
+        else:
+            await msg.reply_text(caption, parse_mode=ParseMode.MARKDOWN)
+    except Exception:
+        log.exception("Could not post winner announcement")
+        return
+
+    # Count only wins whose announcement was successfully posted.
+    wins = context.chat_data.setdefault("prize_wins", {})
+    user_key = str(user.id)
+    entry = wins.setdefault(user_key, {"name": username, "total": 0, "prizes": {}})
+    entry["name"] = username
+    entry["total"] = entry.get("total", 0) + 1
+    prize_counts = entry.setdefault("prizes", {})
+    prize_counts[prize_key] = prize_counts.get(prize_key, 0) + 1
+
+    # Start a fresh round only after the announcement was successfully sent.
+    context.chat_data["message_count"] = 0
+    context.chat_data["message_target"] = random.randint(MIN_MESSAGES, MAX_MESSAGES)
+    log.info("New giveaway round in %s: next target=%s", chat.id, context.chat_data["message_target"])
+
+    if OWNER_ID:
+        try:
+            await context.bot.send_message(
+                chat_id=OWNER_ID,
+                text=(
+                    "🏆 Победитель бесплатного розыгрыша!\n"
+                    f"👤 Участник: {username}\n"
+                    f"💬 Группа: {group_name}\n"
+                    f"🆔 Telegram ID: {user.id}\n"
+                    f"🎁 Приз: {prize_title}\n"
+                    f"📦 Выдача: {delivery_note}"
+                ),
+            )
+        except Exception:
+            log.exception("Could not notify owner")
+
 def main():
     persistence = PicklePersistence(filepath="giveaway_bot_data.pickle", update_interval=5)
     app = Application.builder().token(BOT_TOKEN).persistence(persistence).post_init(start_server).post_shutdown(stop_server).build()
@@ -426,8 +668,9 @@ def main():
     app.add_handler(CallbackQueryHandler(balance_callback, pattern=r"^balance:show$"))
     app.add_handler(CallbackQueryHandler(star_history_callback, pattern=r"^balance:history$"))
     app.add_handler(CallbackQueryHandler(ignored_menu_callback, pattern=r"^ignored:"))
-    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & (filters.PHOTO | filters.ANIMATION | filters.VIDEO | filters.Document.ALL), save_owner_media))
-    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.PHOTO, private_redirect))
+    owner_media = filters.PHOTO | filters.ANIMATION | filters.VIDEO | filters.Document.ALL
+    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & owner_media, save_owner_media))
+    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~owner_media, private_redirect))
     group_messages = (
         (filters.TEXT & ~filters.COMMAND)
         | filters.PHOTO
