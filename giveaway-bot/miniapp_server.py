@@ -113,9 +113,11 @@ async def spin(request):
     uid = str(user["id"])
     today = time.strftime("%Y-%m-%d", time.gmtime())
     spins = app.bot_data.setdefault("daily_site_spins", {})
-    if spins.get(uid) == today:
-        return web.json_response({"error":"Сегодняшняя попытка уже использована. Возвращайся завтра."}, status=409)
-    spins[uid] = today
+    is_owner = bool(OWNER_ID and int(uid) == OWNER_ID)
+    if not is_owner:
+        if spins.get(uid) == today:
+            return web.json_response({"error":"Сегодняшняя попытка уже использована. Возвращайся завтра."}, status=409)
+        spins[uid] = today
     roll = __import__("random").randrange(100)
     if roll < 5:
         prize = "bear"
@@ -132,7 +134,7 @@ async def spin(request):
         await app.bot.send_message(chat_id=int(uid), text=message, disable_web_page_preview=True)
     except Exception:
         message += " Не удалось написать в личку: открой бота и нажми Start."
-    return web.json_response({"ok":True,"prize":prize,"message":message})
+    return web.json_response({"ok":True,"prize":prize,"message":message,"unlimited":is_owner})
 
 
 async def admin(request):
