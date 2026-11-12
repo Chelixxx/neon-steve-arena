@@ -382,6 +382,15 @@ async def nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await msg.reply_text("💎 NFT-буст активирован на 3 дня! Каждый выигрыш в этот период — случайный NFT: Light Sword, InputKey или Cupid Charm.")
 
 
+async def super_nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    if not is_owner(update):
+        await send_group_link(msg)
+        return
+    context.bot_data["super_nft_boost_until"] = time.time() + 3 * 60
+    await msg.reply_text("💎⚡ СУПЕР-NFT-БУСТ активирован на 3 минуты! Каждое второе сообщение в группе выигрывает случайный NFT: Light Sword, InputKey или Cupid Charm.")
+
+
 async def bear_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not is_owner(update):
@@ -469,10 +478,22 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "last_chat_id": chat.id,
     }
 
-    # During /boost, every second incoming group message wins a bear.
+    # Super NFT boost takes priority: every second group message wins an NFT.
+    super_nft_active = context.bot_data.get("super_nft_boost_until", 0) > time.time()
+    forced_nft = False
     bear_boost_active = context.bot_data.get("bear_boost_until", 0) > time.time()
     forced_bear = False
-    if bear_boost_active:
+    if super_nft_active:
+        boost_count = context.chat_data.get("super_nft_boost_message_count", 0) + 1
+        context.chat_data["super_nft_boost_message_count"] = boost_count
+        if boost_count % 2 == 1:
+            try:
+                await context.bot.set_message_reaction(chat_id=chat.id, message_id=msg.message_id, reaction=[ReactionTypeEmoji("👎")])
+            except Exception:
+                log.exception("Could not react to non-winning super NFT boost message")
+            return
+        forced_nft = True
+    elif bear_boost_active:
         boost_count = context.chat_data.get("bear_boost_message_count", 0) + 1
         context.chat_data["bear_boost_message_count"] = boost_count
         if boost_count % 2 == 1:
@@ -511,7 +532,12 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = f"@{user.username}" if user.username else f"{user.full_name} (без username)"
     group_name = chat.title or str(chat.id)
 
-    if forced_bear:
+    if forced_nft:
+        prize_key = random.choice(["nft", "inputkey", "cupid"])
+        nft = next(item for item in PRIZES if item[1] == prize_key)
+        prize_title = nft[2]
+        caption = nft_rental_caption(prize_key, nft[3])
+    elif forced_bear:
         bear = next(item for item in PRIZES if item[1] == "bear")
         prize_key, prize_title, caption = bear[1], bear[2], bear[3]
     else:
@@ -584,6 +610,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).persistence(persistence).post_init(start_server).post_shutdown(stop_server).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("nftboost", nft_boost))
+    app.add_handler(CommandHandler("supernftboost", super_nft_boost))
     app.add_handler(CommandHandler("boost", bear_boost))
     app.add_handler(CommandHandler("giveaway_status", giveaway_status))
     app.add_handler(CommandHandler("top", top_wins))
