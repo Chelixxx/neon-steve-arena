@@ -153,8 +153,8 @@ async def admin(request):
         app.bot_data["bear_boost_message_count"] = 0
         message = "Буст Мишек включён на 3 минуты."
     elif action == "nft_boost":
-        app.bot_data["nft_boost_until"] = time.time()+180
-        message = "NFT-буст включён на 3 минуты."
+        app.bot_data["nft_boost_until"] = time.time()+3*24*60*60
+        message = "NFT-буст включён на 3 дня. В розыгрышах выпадают Light Sword, InputKey или Cupid Charm."
     elif action == "stop_boosts":
         app.bot_data["bear_boost_until"] = 0
         app.bot_data["nft_boost_until"] = 0
