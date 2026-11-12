@@ -543,6 +543,12 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         forced_nft = True
     elif bear_boost_active:
+        # Reset the per-group counter every time the owner starts a new bear boost.
+        # The activation timestamp is the session ID and is shared by all groups.
+        session = context.bot_data.get("bear_boost_session", 0)
+        if context.chat_data.get("bear_boost_session") != session:
+            context.chat_data["bear_boost_session"] = session
+            context.chat_data["bear_boost_message_count"] = 0
         boost_count = context.chat_data.get("bear_boost_message_count", 0) + 1
         context.chat_data["bear_boost_message_count"] = boost_count
         if boost_count % 2 == 1:
@@ -591,7 +597,7 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         prize_key, prize_title, caption = bear[1], bear[2], bear[3]
     else:
         prize_key, prize_title, caption = choose_prize(context, context.chat_data, user.id)
-    log.info("Winner %s in group %s won %s", user.id, chat.id, prize_key)
+    log.info("Winner %s in group %s won %s (bear_boost=%s, boost_count=%s)", user.id, chat.id, prize_key, forced_bear, context.chat_data.get("bear_boost_message_count", 0))
 
     # The owner participates in the public draw, but does not receive a paid gift.
     # Other winners receive a regular Telegram gift from the bot's own Stars balance.
