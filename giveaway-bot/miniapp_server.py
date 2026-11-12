@@ -11,7 +11,7 @@ from aiohttp import web
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
 OWNER_ID = int(OWNER_ID_RAW) if OWNER_ID_RAW.isdigit() else None
-LABELS = {"bear":"🧸 Мишка","bouquet":"💐 Букет","heart":"💝 Сердечко","nft":"⚔️ Light Sword","inputkey":"🔑 InputKey"}
+LABELS = {"bear":"🧸 Мишка","bouquet":"💐 Букет","heart":"💝 Сердечко","nft":"⚔️ Light Sword","inputkey":"🔑 InputKey","cupid":"💗 Cupid Charm"}
 
 
 def validate(init_data):
@@ -73,7 +73,7 @@ async def data(request):
         "boosts":{"bear_seconds":max(0,int(app.bot_data.get("bear_boost_until",0)-time.time())),"nft_seconds":max(0,int(app.bot_data.get("nft_boost_until",0)-time.time()))},
         "ignored_count":len(app.bot_data.get("ignored_users",{})) if owner else 0,
         "chance_settings": ({
-            "default": app.bot_data.get("chance_default", {"bear":96,"bouquet":1,"heart":1,"nft":1,"inputkey":1}),
+            "default": app.bot_data.get("chance_default", {"bear":95,"bouquet":1,"heart":1,"nft":1,"inputkey":1,"cupid":1}),
             "temporary": app.bot_data.get("chance_temporary"),
             "users": app.bot_data.get("chance_users", {}),
             "known_users": sorted(
@@ -98,7 +98,7 @@ async def admin(request):
     if action == "chance_save":
         mode = payload.get("mode")
         weights = payload.get("weights")
-        keys = ("bear", "bouquet", "heart", "nft", "inputkey")
+        keys = ("bear", "bouquet", "heart", "nft", "inputkey", "cupid")
         if not isinstance(weights, dict) or set(weights) != set(keys):
             return web.json_response({"error":"Нужно задать шансы для всех пяти призов."},status=400)
         try:
