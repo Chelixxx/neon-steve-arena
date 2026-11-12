@@ -111,6 +111,17 @@ async def deliver_prize(context: ContextTypes.DEFAULT_TYPE, user_id: int, prize_
     return True, f"Подарок отправлен автоматически за {price} ⭐."
 
 
+def nft_rental_caption(key: str, caption: str) -> str:
+    if key not in ("nft", "inputkey", "cupid"):
+        return caption
+    days = random.randint(3, 7)
+    word = "день" if days % 10 == 1 and days % 100 != 11 else "дня" if 2 <= days % 10 <= 4 and not 12 <= days % 100 <= 14 else "дней"
+    return caption.replace(
+        "⏳ Коллекционный подарок будет закреплён за тобой на 3 дня.",
+        f"⏳ Аренда NFT — {days} {word}."
+    )
+
+
 def choose_prize(context: ContextTypes.DEFAULT_TYPE, chat_data: dict, user_id: int | None = None):
     defaults = {key: weight for weight, key, _, _ in PRIZES}
     now = time.time()
@@ -126,13 +137,13 @@ def choose_prize(context: ContextTypes.DEFAULT_TYPE, chat_data: dict, user_id: i
     if settings.get("nft_boost_until", 0) > now:
         key = random.choice(["nft", "inputkey", "cupid"])
         prize = next(item for item in PRIZES if item[1] == key)
-        return prize[1], prize[2], prize[3]
+        return prize[1], prize[2], nft_rental_caption(prize[1], prize[3])
     roll = random.randrange(100)
     cumulative = 0
     for _, key, title, caption in PRIZES:
         cumulative += int(weights.get(key, defaults[key]))
         if roll < cumulative:
-            return key, title, caption
+            return key, title, nft_rental_caption(key, caption)
     return PRIZES[0][1:]
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
