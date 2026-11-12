@@ -59,6 +59,21 @@ async def miniapp(request):
     return web.FileResponse(Path(__file__).parent / "miniapp" / "app.html")
 
 
+async def site_media(request):
+    key = request.match_info.get("key", "")
+    record = request.app["bot_app"].bot_data.get("site_media", {}).get(key)
+    if not record:
+        raise web.HTTPNotFound(text="Media not found")
+    try:
+        tg_file = await request.app["bot_app"].bot.get_file(record["file_id"])
+        data = await tg_file.download_as_bytearray()
+    except Exception:
+        raise web.HTTPBadGateway(text="Could not retrieve Telegram media")
+    response = web.Response(body=bytes(data), content_type=record.get("mime_type", "application/octet-stream"))
+    response.headers["Cache-Control"] = "public, max-age=300"
+    response.headers["Content-Disposition"] = "inline"
+    return response
+
 async def data(request):
     user = auth(request)
     if not user:
@@ -214,6 +229,7 @@ async def start_server(bot_app):
     app["bot_app"] = bot_app
     app.router.add_get("/", index)
     app.router.add_get("/app", miniapp)
+    app.router.add_get("/media/{key}", site_media)
     app.router.add_get("/api/data", data)
     app.router.add_post("/api/admin", admin)
     app.router.add_post("/api/spin", spin)
