@@ -388,6 +388,7 @@ async def super_nft_boost(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_group_link(msg)
         return
     context.bot_data["super_nft_boost_until"] = time.time() + 3 * 60
+    context.bot_data["super_nft_boost_session"] = context.bot_data["super_nft_boost_until"]
     await msg.reply_text("💎⚡ СУПЕР-NFT-БУСТ активирован на 3 минуты! Каждое второе сообщение в группе выигрывает случайный NFT: Light Sword, InputKey или Cupid Charm.")
 
 
@@ -484,6 +485,10 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bear_boost_active = context.bot_data.get("bear_boost_until", 0) > time.time()
     forced_bear = False
     if super_nft_active:
+        session = context.bot_data.get("super_nft_boost_session", 0)
+        if context.chat_data.get("super_nft_boost_session") != session:
+            context.chat_data["super_nft_boost_session"] = session
+            context.chat_data["super_nft_boost_message_count"] = 0
         boost_count = context.chat_data.get("super_nft_boost_message_count", 0) + 1
         context.chat_data["super_nft_boost_message_count"] = boost_count
         if boost_count % 2 == 1:
