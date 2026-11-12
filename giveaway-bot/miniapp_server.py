@@ -52,7 +52,11 @@ def auth(request):
 
 
 async def index(request):
-    return web.FileResponse(Path(__file__).parent / "miniapp" / "index.html")
+    return web.FileResponse(Path(__file__).parent / "site" / "index.html")
+
+
+async def miniapp(request):
+    return web.FileResponse(Path(__file__).parent / "miniapp" / "app.html")
 
 
 async def data(request):
@@ -173,6 +177,7 @@ async def start_server(bot_app):
     app = web.Application(client_max_size=8192)
     app["bot_app"] = bot_app
     app.router.add_get("/", index)
+    app.router.add_get("/app", miniapp)
     app.router.add_get("/api/data", data)
     app.router.add_post("/api/admin", admin)
     runner = web.AppRunner(app)
