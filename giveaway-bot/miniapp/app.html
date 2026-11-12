@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#100d1d"><title>Челикс Гифтс</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#100d1d;--card:#1b1630;--purple:#9b68ff;--muted:#a99fbd}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#30204c,var(--bg) 58%);color:#fff;font:15px system-ui,-apple-system,sans-serif;padding:22px 16px 40px}
+header{display:flex;align-items:center;gap:13px;margin:8px 0 22px}.avatar{width:54px;height:54px;border-radius:18px;background:#30234b;object-fit:cover}.sub{color:var(--muted);font-size:13px}
+h1{font-size:23px;margin:0 0 3px}.card{background:linear-gradient(145deg,#251d3c,#191426);border:1px solid #ffffff12;border-radius:20px;padding:17px;margin:12px 0;box-shadow:0 10px 30px #0003}
+h2{font-size:16px;margin:0 0 13px}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{background:#ffffff08;padding:13px;border-radius:14px}.num{font-size:25px;font-weight:800}.muted{color:var(--muted);font-size:12px}
+button{width:100%;border:0;border-radius:14px;padding:14px;margin:5px 0;background:linear-gradient(100deg,#8652ed,#b06aff);color:white;font-weight:700;font-size:14px}
+button.secondary{background:#ffffff12;border:1px solid #ffffff16}button:disabled{opacity:.5}
+.person{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #ffffff12}.person:last-child{border:0}.tag{color:#c5a5ff;font-size:12px}.hidden{display:none}.notice{padding:12px;border-radius:12px;background:#ffffff10;color:#e9ddff;margin:12px 0}
+</style></head><body>
+<header><img id="avatar" class="avatar" alt=""><div><h1>Челикс Гифтс</h1><div id="hello" class="sub">Загрузка профиля…</div></div></header>
+<div id="notice" class="notice hidden"></div>
+<section class="card"><h2>👤 Твой профиль</h2><div class="stats"><div class="stat"><div id="wins" class="num">—</div><div class="muted">Побед</div></div><div class="stat"><div id="rank" class="num">—</div><div class="muted">Место в рейтинге</div></div></div><div id="breakdown" class="sub" style="margin-top:12px">Пока нет побед</div></section>
+<section class="card"><h2>🏆 Рейтинг участников</h2><div id="top" class="sub">Загружаем рейтинг…</div></section>
+<section id="admin" class="card hidden"><h2>🛠 Меню владельца</h2><div class="stats"><div class="stat"><div id="bear" class="num">0:00</div><div class="muted">Буст Мишек</div></div><div class="stat"><div id="nft" class="num">0:00</div><div class="muted">NFT-буст · 3 дня</div></div><div class="stat"><div id="superNft" class="num">0:00</div><div class="muted">Супер-NFT-буст · 3 мин</div></div></div><button id="bearBtn">🧸 Включить буст Мишек · 3 мин</button><button id="nftBtn">⚔️ Включить NFT-буст · 3 дня</button><button id="superNftBtn">💎⚡ Супер-NFT-буст · 3 мин</button><button id="stopBtn" class="secondary">Остановить бусты</button><div id="adminInfo" class="sub"></div>
+<div style="height:1px;background:#ffffff18;margin:18px 0"></div>
+<h2>🎲 Настройка шансов</h2>
+<div class="muted" style="margin-bottom:10px">Сумма вероятностей шести призов должна быть ровно 100%. Персональные настройки участника имеют приоритет над общими.</div>
+<div id="chanceFields"></div>
+<label class="muted" for="chanceMode">К кому применить</label>
+<select id="chanceMode" style="width:100%;padding:13px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:7px 0 12px">
+<option value="default">Для всех · навсегда</option><option value="temporary">Для всех · на время</option><option value="user">Для участника · навсегда</option><option value="user_temporary">Для участника · на время</option>
+</select>
+<div id="targetWrap" class="hidden"><label class="muted" for="chanceUsername">Username участника Telegram</label><input id="chanceUsername" type="text" placeholder="@username" autocomplete="off" style="width:100%;padding:13px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:7px 0 5px"><div class="muted">Без @ тоже можно. Участник должен хотя бы раз написать в группе после включения обновления бота.</div></div>
+<div id="durationWrap" class="hidden"><label class="muted" for="chanceMinutes">Длительность, минут (до 30 дней)</label><input id="chanceMinutes" type="number" min="1" max="43200" value="60" style="width:100%;padding:13px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:7px 0 12px"></div>
+<button id="saveChanceBtn">💾 Сохранить шансы</button><button id="removeChanceBtn" class="secondary">Убрать персональные настройки участника</button>
+<div id="chanceInfo" class="sub" style="margin-top:8px"></div>
+</section>
+<script>
+const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
+const $=id=>document.getElementById(id), init=tg?.initData||"";
+function notice(s){$("notice").textContent=s;$("notice").classList.remove("hidden")}
+async function api(path,body){const r=await fetch(path,{method:body?"POST":"GET",headers:{"Content-Type":"application/json","X-Telegram-Init-Data":init},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||"Ошибка запроса");return d}
+function timer(n){if(n>=3600)return Math.floor(n/3600)+":"+String(Math.floor(n%3600/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")}
+const prizeNames={bear:"🧸 Мишка",bouquet:"💐 Букет",heart:"💝 Сердечко",nft:"⚔️ NFT Light Sword",inputkey:"🔑 NFT InputKey",cupid:"💗 NFT Cupid Charm"};
+
+function buildChanceFields(weights){$("chanceFields").innerHTML=Object.entries(prizeNames).map(([k,label])=>'<label class="muted" for="chance-'+k+'">'+label+' · %</label><input id="chance-'+k+'" type="number" min="0" max="100" value="'+Number(weights?.[k]??0)+'" style="width:100%;padding:12px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:5px 0 10px">').join("")}
+function updateChanceMode(){const m=$("chanceMode").value;$("targetWrap").classList.toggle("hidden",!m.startsWith("user"));$("durationWrap").classList.toggle("hidden",!m.endsWith("temporary"))}
+function renderChance(c){if(!c)return;buildChanceFields(c.default);const temp=c.temporary;$("chanceInfo").textContent=temp&&temp.until>Date.now()/1000?'Временные общие настройки активны до '+new Date(temp.until*1000).toLocaleString():'Сейчас действуют постоянные общие настройки. Для персональной настройки введи @username участника.'}
+function render(d){const u=d.user;$("hello").textContent=(u.username?"@"+u.username:u.name)+(u.is_owner?" · владелец":"");if(u.photo){$("avatar").src=u.photo}else{$("avatar").src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Crect width='60' height='60' rx='18' fill='%233a2857'/%3E%3Ctext x='30' y='39' text-anchor='middle' font-size='30'%3E🎁%3C/text%3E%3C/svg%3E"}
+$("wins").textContent=d.profile.total||0;const idx=d.top.findIndex(x=>String(x.id)===String(u.id));$("rank").textContent=idx<0?"—":"#"+(idx+1);
+const labels=d.prize_labels||{};const parts=Object.entries(d.profile.prizes||{}).map(([k,v])=>(labels[k]||k)+": "+v);$("breakdown").textContent=parts.join(" · ")||"Твои победы появятся здесь";
+$("top").innerHTML=d.top.length?d.top.map((x,i)=>'<div class="person"><span>'+(["🥇","🥈","🥉"][i]||("#"+(i+1)))+" "+escapeHtml(x.name)+'</span><b>'+x.total+'</b></div>').join(""):"Пока нет победителей";
+$("admin").classList.toggle("hidden",!u.is_owner);if(u.is_owner){$("bear").textContent=timer(d.boosts.bear_seconds);$("nft").textContent=timer(d.boosts.nft_seconds);$("superNft").textContent=timer(d.boosts.super_nft_seconds||0);$("adminInfo").textContent="В игнор-листе: "+d.ignored_count;renderChance(d.chance_settings)}}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+async function act(action){try{const d=await api("/api/admin",{action});notice(d.message);await load()}catch(e){notice(e.message)}}
+async function load(){try{if(!init)throw Error("Открой Mini App через кнопку в Telegram.");render(await api("/api/data"))}catch(e){notice(e.message)}}
+$("bearBtn").onclick=()=>act("bear_boost");$("nftBtn").onclick=()=>act("nft_boost");$("superNftBtn").onclick=()=>act("super_nft_boost");$("stopBtn").onclick=()=>act("stop_boosts");
+$("chanceMode").onchange=updateChanceMode;
+function chancePayload(mode){const weights={};for(const k of Object.keys(prizeNames)){const v=Number($("chance-"+k).value);if(!Number.isInteger(v)||v<0||v>100)throw Error("Каждый шанс должен быть целым числом от 0 до 100.");weights[k]=v}if(Object.values(weights).reduce((a,b)=>a+b,0)!==100)throw Error("Сумма шансов должна быть ровно 100%. Сейчас: "+Object.values(weights).reduce((a,b)=>a+b,0)+"%.");return {action:"chance_save",mode,weights,username:$("chanceUsername").value.trim().replace(/^@/,""),minutes:Number($("chanceMinutes").value)}}
+$("saveChanceBtn").onclick=async()=>{try{const mode=$("chanceMode").value;const d=await api("/api/admin",chancePayload(mode));notice(d.message);await load()}catch(e){notice(e.message)}};
+$("removeChanceBtn").onclick=async()=>{try{const payload=chancePayload("user_remove");const d=await api("/api/admin",payload);notice(d.message);await load()}catch(e){notice(e.message)}};
+load();
+</script></body></html>
