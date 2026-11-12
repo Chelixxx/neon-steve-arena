@@ -70,7 +70,7 @@ async def data(request):
         "user":{"id":uid,"name":user.get("first_name","Участник"),"username":user.get("username",""),"photo":user.get("photo_url",""),"is_owner":owner},
         "profile":profile,"rank":rank,
         "top":[{"id":key,**value} for key,value in top],"prize_labels":LABELS,
-        "boosts":{"bear_seconds":max(0,int(app.bot_data.get("bear_boost_until",0)-time.time())),"nft_seconds":max(0,int(app.bot_data.get("nft_boost_until",0)-time.time()))},
+        "boosts":{"bear_seconds":max(0,int(app.bot_data.get("bear_boost_until",0)-time.time())),"nft_seconds":max(0,int(app.bot_data.get("nft_boost_until",0)-time.time())),"super_nft_seconds":max(0,int(app.bot_data.get("super_nft_boost_until",0)-time.time()))},
         "ignored_count":len(app.bot_data.get("ignored_users",{})) if owner else 0,
         "chance_settings": ({
             "default": app.bot_data.get("chance_default", {"bear":95,"bouquet":1,"heart":1,"nft":1,"inputkey":1,"cupid":1}),
@@ -155,9 +155,13 @@ async def admin(request):
     elif action == "nft_boost":
         app.bot_data["nft_boost_until"] = time.time()+3*24*60*60
         message = "NFT-буст включён на 3 дня. В розыгрышах выпадают Light Sword, InputKey или Cupid Charm."
+    elif action == "super_nft_boost":
+        app.bot_data["super_nft_boost_until"] = time.time()+180
+        message = "Супер-NFT-буст включён на 3 минуты: каждый второй пост выигрывает NFT."
     elif action == "stop_boosts":
         app.bot_data["bear_boost_until"] = 0
         app.bot_data["nft_boost_until"] = 0
+        app.bot_data["super_nft_boost_until"] = 0
         message = "Бусты остановлены."
     else:
         return web.json_response({"error":"Неизвестная команда."},status=400)
