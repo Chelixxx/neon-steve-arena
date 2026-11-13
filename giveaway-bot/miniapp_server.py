@@ -87,7 +87,7 @@ async def data(request):
     owner = bool(OWNER_ID and int(uid)==OWNER_ID)
     return web.json_response({
         "user":{"id":uid,"name":user.get("first_name","Участник"),"username":user.get("username",""),"photo":user.get("photo_url",""),"is_owner":owner},
-        "profile":profile,"rank":rank,
+        "profile":profile,"rank":rank,"sponsor": uid in app.bot_data.get("sponsor_users", {}),
         "top":[{"id":key,**value} for key,value in top],"prize_labels":LABELS,
         "boosts":{"bear_seconds":max(0,int(app.bot_data.get("bear_boost_until",0)-time.time())),"nft_seconds":max(0,int(app.bot_data.get("nft_boost_until",0)-time.time())),"super_nft_seconds":max(0,int(app.bot_data.get("super_nft_boost_until",0)-time.time()))},
         "ignored_count":len(app.bot_data.get("ignored_users",{})) if owner else 0,
@@ -103,6 +103,13 @@ async def data(request):
         } if owner else None)
     })
 
+
+
+async def support_info(request):
+    if not auth(request):
+        return web.json_response({"error":"Открой Mini App через Telegram."}, status=401)
+    card = os.getenv("SUPPORT_CARD_NUMBER", "").strip()
+    return web.json_response({"card_number": card, "gift_url": "https://t.me/Chelixxx"})
 
 
 async def spin(request):
@@ -147,6 +154,24 @@ async def admin(request):
     except Exception:
         return web.json_response({"error":"Некорректный запрос."},status=400)
     app = request.app["bot_app"]
+    if action in ("sponsor_set", "sponsor_remove"):
+        target = str(payload.get("target", "")).strip()
+        known = app.bot_data.get("known_users", {})
+        target_id = target if target in known else next(
+            (uid for uid, person in known.items()
+             if str(person.get("username", "")).lstrip("@").lower() == target.lstrip("@").lower()),
+            None
+        )
+        if not target_id:
+            return web.json_response({"error":"Участник не найден. Введи его Telegram ID или @username после того, как он напишет в группе."}, status=404)
+        sponsors = app.bot_data.setdefault("sponsor_users", {})
+        if action == "sponsor_set":
+            sponsors[target_id] = {"since": time.time(), "name": known[target_id].get("name", "Участник")}
+            message = f"Статус «Спонсор» выдан: {known[target_id].get('name', 'Участник')}."
+        else:
+            sponsors.pop(target_id, None)
+            message = f"Статус «Спонсор» снят: {known[target_id].get('name', 'Участник')}."
+        return web.json_response({"ok":True,"message":message})
     if action == "chance_save":
         mode = payload.get("mode")
         weights = payload.get("weights")
@@ -231,7 +256,7 @@ async def start_server(bot_app):
     app.router.add_get("/", index)
     app.router.add_get("/app", miniapp)
     app.router.add_get("/media/{key}", site_media)
-    app.router.add_get("/api/data", data)
+    app.router.add_get("/api/data", data)\n    app.router.add_get("/api/support", support_info)
     app.router.add_post("/api/admin", admin)
     app.router.add_post("/api/spin", spin)
     runner = web.AppRunner(app)
