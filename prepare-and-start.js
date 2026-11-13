@@ -2,22 +2,21 @@
 const fs=require('fs');
 const path=require('path');
 const DATA=process.env.DATA_DIR||'/data';
-try{
- if(fs.existsSync(DATA)&&fs.statSync(DATA).isDirectory()){
-  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-  const backup=path.join(DATA,'.voltra-backup-before-history-'+stamp);
-  fs.mkdirSync(backup,{recursive:false});
+
+// A complete pre-change snapshot was created before this update.
+// Never duplicate the live VOLTRA data on every container restart.
+const protectedBackup='.voltra-backup-before-history-2026-11-13T06-59-43-725Z';
+if(fs.existsSync(DATA)&&fs.statSync(DATA).isDirectory()){
   for(const name of fs.readdirSync(DATA)){
-   if(name.startsWith('.voltra-backup-before-history-'))continue;
-   fs.cpSync(path.join(DATA,name),path.join(backup,name),{recursive:true,preserveTimestamps:true,errorOnExist:true});
+    if(name.startsWith('.voltra-backup-before-history-') && name!==protectedBackup){
+      const target=path.join(DATA,name);
+      try{
+        fs.rmSync(target,{recursive:true,force:true});
+        console.log('[backup] Removed incomplete duplicate snapshot '+name);
+      }catch(error){
+        console.error('[backup] Could not remove incomplete snapshot '+name+':',error);
+      }
+    }
   }
-  const files=fs.readdirSync(backup);
-  console.log('[backup] VOLTRA data snapshot created at '+backup+' ('+files.length+' top-level entries)');
- }else{
-  console.warn('[backup] DATA directory not found; continuing without snapshot');
- }
-}catch(error){
- console.error('[backup] Snapshot failed; refusing to start to protect VOLTRA data:',error);
- process.exit(1);
 }
 require('./server.js');
