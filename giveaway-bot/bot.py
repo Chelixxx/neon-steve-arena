@@ -683,7 +683,8 @@ def main():
     app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(CommandHandler("panel", panel))
     app.add_handler(CommandHandler("ignore", ignore_user))
-    app.add_handler(CallbackQueryHandler(support_callback, pattern=r"^support:open$"))\n    app.add_handler(CallbackQueryHandler(balance_callback, pattern=r"^balance:show$"))
+    app.add_handler(CallbackQueryHandler(support_callback, pattern=r"^support:open$"))
+    app.add_handler(CallbackQueryHandler(balance_callback, pattern=r"^balance:show$"))
     app.add_handler(CallbackQueryHandler(star_history_callback, pattern=r"^balance:history$"))
     app.add_handler(CallbackQueryHandler(ignored_menu_callback, pattern=r"^ignored:"))
     owner_media = filters.PHOTO | filters.ANIMATION | filters.VIDEO | filters.Document.ALL
