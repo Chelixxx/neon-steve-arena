@@ -3,6 +3,7 @@ import hmac
 import json
 import os
 import time
+import secrets
 import urllib.parse
 from pathlib import Path
 
@@ -12,6 +13,15 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID_RAW = os.getenv("OWNER_ID", "").strip()
 OWNER_ID = int(OWNER_ID_RAW) if OWNER_ID_RAW.isdigit() else None
 LABELS = {"bear":"🧸 Мишка","bouquet":"💐 Букет","heart":"💝 Сердечко","nft":"⚔️ Light Sword","inputkey":"🔑 InputKey","cupid":"💗 Cupid Charm"}
+
+NFT_EVENTS = {
+    "drop": ("🎁 NFT-ДРОП", "🎁 Открываем NFT-дроп! Участвуй в нашем событии и следи за новостями о выдаче коллекционного подарка."),
+    "rare": ("💎 РЕДКИЙ NFT", "💎 Редкий NFT-ивент! Особое событие для поклонников коллекционных подарков. Подробности и итоги — в нашей группе."),
+    "collection": ("🖼️ КОЛЛЕКЦИОННЫЙ ДРОП", "🖼️ Коллекционный дроп! Знакомимся с новой подборкой NFT-подарков. Следи за обновлениями и условиями выдачи."),
+    "vip": ("👑 VIP NFT-ИВЕНТ", "👑 Специальный VIP NFT-ивент! Отдельное событие для нашего сообщества. Следи за сообщениями организатора."),
+    "blitz": ("⚡ NFT-БЛИЦ", "⚡ NFT-БЛИЦ запущен! Короткое событие — подробности и время окончания объявит организатор в чате."),
+    "holiday": ("🎉 ПРАЗДНИЧНЫЙ NFT-ДРОП", "🎉 Праздничный NFT-дроп! Отмечаем событие вместе с сообществом и делимся коллекционными подарками."),
+}
 
 
 def validate(init_data):
@@ -170,6 +180,37 @@ async def spin(request):
     return web.json_response({"ok":True,"prize":prize,"message":message,"unlimited":is_owner})
 
 
+async def create_event_invoice(request):
+    user = auth(request)
+    if not user or not OWNER_ID or int(user.get("id", 0)) != OWNER_ID:
+        return web.json_response({"error":"Создавать NFT-ивенты может только владелец."}, status=403)
+    try:
+        payload = await request.json()
+        event_key = str(payload.get("event", ""))
+    except Exception:
+        return web.json_response({"error":"Некорректный запрос."}, status=400)
+    if event_key not in NFT_EVENTS:
+        return web.json_response({"error":"Неизвестный формат NFT-ивента."}, status=400)
+    app = request.app["bot_app"]
+    title, message = NFT_EVENTS[event_key]
+    invoice_payload = "nft_event_" + secrets.token_urlsafe(12)
+    pending = app.bot_data.setdefault("pending_nft_events", {})
+    pending[invoice_payload] = {"owner_id": OWNER_ID, "event": event_key, "title": title, "message": message, "created": time.time()}
+    try:
+        url = await app.bot.create_invoice_link(
+            title=title[:32],
+            description="Публикация NFT-ивента в группе @freegiftsgroup",
+            payload=invoice_payload,
+            provider_token="",
+            currency="XTR",
+            prices=[__import__("telegram").LabeledPrice("Публикация NFT-ивента", 100)],
+        )
+    except Exception:
+        pending.pop(invoice_payload, None)
+        return web.json_response({"error":"Telegram не смог создать счёт. Проверь доступность Stars-платежей и попробуй позже."}, status=502)
+    return web.json_response({"ok":True,"invoice_url":url,"price":100,"event_title":title})
+
+
 async def admin(request):
     user = auth(request)
     if not user or not OWNER_ID or int(user.get("id",0)) != OWNER_ID:
@@ -286,6 +327,7 @@ async def start_server(bot_app):
     app.router.add_get("/api/support", support_info)
     app.router.add_post("/api/support/notify", support_notify)
     app.router.add_post("/api/admin", admin)
+    app.router.add_post("/api/event/invoice", create_event_invoice)
     app.router.add_post("/api/spin", spin)
     runner = web.AppRunner(app)
     await runner.setup()
