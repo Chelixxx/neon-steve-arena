@@ -712,7 +712,7 @@ async def successful_event_payment(update: Update, context: ContextTypes.DEFAULT
     try:
         await context.bot.send_message(
             chat_id="@freegiftsgroup",
-            text=record["title"] + "\\n\\n" + record["message"] + "\\n\\n💜 Организатор: @chelixxxs",
+            text=record["title"] + "\n\n" + record["message"] + "\n\n💜 Организатор: @chelixxxs",
             disable_web_page_preview=True,
         )
     except Exception:
