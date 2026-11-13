@@ -135,7 +135,7 @@ async def support_notify(request):
     method_label = "перевод по карте (нужно проверить вручную)" if method == "card" else "Stars / подарок (нужно проверить вручную)"
     await app.bot.send_message(
         chat_id=OWNER_ID,
-        text=f"💜 Пользователь сообщил о поддержке!\\nИмя: {user.get('first_name', 'Участник')}\\nUsername: {username}\\nTelegram ID: {uid}\\nСпособ: {method_label}\\nВремя: {time.strftime('%d.%m.%Y %H:%M', time.localtime(now))}"
+        text=f"💜 Пользователь сообщил о поддержке!\nИмя: {user.get('first_name', 'Участник')}\nUsername: {username}\nTelegram ID: {uid}\nСпособ: {method_label}\nВремя: {time.strftime('%d.%m.%Y %H:%M', time.localtime(now))}"
     )
     sent[uid] = now
     return web.json_response({"ok":True,"message":"Уведомление отправлено владельцу. Перевод будет проверен вручную."})
@@ -145,7 +145,7 @@ async def support_info(request):
     if not auth(request):
         return web.json_response({"error":"Открой Mini App через Telegram."}, status=401)
     card = os.getenv("SUPPORT_CARD_NUMBER", "").strip()
-    return web.json_response({"card_number": card, "gift_url": "https://t.me/Chelixxx"})
+    return web.json_response({"card_number": card, "gift_url": "https://t.me/chelixxxs"})
 
 
 async def spin(request):
