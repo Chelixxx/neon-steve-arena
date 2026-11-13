@@ -167,12 +167,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     url = os.getenv("MINI_APP_URL", "").strip()
     greeting = "🛠 Панель владельца Челикс Гифтс" if is_owner(update) else "🎁 Профиль, рейтинг и история твоих побед"
-    buttons = [[InlineKeyboardButton("🎁 Группа с розыгрышами", url="https://t.me/freegiftsgroup")]]
+    buttons = [[InlineKeyboardButton("💜 Поддержать Челикса", callback_data="support:open")], [InlineKeyboardButton("🎁 Группа с розыгрышами", url="https://t.me/freegiftsgroup")]]
     if url:
         buttons.insert(0, [InlineKeyboardButton("🎡 Сайт и ежедневная рулетка", web_app=WebAppInfo(url=url.replace("/app", "")))])
         if is_owner(update):
             buttons.insert(1, [InlineKeyboardButton("🛠 Панель владельца", web_app=WebAppInfo(url=url))])
     await msg.reply_text(greeting, reply_markup=InlineKeyboardMarkup(buttons))
+
+
+async def support_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    card = os.getenv("SUPPORT_CARD_NUMBER", "").strip()
+    text = "💜 Спасибо за желание поддержать проект!\n\n⭐ Stars / подарок: отправь подарок автору @Chelixxx.\n"
+    text += ("\n💳 Перевод по карте:\n" + card if card else "\n💳 Перевод по карте временно не настроен.")
+    text += "\n\nПоддержка добровольная. Статус «Спонсор» владелец выдаёт вручную."
+    await query.message.reply_text(text)
 
 
 async def private_redirect(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -671,7 +683,7 @@ def main():
     app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(CommandHandler("panel", panel))
     app.add_handler(CommandHandler("ignore", ignore_user))
-    app.add_handler(CallbackQueryHandler(balance_callback, pattern=r"^balance:show$"))
+    app.add_handler(CallbackQueryHandler(support_callback, pattern=r"^support:open$"))\n    app.add_handler(CallbackQueryHandler(balance_callback, pattern=r"^balance:show$"))
     app.add_handler(CallbackQueryHandler(star_history_callback, pattern=r"^balance:history$"))
     app.add_handler(CallbackQueryHandler(ignored_menu_callback, pattern=r"^ignored:"))
     owner_media = filters.PHOTO | filters.ANIMATION | filters.VIDEO | filters.Document.ALL
