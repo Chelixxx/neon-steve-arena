@@ -19,7 +19,17 @@ button.secondary{background:#ffffff12;border:1px solid #ffffff16}button:disabled
 <section class="card"><h2>👤 Твой профиль</h2><div class="stats"><div class="stat"><div id="wins" class="num">—</div><div class="muted">Побед</div></div><div class="stat"><div id="rank" class="num">—</div><div class="muted">Место в рейтинге</div></div></div><div id="breakdown" class="sub" style="margin-top:12px">Пока нет побед</div></section>
 <section class="card"><h2>🏆 Рейтинг участников</h2><div id="top" class="sub">Загружаем рейтинг…</div></section>
 <section class="card" id="supportCard"><h2>💜 Поддержать Челикса</h2><div class="muted">Поддержка добровольная — спасибо каждому!</div><button id="giftSupportBtn">⭐ Поддержать Stars / подарком</button><button id="giftDoneBtn" class="secondary">✅ Я отправил Stars / подарок</button><button id="cardSupportBtn" class="secondary">💳 Поддержать по карте</button><div id="cardSupportDetails" class="hidden notice"><div id="cardNumberText">Загрузка реквизитов…</div><button id="copyCardBtn" class="secondary">📋 Скопировать номер</button><button id="cardDoneBtn" class="secondary">✅ Я перевёл по карте</button><div class="muted">Перевод добровольный. После перевода статус «Спонсор» выдаётся владельцем вручную.</div></div></section>
-<section id="admin" class="card hidden"><h2>🛠 Меню владельца</h2><div class="stats"><div class="stat"><div id="bear" class="num">0:00</div><div class="muted">Буст Мишек</div></div><div class="stat"><div id="nft" class="num">0:00</div><div class="muted">NFT-буст · 3 дня</div></div><div class="stat"><div id="superNft" class="num">0:00</div><div class="muted">Супер-NFT-буст · 3 мин</div></div></div><button id="bearBtn">🧸 Включить буст Мишек · 3 мин</button><button id="nftBtn">⚔️ Включить NFT-буст · 3 дня</button><button id="superNftBtn">💎⚡ Супер-NFT-буст · 3 мин</button><button id="stopBtn" class="secondary">Остановить бусты</button><div id="adminInfo" class="sub"></div>
+<section id="admin" class="card hidden"><h2>🛠 Меню владельца</h2><div style="height:1px;background:#ffffff18;margin:18px 0"></div>
+<h2>🎉 NFT-ивенты · публикация в группу</h2>
+<div class="muted" style="margin-bottom:10px">Выбери формат — бот сразу отправит объявление в @freegiftsgroup. Оплату и ограничения чата ты настраиваешь отдельно в Telegram.</div>
+<button id="eventDropBtn">🎁 NFT-дроп</button>
+<button id="eventRareBtn">💎 Редкий NFT</button>
+<button id="eventCollectionBtn">🖼️ Коллекционный дроп</button>
+<button id="eventVipBtn">👑 VIP-ивент</button>
+<button id="eventBlitzBtn">⚡ NFT-блиц</button>
+<button id="eventHolidayBtn">🎉 Праздничный дроп</button>
+<div class="muted"></div>
+<div class="stats"><div class="stat"><div id="bear" class="num">0:00</div><div class="muted">Буст Мишек</div></div><div class="stat"><div id="nft" class="num">0:00</div><div class="muted">NFT-буст · 3 дня</div></div><div class="stat"><div id="superNft" class="num">0:00</div><div class="muted">Супер-NFT-буст · 3 мин</div></div></div><button id="bearBtn">🧸 Включить буст Мишек · 3 мин</button><button id="nftBtn">⚔️ Включить NFT-буст · 3 дня</button><button id="superNftBtn">💎⚡ Супер-NFT-буст · 3 мин</button><button id="stopBtn" class="secondary">Остановить бусты</button><div id="adminInfo" class="sub"></div>
 <div style="height:1px;background:#ffffff18;margin:18px 0"></div>
 <h2>🎲 Настройка шансов</h2>
 <div class="muted" style="margin-bottom:10px">Сумма вероятностей шести призов должна быть ровно 100%. Персональные настройки участника имеют приоритет над общими.</div>
@@ -37,16 +47,7 @@ button.secondary{background:#ffffff12;border:1px solid #ffffff16}button:disabled
 <div class="muted">Введи Telegram ID или @username участника, которого бот уже видел в группе.</div>
 <input id="sponsorTarget" type="text" placeholder="Telegram ID или @username" autocomplete="off" style="width:100%;padding:13px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:7px 0">
 <button id="sponsorSetBtn">⭐ Выдать статус «Спонсор»</button><button id="sponsorRemoveBtn" class="secondary">Снять статус «Спонсор»</button>
-<div style="height:1px;background:#ffffff18;margin:18px 0"></div>
-<h2>🎉 NFT-ивенты · публикация в группу</h2>
-<div class="muted" style="margin-bottom:10px">Выбери формат — бот сразу отправит объявление в @freegiftsgroup. Оплату и ограничения чата ты настраиваешь отдельно в Telegram.</div>
-<button id="eventDropBtn">🎁 NFT-дроп</button>
-<button id="eventRareBtn">💎 Редкий NFT</button>
-<button id="eventCollectionBtn">🖼️ Коллекционный дроп</button>
-<button id="eventVipBtn">👑 VIP-ивент</button>
-<button id="eventBlitzBtn">⚡ NFT-блиц</button>
-<button id="eventHolidayBtn">🎉 Праздничный дроп</button>
-<div class="muted"></div>
+
 </section>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
