@@ -10,7 +10,6 @@ from pathlib import Path
 
 from aiohttp import web
 from telegram import WebAppInfo
-from telegram.ext import PreCheckoutQueryHandler
 
 from telegram import Update, ReactionTypeEmoji, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
@@ -672,57 +671,6 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             log.exception("Could not notify owner")
 
-async def precheckout_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.pre_checkout_query
-    if not query:
-        return
-    pending = context.bot_data.get("pending_nft_events", {})
-    record = pending.get(query.invoice_payload)
-    valid = bool(
-        record
-        and update.effective_user
-        and OWNER_ID
-        and update.effective_user.id == OWNER_ID
-        and query.currency == "XTR"
-        and query.total_amount == 100
-    )
-    if not valid:
-        await query.answer(ok=False, error_message="Счёт недействителен или уже истёк. Создай новый в меню владельца.")
-        return
-    await query.answer(ok=True)
-
-
-async def successful_event_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.effective_message
-    user = update.effective_user
-    payment = msg.successful_payment if msg else None
-    if not payment or not user:
-        return
-    pending = context.bot_data.setdefault("pending_nft_events", {})
-    record = pending.get(payment.invoice_payload)
-    if (
-        not record
-        or not OWNER_ID
-        or user.id != OWNER_ID
-        or payment.currency != "XTR"
-        or payment.total_amount != 100
-    ):
-        log.warning("Ignoring unmatched NFT event payment from user %s", user.id)
-        return
-    try:
-        await context.bot.send_message(
-            chat_id="@freegiftsgroup",
-            text=record["title"] + "\n\n" + record["message"] + "\n\n💜 Организатор: @chelixxxs",
-            disable_web_page_preview=True,
-        )
-    except Exception:
-        log.exception("Paid NFT event could not be published")
-        await msg.reply_text("Оплата получена, но публикация не удалась. Проверь права бота в @freegiftsgroup; событие сохранено для повторной обработки.")
-        record["paid"] = True
-        record["telegram_payment_charge_id"] = payment.telegram_payment_charge_id
-        return
-    pending.pop(payment.invoice_payload, None)
-    await msg.reply_text("✅ Оплата 100 ⭐ подтверждена. NFT-ивент опубликован в @freegiftsgroup!")
 
 
 def main():
@@ -737,8 +685,6 @@ def main():
     app.add_handler(CommandHandler("say", say_to_groups))
     app.add_handler(CommandHandler("panel", panel))
     app.add_handler(CommandHandler("ignore", ignore_user))
-    app.add_handler(PreCheckoutQueryHandler(precheckout_event))
-    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_event_payment))
     app.add_handler(CallbackQueryHandler(support_callback, pattern=r"^support:open$"))
     app.add_handler(CallbackQueryHandler(balance_callback, pattern=r"^balance:show$"))
     app.add_handler(CallbackQueryHandler(star_history_callback, pattern=r"^balance:history$"))
