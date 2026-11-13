@@ -38,15 +38,15 @@ button.secondary{background:#ffffff12;border:1px solid #ffffff16}button:disabled
 <input id="sponsorTarget" type="text" placeholder="Telegram ID или @username" autocomplete="off" style="width:100%;padding:13px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:7px 0">
 <button id="sponsorSetBtn">⭐ Выдать статус «Спонсор»</button><button id="sponsorRemoveBtn" class="secondary">Снять статус «Спонсор»</button>
 <div style="height:1px;background:#ffffff18;margin:18px 0"></div>
-<h2>🎉 NFT-ивенты · публикация 100 ⭐</h2>
-<div class="muted" style="margin-bottom:10px">Выбери формат. Telegram покажет счёт на 100 Stars; сообщение появится в @freegiftsgroup только после подтверждения оплаты.</div>
-<button id="eventDropBtn">🎁 NFT-дроп · 100 ⭐</button>
-<button id="eventRareBtn">💎 Редкий NFT · 100 ⭐</button>
-<button id="eventCollectionBtn">🖼️ Коллекционный дроп · 100 ⭐</button>
-<button id="eventVipBtn">👑 VIP-ивент · 100 ⭐</button>
-<button id="eventBlitzBtn">⚡ NFT-блиц · 100 ⭐</button>
-<button id="eventHolidayBtn">🎉 Праздничный дроп · 100 ⭐</button>
-<div class="muted">Каждая публикация оплачивается отдельно. Оплата — за объявление, а не за шанс выиграть NFT.</div>
+<h2>🎉 NFT-ивенты · публикация в группу</h2>
+<div class="muted" style="margin-bottom:10px">Выбери формат — бот сразу отправит объявление в @freegiftsgroup. Оплату и ограничения чата ты настраиваешь отдельно в Telegram.</div>
+<button id="eventDropBtn">🎁 NFT-дроп</button>
+<button id="eventRareBtn">💎 Редкий NFT</button>
+<button id="eventCollectionBtn">🖼️ Коллекционный дроп</button>
+<button id="eventVipBtn">👑 VIP-ивент</button>
+<button id="eventBlitzBtn">⚡ NFT-блиц</button>
+<button id="eventHolidayBtn">🎉 Праздничный дроп</button>
+<div class="muted"></div>
 </section>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
@@ -67,7 +67,7 @@ $("admin").classList.toggle("hidden",!u.is_owner);if(u.is_owner){$("bear").textC
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 async function act(action,target){try{const d=await api("/api/admin",{action,target});notice(d.message);await load()}catch(e){notice(e.message)}}
 async function load(){try{if(!init)throw Error("Открой Mini App через кнопку в Telegram.");render(await api("/api/data"))}catch(e){notice(e.message)}}
-async function publishEvent(eventKey){try{const d=await api("/api/event/invoice",{event:eventKey});if(!d.invoice_url)throw Error("Telegram не вернул ссылку на оплату.");if(tg?.openInvoice){tg.openInvoice(d.invoice_url,status=>{if(status==="paid")notice("Оплата принята Telegram. Бот отправит NFT-ивент в группу.");else if(status==="failed")notice("Оплата не прошла. Попробуй ещё раз.");else notice("Оплата отменена.");});}else{window.open(d.invoice_url,"_blank");notice("Открой счёт Telegram и подтверди оплату 100 ⭐.");}}catch(e){notice(e.message)}}
+async function publishEvent(eventKey){try{const d=await api("/api/admin",{action:"event_publish",event:eventKey});notice(d.message); }catch(e){notice(e.message)}}
 $("eventDropBtn").onclick=()=>publishEvent("drop");
 $("eventRareBtn").onclick=()=>publishEvent("rare");
 $("eventCollectionBtn").onclick=()=>publishEvent("collection");
