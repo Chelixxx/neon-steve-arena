@@ -65,7 +65,10 @@ async def index(request):
 
 
 async def miniapp(request):
-    return web.FileResponse(Path(__file__).parent / "miniapp" / "app.html")
+    response = web.FileResponse(Path(__file__).parent / "miniapp" / "app.html")
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 async def site_media(request):
