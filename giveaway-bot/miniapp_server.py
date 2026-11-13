@@ -3,7 +3,6 @@ import hmac
 import json
 import os
 import time
-import secrets
 import urllib.parse
 from pathlib import Path
 
@@ -180,35 +179,6 @@ async def spin(request):
     return web.json_response({"ok":True,"prize":prize,"message":message,"unlimited":is_owner})
 
 
-async def create_event_invoice(request):
-    user = auth(request)
-    if not user or not OWNER_ID or int(user.get("id", 0)) != OWNER_ID:
-        return web.json_response({"error":"Создавать NFT-ивенты может только владелец."}, status=403)
-    try:
-        payload = await request.json()
-        event_key = str(payload.get("event", ""))
-    except Exception:
-        return web.json_response({"error":"Некорректный запрос."}, status=400)
-    if event_key not in NFT_EVENTS:
-        return web.json_response({"error":"Неизвестный формат NFT-ивента."}, status=400)
-    app = request.app["bot_app"]
-    title, message = NFT_EVENTS[event_key]
-    invoice_payload = "nft_event_" + secrets.token_urlsafe(12)
-    pending = app.bot_data.setdefault("pending_nft_events", {})
-    pending[invoice_payload] = {"owner_id": OWNER_ID, "event": event_key, "title": title, "message": message, "created": time.time()}
-    try:
-        url = await app.bot.create_invoice_link(
-            title=title[:32],
-            description="Публикация NFT-ивента в группе @freegiftsgroup",
-            payload=invoice_payload,
-            provider_token="",
-            currency="XTR",
-            prices=[__import__("telegram").LabeledPrice("Публикация NFT-ивента", 100)],
-        )
-    except Exception:
-        pending.pop(invoice_payload, None)
-        return web.json_response({"error":"Telegram не смог создать счёт. Проверь доступность Stars-платежей и попробуй позже."}, status=502)
-    return web.json_response({"ok":True,"invoice_url":url,"price":100,"event_title":title})
 
 
 async def admin(request):
@@ -221,6 +191,20 @@ async def admin(request):
     except Exception:
         return web.json_response({"error":"Некорректный запрос."},status=400)
     app = request.app["bot_app"]
+    if action == "event_publish":
+        event_key = str(payload.get("event", ""))
+        if event_key not in NFT_EVENTS:
+            return web.json_response({"error":"Неизвестный формат NFT-ивента."}, status=400)
+        title, message = NFT_EVENTS[event_key]
+        try:
+            await app.bot.send_message(
+                chat_id="@freegiftsgroup",
+                text=title + "\n\n" + message + "\n\n💜 Организатор: @chelixxxs",
+                disable_web_page_preview=True,
+            )
+        except Exception:
+            return web.json_response({"error":"Не удалось опубликовать. Проверь, что бот добавлен в @freegiftsgroup и может отправлять сообщения."}, status=502)
+        return web.json_response({"ok":True,"message":"Ивент опубликован в @freegiftsgroup."})
     if action in ("sponsor_set", "sponsor_remove"):
         target = str(payload.get("target", "")).strip()
         known = app.bot_data.get("known_users", {})
@@ -327,7 +311,6 @@ async def start_server(bot_app):
     app.router.add_get("/api/support", support_info)
     app.router.add_post("/api/support/notify", support_notify)
     app.router.add_post("/api/admin", admin)
-    app.router.add_post("/api/event/invoice", create_event_invoice)
     app.router.add_post("/api/spin", spin)
     runner = web.AppRunner(app)
     await runner.setup()
