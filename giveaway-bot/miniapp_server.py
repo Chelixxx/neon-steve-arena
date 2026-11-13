@@ -105,6 +105,32 @@ async def data(request):
 
 
 
+async def support_notify(request):
+    user = auth(request)
+    if not user:
+        return web.json_response({"error":"Открой Mini App через Telegram."}, status=401)
+    app = request.app["bot_app"]
+    uid = str(user.get("id", ""))
+    payload = await request.json()
+    method = payload.get("method")
+    if method not in ("card", "gift"):
+        return web.json_response({"error":"Неизвестный способ поддержки."}, status=400)
+    sent = app.bot_data.setdefault("support_notifications", {})
+    now = time.time()
+    if now - float(sent.get(uid, 0)) < 86400:
+        return web.json_response({"error":"Уведомление уже отправлено. Повторить можно через 24 часа."}, status=429)
+    if not OWNER_ID:
+        return web.json_response({"error":"Владелец ещё не настроен."}, status=503)
+    username = ("@" + user["username"]) if user.get("username") else "без username"
+    method_label = "перевод по карте (нужно проверить вручную)" if method == "card" else "Stars / подарок (нужно проверить вручную)"
+    await app.bot.send_message(
+        chat_id=OWNER_ID,
+        text=f"💜 Пользователь сообщил о поддержке!\\nИмя: {user.get('first_name', 'Участник')}\\nUsername: {username}\\nTelegram ID: {uid}\\nСпособ: {method_label}\\nВремя: {time.strftime('%d.%m.%Y %H:%M', time.localtime(now))}"
+    )
+    sent[uid] = now
+    return web.json_response({"ok":True,"message":"Уведомление отправлено владельцу. Перевод будет проверен вручную."})
+
+
 async def support_info(request):
     if not auth(request):
         return web.json_response({"error":"Открой Mini App через Telegram."}, status=401)
@@ -256,7 +282,7 @@ async def start_server(bot_app):
     app.router.add_get("/", index)
     app.router.add_get("/app", miniapp)
     app.router.add_get("/media/{key}", site_media)
-    app.router.add_get("/api/data", data)\n    app.router.add_get("/api/support", support_info)
+    app.router.add_get("/api/data", data)\n    app.router.add_get("/api/support", support_info)\n    app.router.add_post("/api/support/notify", support_notify)
     app.router.add_post("/api/admin", admin)
     app.router.add_post("/api/spin", spin)
     runner = web.AppRunner(app)
