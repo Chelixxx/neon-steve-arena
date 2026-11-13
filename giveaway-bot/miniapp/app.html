@@ -37,6 +37,16 @@ button.secondary{background:#ffffff12;border:1px solid #ffffff16}button:disabled
 <div class="muted">Введи Telegram ID или @username участника, которого бот уже видел в группе.</div>
 <input id="sponsorTarget" type="text" placeholder="Telegram ID или @username" autocomplete="off" style="width:100%;padding:13px;border-radius:12px;background:#302544;color:white;border:1px solid #ffffff22;margin:7px 0">
 <button id="sponsorSetBtn">⭐ Выдать статус «Спонсор»</button><button id="sponsorRemoveBtn" class="secondary">Снять статус «Спонсор»</button>
+<div style="height:1px;background:#ffffff18;margin:18px 0"></div>
+<h2>🎉 NFT-ивенты · публикация 100 ⭐</h2>
+<div class="muted" style="margin-bottom:10px">Выбери формат. Telegram покажет счёт на 100 Stars; сообщение появится в @freegiftsgroup только после подтверждения оплаты.</div>
+<button id="eventDropBtn">🎁 NFT-дроп · 100 ⭐</button>
+<button id="eventRareBtn">💎 Редкий NFT · 100 ⭐</button>
+<button id="eventCollectionBtn">🖼️ Коллекционный дроп · 100 ⭐</button>
+<button id="eventVipBtn">👑 VIP-ивент · 100 ⭐</button>
+<button id="eventBlitzBtn">⚡ NFT-блиц · 100 ⭐</button>
+<button id="eventHolidayBtn">🎉 Праздничный дроп · 100 ⭐</button>
+<div class="muted">Каждая публикация оплачивается отдельно. Оплата — за объявление, а не за шанс выиграть NFT.</div>
 </section>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
@@ -57,12 +67,21 @@ $("admin").classList.toggle("hidden",!u.is_owner);if(u.is_owner){$("bear").textC
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 async function act(action,target){try{const d=await api("/api/admin",{action,target});notice(d.message);await load()}catch(e){notice(e.message)}}
 async function load(){try{if(!init)throw Error("Открой Mini App через кнопку в Telegram.");render(await api("/api/data"))}catch(e){notice(e.message)}}
+async function publishEvent(eventKey){try{const d=await api("/api/event/invoice",{event:eventKey});if(!d.invoice_url)throw Error("Telegram не вернул ссылку на оплату.");if(tg?.openInvoice){tg.openInvoice(d.invoice_url,status=>{if(status==="paid")notice("Оплата принята Telegram. Бот отправит NFT-ивент в группу.");else if(status==="failed")notice("Оплата не прошла. Попробуй ещё раз.");else notice("Оплата отменена.");});}else{window.open(d.invoice_url,"_blank");notice("Открой счёт Telegram и подтверди оплату 100 ⭐.");}}catch(e){notice(e.message)}}
+$("eventDropBtn").onclick=()=>publishEvent("drop");
+$("eventRareBtn").onclick=()=>publishEvent("rare");
+$("eventCollectionBtn").onclick=()=>publishEvent("collection");
+$("eventVipBtn").onclick=()=>publishEvent("vip");
+$("eventBlitzBtn").onclick=()=>publishEvent("blitz");
+$("eventHolidayBtn").onclick=()=>publishEvent("holiday");
 $("bearBtn").onclick=()=>act("bear_boost");$("nftBtn").onclick=()=>act("nft_boost");$("superNftBtn").onclick=()=>act("super_nft_boost");$("stopBtn").onclick=()=>act("stop_boosts");
 $("chanceMode").onchange=updateChanceMode;
 function chancePayload(mode){const weights={};for(const k of Object.keys(prizeNames)){const v=Number($("chance-"+k).value);if(!Number.isInteger(v)||v<0||v>100)throw Error("Каждый шанс должен быть целым числом от 0 до 100.");weights[k]=v}if(Object.values(weights).reduce((a,b)=>a+b,0)!==100)throw Error("Сумма шансов должна быть ровно 100%. Сейчас: "+Object.values(weights).reduce((a,b)=>a+b,0)+"%.");return {action:"chance_save",mode,weights,username:$("chanceUsername").value.trim().replace(/^@/,""),minutes:Number($("chanceMinutes").value)}}
 $("saveChanceBtn").onclick=async()=>{try{const mode=$("chanceMode").value;const d=await api("/api/admin",chancePayload(mode));notice(d.message);await load()}catch(e){notice(e.message)}};
 $("removeChanceBtn").onclick=async()=>{try{const payload=chancePayload("user_remove");const d=await api("/api/admin",payload);notice(d.message);await load()}catch(e){notice(e.message)}};
-$("giftSupportBtn").onclick=()=>{window.open("https://t.me/Chelixxx","_blank")};\nasync function notifySupport(method){try{const d=await api("/api/support/notify",{method});notice(d.message)}catch(e){notice(e.message)}}\n$("giftDoneBtn").onclick=()=>notifySupport("gift");$("cardDoneBtn").onclick=()=>notifySupport("card");
+$("giftSupportBtn").onclick=()=>{window.open("https://t.me/chelixxxs","_blank")};
+async function notifySupport(method){try{const d=await api("/api/support/notify",{method});notice(d.message)}catch(e){notice(e.message)}}
+$("giftDoneBtn").onclick=()=>notifySupport("gift");$("cardDoneBtn").onclick=()=>notifySupport("card");
 $("cardSupportBtn").onclick=async()=>{const box=$("cardSupportDetails");box.classList.toggle("hidden");if(!box.classList.contains("hidden")){try{const d=await api("/api/support");$("cardNumberText").textContent=d.card_number||"Реквизиты пока не настроены владельцем."; $("copyCardBtn").disabled=!d.card_number}catch(e){$("cardNumberText").textContent=e.message}}};
 $("copyCardBtn").onclick=async()=>{const d=await api("/api/support");if(!d.card_number)return;try{await navigator.clipboard.writeText(d.card_number);notice("Номер карты скопирован.")}catch(e){notice("Не удалось скопировать — выдели номер вручную.")}};
 $("sponsorSetBtn").onclick=()=>{const target=$("sponsorTarget").value.trim();if(target)act("sponsor_set",target)};
