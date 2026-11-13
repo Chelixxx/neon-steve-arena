@@ -7,10 +7,10 @@ try{
   const stamp=new Date().toISOString().replace(/[:.]/g,'-');
   const backup=path.join(DATA,'.voltra-backup-before-history-'+stamp);
   fs.mkdirSync(backup,{recursive:false});
-  fs.cpSync(DATA,backup,{recursive:true,preserveTimestamps:true,filter:(source)=>{
-   if(source===backup||source.startsWith(backup+path.sep))return false;
-   return true;
-  }});
+  for(const name of fs.readdirSync(DATA)){
+   if(name.startsWith('.voltra-backup-before-history-'))continue;
+   fs.cpSync(path.join(DATA,name),path.join(backup,name),{recursive:true,preserveTimestamps:true,errorOnExist:true});
+  }
   const files=fs.readdirSync(backup);
   console.log('[backup] VOLTRA data snapshot created at '+backup+' ('+files.length+' top-level entries)');
  }else{
