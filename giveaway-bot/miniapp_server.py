@@ -301,7 +301,7 @@ async def admin(request):
             updated = wallet_change(app.bot_data, target, amount, "Ручная корректировка владельцем", target_name)
         except ValueError as exc:
             return web.json_response({"error":str(exc)}, status=409)
-        return web.json_response({"ok":True,"message":f"Баланс {target_name}: {updated[chr(98)+chr(97)+chr(108)+chr(97)+chr(110)+chr(99)+chr(101)]} VOLTRA STARS."})
+        return web.json_response({"ok":True,"message":f"Баланс {target_name}: {updated.get('balance')} VOLTRA STARS."})
     if action == "event_publish":
         event_key = str(payload.get("event", ""))
         if event_key not in NFT_EVENTS:
