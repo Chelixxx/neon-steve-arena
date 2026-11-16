@@ -97,7 +97,9 @@ async def data(request):
     top = sorted(all_wins.items(), key=lambda x:x[1]["total"], reverse=True)[:10]
     rank = next((i+1 for i,(key,_) in enumerate(sorted(all_wins.items(),key=lambda x:x[1]["total"],reverse=True)) if key==uid), None)
     owner = bool(OWNER_ID and int(uid)==OWNER_ID)
+    wallet = wallet_record(app.bot_data, uid, user.get("first_name", "Участник"))
     return web.json_response({
+        "wallet":{"balance":wallet["balance"],"ledger":wallet["ledger"][-8:],"inventory":app.bot_data.get("voltra_inventory",{}).get(uid,[]),"daily_done":wallet["tasks"].get("daily")==time.strftime("%Y-%m-%d",time.gmtime()),"joined_group_done":bool(wallet["tasks"].get("join_group"))},
         "user":{"id":uid,"name":user.get("first_name","Участник"),"username":user.get("username",""),"photo":user.get("photo_url",""),"is_owner":owner},
         "profile":profile,"rank":rank,"sponsor": uid in app.bot_data.get("sponsor_users", {}),
         "top":[{"id":key,**value} for key,value in top],"prize_labels":LABELS,
@@ -184,6 +186,80 @@ async def spin(request):
 
 
 
+def wallet_record(bot_data, uid, name="Участник"):
+    wallets = bot_data.setdefault("voltra_wallets", {})
+    row = wallets.setdefault(str(uid), {"balance": 5, "name": name, "ledger": [], "tasks": {}})
+    row.setdefault("balance", 5)
+    row.setdefault("ledger", [])
+    row.setdefault("tasks", {})
+    row["name"] = name or row.get("name", "Участник")
+    return row
+
+
+def wallet_change(bot_data, uid, amount, reason, name="Участник"):
+    row = wallet_record(bot_data, uid, name)
+    amount = int(amount)
+    if row["balance"] + amount < 0:
+        raise ValueError("Недостаточно VOLTRA STARS.")
+    row["balance"] += amount
+    row["ledger"].append({"amount": amount, "reason": reason, "at": time.time(), "balance": row["balance"]})
+    row["ledger"] = row["ledger"][-50:]
+    return row
+
+
+async def economy_action(request):
+    user = auth(request)
+    if not user:
+        return web.json_response({"error": "Открой Mini App через Telegram."}, status=401)
+    app = request.app["bot_app"]
+    uid = str(user["id"])
+    name = user.get("first_name", "Участник")
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    action = payload.get("action")
+    row = wallet_record(app.bot_data, uid, name)
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    if action == "daily":
+        if row["tasks"].get("daily") == today:
+            return web.json_response({"error": "Ежедневная награда уже получена. Возвращайся завтра."}, status=409)
+        wallet_change(app.bot_data, uid, 1, "Ежедневный бонус", name)
+        row["tasks"]["daily"] = today
+        return web.json_response({"ok": True, "message": "+1 VOLTRA STAR за ежедневный вход.", "balance": row["balance"]})
+    if action == "join_group":
+        if row["tasks"].get("join_group"):
+            return web.json_response({"error": "Награда за вступление уже получена."}, status=409)
+        try:
+            member = await app.bot.get_chat_member("@freegiftsgroup", int(uid))
+            if getattr(member, "status", "") not in ("member", "administrator", "creator"):
+                return web.json_response({"error": "Сначала вступи в @freegiftsgroup, затем проверь задание."}, status=403)
+        except Exception:
+            return web.json_response({"error": "Не удалось проверить подписку. Убедись, что бот добавлен в группу и попробуй позже."}, status=503)
+        wallet_change(app.bot_data, uid, 2, "Вступление в группу @freegiftsgroup", name)
+        row["tasks"]["join_group"] = True
+        return web.json_response({"ok": True, "message": "+2 VOLTRA STARS за вступление в группу.", "balance": row["balance"]})
+    if action == "open_case":
+        case_id = str(payload.get("case_id", "starter"))
+        cases = {
+            "starter": {"cost": 5, "item": "Значок VOLTRA", "emoji": "🌟"},
+            "gold": {"cost": 10, "item": "Золотая рамка профиля", "emoji": "👑"},
+            "premium": {"cost": 15, "item": "Анимированный фон VOLTRA", "emoji": "✨"},
+        }
+        case = cases.get(case_id)
+        if not case:
+            return web.json_response({"error": "Такого кейса нет."}, status=404)
+        try:
+            wallet_change(app.bot_data, uid, -case["cost"], "Открытие кейса: " + case["item"], name)
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=409)
+        inventory = app.bot_data.setdefault("voltra_inventory", {})
+        owned = inventory.setdefault(uid, [])
+        owned.append({"item": case["item"], "emoji": case["emoji"], "at": time.time()})
+        return web.json_response({"ok": True, "message": "Получено: " + case["emoji"] + " " + case["item"], "item": case, "balance": row["balance"]})
+    return web.json_response({"error": "Неизвестное действие."}, status=400)
+
+
 async def admin(request):
     user = auth(request)
     if not user or not OWNER_ID or int(user.get("id",0)) != OWNER_ID:
@@ -194,6 +270,23 @@ async def admin(request):
     except Exception:
         return web.json_response({"error":"Некорректный запрос."},status=400)
     app = request.app["bot_app"]
+    if action == "stars_adjust":
+        target = str(payload.get("target", "")).strip()
+        try:
+            amount = int(payload.get("amount", 0))
+        except (TypeError, ValueError):
+            return web.json_response({"error":"Укажи целое количество Stars."}, status=400)
+        if not target or amount == 0 or abs(amount) > 10000:
+            return web.json_response({"error":"Укажи Telegram ID и сумму от -10000 до 10000, кроме нуля."}, status=400)
+        known = app.bot_data.get("known_users", {})
+        if target not in known:
+            target = next((k for k,v in known.items() if str(v.get("username","")).lstrip("@").lower()==target.lstrip("@").lower()), target)
+        target_name = known.get(target, {}).get("name", "Участник")
+        try:
+            updated = wallet_change(app.bot_data, target, amount, "Ручная корректировка владельцем", target_name)
+        except ValueError as exc:
+            return web.json_response({"error":str(exc)}, status=409)
+        return web.json_response({"ok":True,"message":f"Баланс {target_name}: {updated[chr(98)+chr(97)+chr(108)+chr(97)+chr(110)+chr(99)+chr(101)]} VOLTRA STARS."})
     if action == "event_publish":
         event_key = str(payload.get("event", ""))
         if event_key not in NFT_EVENTS:
@@ -315,6 +408,7 @@ async def start_server(bot_app):
     app.router.add_post("/api/support/notify", support_notify)
     app.router.add_post("/api/admin", admin)
     app.router.add_post("/api/spin", spin)
+    app.router.add_post("/api/economy", economy_action)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT","8080")))
