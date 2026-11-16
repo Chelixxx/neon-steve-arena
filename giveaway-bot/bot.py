@@ -169,9 +169,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     greeting = "🛠 Панель владельца Челикс Гифтс" if is_owner(update) else "🎁 Профиль, рейтинг и история твоих побед"
     buttons = [[InlineKeyboardButton("💜 Поддержать Челикса", callback_data="support:open")], [InlineKeyboardButton("🎁 Группа с розыгрышами", url="https://t.me/freegiftsgroup")]]
     if url:
-        buttons.insert(0, [InlineKeyboardButton("🎡 Сайт и ежедневная рулетка", web_app=WebAppInfo(url=url.replace("/app", "")))])
-        if is_owner(update):
-            buttons.insert(1, [InlineKeyboardButton("🛠 Панель владельца", web_app=WebAppInfo(url=url))])
+        app_url = url.rstrip("/")
+        if not app_url.endswith("/app"):
+            app_url += "/app"
+        buttons.insert(0, [InlineKeyboardButton("⭐ VOLTRA STARS · открыть приложение", web_app=WebAppInfo(url=app_url))])
     await msg.reply_text(greeting, reply_markup=InlineKeyboardMarkup(buttons))
 
 
@@ -245,7 +246,10 @@ async def panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != "private":
         await update.effective_message.reply_text("Открой меню в личке с ботом: /panel")
         return
-    rows = [[InlineKeyboardButton("✨ Открыть Mini App", web_app=WebAppInfo(url=os.getenv("MINI_APP_URL", "https://giveaway-bot-hidden-production.up.railway.app")))]]
+    app_url = os.getenv("MINI_APP_URL", "https://giveaway-bot-hidden-production.up.railway.app").strip().rstrip("/")
+    if not app_url.endswith("/app"):
+        app_url += "/app"
+    rows = [[InlineKeyboardButton("⭐ Открыть VOLTRA STARS", web_app=WebAppInfo(url=app_url))]]
     rows.extend(ignored_menu(context).inline_keyboard)
     await update.effective_message.reply_text(ignored_panel_text(context), reply_markup=InlineKeyboardMarkup(rows))
 
