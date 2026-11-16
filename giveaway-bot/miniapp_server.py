@@ -99,7 +99,7 @@ async def data(request):
     owner = bool(OWNER_ID and int(uid)==OWNER_ID)
     wallet = wallet_record(app.bot_data, uid, user.get("first_name", "Участник"))
     return web.json_response({
-        "wallet":{"balance":wallet["balance"],"ledger":wallet["ledger"][-8:],"inventory":app.bot_data.get("voltra_inventory",{}).get(uid,[]),"daily_done":wallet["tasks"].get("daily")==time.strftime("%Y-%m-%d",time.gmtime()),"joined_group_done":bool(wallet["tasks"].get("join_group"))},
+        "wallet":{"balance":wallet["balance"],"ledger":wallet["ledger"][-8:],"inventory":app.bot_data.get("voltra_inventory",{}).get(uid,[]),"daily_done":wallet["tasks"].get("daily")==time.strftime("%Y-%m-%d",time.gmtime()),"joined_group_done":bool(wallet["tasks"].get("join_group")),"wheel_done":app.bot_data.get("daily_site_spins",{}).get(uid)==time.strftime("%Y-%m-%d",time.gmtime()),"wheel_unlimited":owner},
         "user":{"id":uid,"name":user.get("first_name","Участник"),"username":user.get("username",""),"photo":user.get("photo_url",""),"is_owner":owner},
         "profile":profile,"rank":rank,"sponsor": uid in app.bot_data.get("sponsor_users", {}),
         "top":[{"id":key,**value} for key,value in top],"prize_labels":LABELS,
@@ -202,7 +202,7 @@ def grant_task_reward(bot_data, uid, amount, reason, name="Участник"):
     if issue.get("day") != today:
         issue.update({"day": today, "total": 0})
     if int(issue.get("total", 0)) + int(amount) > 100:
-        raise ValueError("Дневный лимит наград исчерпан. Попробуй завтра.")
+        return None
     row = wallet_change(bot_data, uid, amount, reason, name)
     issue["total"] = int(issue.get("total", 0)) + int(amount)
     return row
@@ -235,7 +235,9 @@ async def economy_action(request):
     if action == "daily":
         if row["tasks"].get("daily") == today:
             return web.json_response({"error": "Ежедневная награда уже получена. Возвращайся завтра."}, status=409)
-        grant_task_reward(app.bot_data, uid, 1, "Ежедневный бонус", name)
+        granted = grant_task_reward(app.bot_data, uid, 1, "Ежедневный бонус", name)
+        if not granted:
+            return web.json_response({"error": "Дневной лимит наград исчерпан. Попробуй завтра."}, status=429)
         row["tasks"]["daily"] = today
         return web.json_response({"ok": True, "message": "+1 VOLTRA STAR за ежедневный вход.", "balance": row["balance"]})
     if action == "join_group":
@@ -247,7 +249,9 @@ async def economy_action(request):
                 return web.json_response({"error": "Сначала вступи в @freegiftsgroup, затем проверь задание."}, status=403)
         except Exception:
             return web.json_response({"error": "Не удалось проверить подписку. Убедись, что бот добавлен в группу и попробуй позже."}, status=503)
-        grant_task_reward(app.bot_data, uid, 2, "Вступление в группу @freegiftsgroup", name)
+        granted = grant_task_reward(app.bot_data, uid, 2, "Вступление в группу @freegiftsgroup", name)
+        if not granted:
+            return web.json_response({"error": "Дневной лимит наград исчерпан. Попробуй завтра."}, status=429)
         row["tasks"]["join_group"] = True
         return web.json_response({"ok": True, "message": "+2 VOLTRA STARS за вступление в группу.", "balance": row["balance"]})
     if action == "open_case":
