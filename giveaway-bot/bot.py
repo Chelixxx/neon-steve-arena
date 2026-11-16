@@ -678,7 +678,9 @@ async def on_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    persistence = PicklePersistence(filepath="giveaway_bot_data.pickle", update_interval=5)
+    persistence_path = os.getenv("PERSISTENCE_PATH", "giveaway_bot_data.pickle")
+    Path(persistence_path).parent.mkdir(parents=True, exist_ok=True)
+    persistence = PicklePersistence(filepath=persistence_path, update_interval=5)
     app = Application.builder().token(BOT_TOKEN).persistence(persistence).post_init(start_server).post_shutdown(stop_server).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("nftboost", nft_boost))
