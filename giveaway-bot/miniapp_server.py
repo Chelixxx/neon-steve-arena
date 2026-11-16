@@ -196,6 +196,17 @@ def wallet_record(bot_data, uid, name="Участник"):
     return row
 
 
+def grant_task_reward(bot_data, uid, amount, reason, name="Участник"):
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    issue = bot_data.setdefault("voltra_daily_issuance", {"day": today, "total": 0})
+    if issue.get("day") != today:
+        issue.update({"day": today, "total": 0})
+    if int(issue.get("total", 0)) + int(amount) > 100:
+        raise ValueError("Дневный лимит наград исчерпан. Попробуй завтра.")
+    row = wallet_change(bot_data, uid, amount, reason, name)
+    issue["total"] = int(issue.get("total", 0)) + int(amount)
+    return row
+
 def wallet_change(bot_data, uid, amount, reason, name="Участник"):
     row = wallet_record(bot_data, uid, name)
     amount = int(amount)
@@ -224,7 +235,7 @@ async def economy_action(request):
     if action == "daily":
         if row["tasks"].get("daily") == today:
             return web.json_response({"error": "Ежедневная награда уже получена. Возвращайся завтра."}, status=409)
-        wallet_change(app.bot_data, uid, 1, "Ежедневный бонус", name)
+        grant_task_reward(app.bot_data, uid, 1, "Ежедневный бонус", name)
         row["tasks"]["daily"] = today
         return web.json_response({"ok": True, "message": "+1 VOLTRA STAR за ежедневный вход.", "balance": row["balance"]})
     if action == "join_group":
@@ -232,11 +243,11 @@ async def economy_action(request):
             return web.json_response({"error": "Награда за вступление уже получена."}, status=409)
         try:
             member = await app.bot.get_chat_member("@freegiftsgroup", int(uid))
-            if getattr(member, "status", "") not in ("member", "administrator", "creator"):
+            if getattr(member, "status", "") not in ("member", "administrator", "creator") and not (getattr(member, "status", "") == "restricted" and getattr(member, "is_member", False)):
                 return web.json_response({"error": "Сначала вступи в @freegiftsgroup, затем проверь задание."}, status=403)
         except Exception:
             return web.json_response({"error": "Не удалось проверить подписку. Убедись, что бот добавлен в группу и попробуй позже."}, status=503)
-        wallet_change(app.bot_data, uid, 2, "Вступление в группу @freegiftsgroup", name)
+        grant_task_reward(app.bot_data, uid, 2, "Вступление в группу @freegiftsgroup", name)
         row["tasks"]["join_group"] = True
         return web.json_response({"ok": True, "message": "+2 VOLTRA STARS за вступление в группу.", "balance": row["balance"]})
     if action == "open_case":
