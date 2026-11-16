@@ -113,5 +113,6 @@ async function spinDaily(){if(wheelBusy)return;wheelBusy=true;$("spinBtn").disab
 $("spinBtn").onclick=spinDaily;
 let caseBusy=false;async function openCase(caseId,button){if(caseBusy)return;caseBusy=true;document.querySelectorAll(".caseOpenBtn").forEach(b=>b.disabled=true);$("caseCaption").textContent="Проверяем баланс и открываем кейс…";try{const d=await api("/api/economy",{action:"open_case",case_id:caseId});const reel=$("caseReel");const icons=["🧸","💎","🎁","🌟","🪙","💜","✨","🎀","⭐",d.item.emoji];reel.innerHTML=icons.map((x,i)=>"<span"+(i===9?' class="selected"':"")+">"+x+"</span>").join("");reel.style.transition="none";reel.style.transform="translateX(0)";void reel.offsetWidth;reel.style.transition="transform 3.2s cubic-bezier(.08,.78,.08,1)";reel.style.transform="translateX(-740px)";await new Promise(r=>setTimeout(r,3400));$("caseCaption").textContent=d.message;$("walletBalance").textContent=d.balance+" ⭐";notice(d.message);await load()}catch(e){$("caseCaption").textContent=e.message;notice(e.message)}finally{document.querySelectorAll(".caseOpenBtn").forEach(b=>b.disabled=false);caseBusy=false}}document.querySelectorAll(".caseOpenBtn").forEach(b=>b.onclick=()=>openCase(b.dataset.case,b));
 $("dailyTaskBtn").onclick=async()=>{try{const d=await api("/api/economy",{action:"daily"});notice(d.message);await load()}catch(e){notice(e.message)}};$("joinTaskBtn").onclick=async()=>{try{const d=await api("/api/economy",{action:"join_group"});notice(d.message);await load()}catch(e){notice(e.message)}};
-\nload();
+
+load();
 </script></body></html>
