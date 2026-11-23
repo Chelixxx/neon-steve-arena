@@ -1,0 +1,22 @@
+name: VOLTRA shared-account web check
+
+on:
+  push:
+    branches:
+      - voltra-shared-mtproto-web
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - run: npm run check
+      - run: npm run build:shared-login
