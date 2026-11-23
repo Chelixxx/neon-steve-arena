@@ -1,6 +1,8 @@
 'use strict';
-const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),zlib=require('zlib'),{WebSocketServer}=require('ws'),webpush=require('web-push');
-const PORT=process.env.PORT||8080,ROOT=path.join(__dirname,'public'),DATA=process.env.DATA_DIR||'/data',UPLOADS=path.join(DATA,'uploads'),DB=path.join(DATA,'pulse-store.json'),SECRET_FILE=path.join(DATA,'.pulse-secret'),MAX_UPLOAD=100*1024*1024,MAX_ADMIN_UPLOAD=100*1024*1024,FILE_TTL=3*24*60*60*1000;
+
+(async function startVoltra() {
+const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),zlib=require('zlib'),{WebSocketServer}=require('ws'),webpush=require('web-push'),{Pool}=require('pg');
+const PORT=process.env.PORT||8080,ROOT=path.join(__dirname,'public'),DATA=process.env.DATA_DIR||path.join(__dirname,'data'),UPLOADS=path.join(DATA,'uploads'),DB=path.join(DATA,'pulse-store.json'),SECRET_FILE=path.join(DATA,'.pulse-secret'),MAX_UPLOAD=100*1024*1024,MAX_ADMIN_UPLOAD=100*1024*1024,FILE_TTL=3*24*60*60*1000;
 fs.mkdirSync(UPLOADS,{recursive:true});
 function collectUploadReferences(value,refs=new Set()){
  if(typeof value==='string'){
@@ -27,19 +29,119 @@ function cleanupOldUploads(){
  });
 }
 cleanupOldUploads();setInterval(cleanupOldUploads,60*60*1000).unref?.();
-if(!fs.existsSync(SECRET_FILE))fs.writeFileSync(SECRET_FILE,crypto.randomBytes(48),{mode:0o600,flag:'wx'});
-const SECRET=fs.readFileSync(SECRET_FILE);
 let store={users:[],messages:[],channels:[],posts:[],comments:[],stickerPacks:[],marketListings:[],miniApps:[]};
 try{const raw=JSON.parse(fs.readFileSync(DB,'utf8'));if(Array.isArray(raw.users)&&Array.isArray(raw.messages))store={...store,...raw,channels:Array.isArray(raw.channels)?raw.channels:[],posts:Array.isArray(raw.posts)?raw.posts:[],comments:Array.isArray(raw.comments)?raw.comments:[]}}catch{}
+
+const VAPID_FILE=path.join(DATA,'pulse-vapid.json');
+const DATABASE_URL=String(process.env.VOLTRA_DATABASE_URL||process.env.DATABASE_URL||'').trim();
+let postgresPool=null;
+let pendingDatabaseWrite=Promise.resolve();
+let pendingDatabaseTimer=null;
+let SECRET;
+let vapidKeys;
+
+let legacySecret;
+try{legacySecret=fs.readFileSync(SECRET_FILE)}catch{legacySecret=crypto.randomBytes(48)}
+let legacyVapid;
+try{legacyVapid=JSON.parse(fs.readFileSync(VAPID_FILE,'utf8'))}catch{legacyVapid=webpush.generateVAPIDKeys()}
+
+const UPSERT_WEB_STATE_SQL = `
+INSERT INTO voltra_web.state(singleton_id,payload,session_secret,vapid_keys,updated_at)
+VALUES (1,$1::jsonb,$2,$3::jsonb,NOW())
+ON CONFLICT (singleton_id) DO UPDATE
+SET payload=EXCLUDED.payload,
+    session_secret=EXCLUDED.session_secret,
+    vapid_keys=EXCLUDED.vapid_keys,
+    updated_at=NOW()
+`;
+
+async function persistDatabaseState(){
+ if(!postgresPool)return;
+ const payload=JSON.stringify(store);
+ const secret=Buffer.from(SECRET);
+ const keys=JSON.stringify(vapidKeys);
+ await postgresPool.query(UPSERT_WEB_STATE_SQL,[payload,secret,keys]);
+}
+
+if(DATABASE_URL){
+ postgresPool=new Pool({connectionString:DATABASE_URL,max:5,connectionTimeoutMillis:10000,idleTimeoutMillis:30000});
+ await postgresPool.query('SELECT 1');
+ await postgresPool.query('CREATE SCHEMA IF NOT EXISTS voltra_web');
+ await postgresPool.query(`
+  CREATE TABLE IF NOT EXISTS voltra_web.state (
+   singleton_id SMALLINT PRIMARY KEY CHECK (singleton_id = 1),
+   payload JSONB NOT NULL,
+   session_secret BYTEA NOT NULL,
+   vapid_keys JSONB NOT NULL,
+   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )
+ `);
+ const dbState=await postgresPool.query('SELECT payload,session_secret,vapid_keys FROM voltra_web.state WHERE singleton_id=1');
+ if(dbState.rows.length){
+  const row=dbState.rows[0];
+  if(!row.payload||!Array.isArray(row.payload.users)||!Array.isArray(row.payload.messages)){
+   throw new Error('Railway PostgreSQL contains an invalid VOLTRA web state; refusing to overwrite it');
+  }
+  store={...store,...row.payload,channels:Array.isArray(row.payload.channels)?row.payload.channels:[],posts:Array.isArray(row.payload.posts)?row.payload.posts:[],comments:Array.isArray(row.payload.comments)?row.payload.comments:[]};
+  SECRET=row.session_secret?Buffer.from(row.session_secret):legacySecret;
+  vapidKeys=row.vapid_keys&&row.vapid_keys.publicKey&&row.vapid_keys.privateKey?row.vapid_keys:legacyVapid;
+  console.log('Loaded VOLTRA web state from Railway PostgreSQL (voltra_web.state)');
+ }else{
+  // First connection only: seed the dedicated web-app table from the legacy JSON file.
+  // Existing Gramsrv tables and data are never read, modified or truncated.
+  SECRET=legacySecret;
+  vapidKeys=legacyVapid;
+  await persistDatabaseState();
+  console.log('Initialized VOLTRA web state in Railway PostgreSQL (voltra_web.state)');
+ }
+}else{
+ SECRET=legacySecret;
+ vapidKeys=legacyVapid;
+ console.warn('VOLTRA_DATABASE_URL is not set; using local JSON persistence only');
+}
+
+try{fs.writeFileSync(SECRET_FILE,SECRET,{mode:0o600})}catch(error){console.warn('Could not write local session-secret copy:',error.message)}
+try{fs.writeFileSync(VAPID_FILE,JSON.stringify(vapidKeys),{mode:0o600})}catch(error){console.warn('Could not write local VAPID-key copy:',error.message)}
+webpush.setVapidDetails(process.env.PULSE_VAPID_SUBJECT||'mailto:pulse-notifications@example.com',vapidKeys.publicKey,vapidKeys.privateKey);
+
 if(!store.messageHides||typeof store.messageHides!=='object'||Array.isArray(store.messageHides))store.messageHides={};
 if(!Array.isArray(store.stickerPacks))store.stickerPacks=[];
 if(!Array.isArray(store.marketListings))store.marketListings=[];if(!Array.isArray(store.marketTransactions))store.marketTransactions=[];if(!Array.isArray(store.miniApps))store.miniApps=[];if(!Array.isArray(store.reports))store.reports=[];if(!Array.isArray(store.premiumRequests))store.premiumRequests=[];
 if(!store.cookieClickers||typeof store.cookieClickers!=='object'||Array.isArray(store.cookieClickers))store.cookieClickers={};
 if(!store.pushSubscriptions||typeof store.pushSubscriptions!=='object'||Array.isArray(store.pushSubscriptions))store.pushSubscriptions={};if(!store.pendingCalls||typeof store.pendingCalls!=='object'||Array.isArray(store.pendingCalls))store.pendingCalls={};if(!Array.isArray(store.pendingCallSignals))store.pendingCallSignals=[];
 if(!store.deviceBans||typeof store.deviceBans!=='object'||Array.isArray(store.deviceBans))store.deviceBans={};
-const VAPID_FILE=path.join(DATA,'pulse-vapid.json');let vapidKeys;try{vapidKeys=JSON.parse(fs.readFileSync(VAPID_FILE,'utf8'))}catch{vapidKeys=webpush.generateVAPIDKeys();fs.writeFileSync(VAPID_FILE,JSON.stringify(vapidKeys),{mode:0o600})}webpush.setVapidDetails(process.env.PULSE_VAPID_SUBJECT||'mailto:pulse-notifications@example.com',vapidKeys.publicKey,vapidKeys.privateKey);
+
+function scheduleDatabaseSave(){
+ if(!postgresPool)return;
+ if(pendingDatabaseTimer)clearTimeout(pendingDatabaseTimer);
+ pendingDatabaseTimer=setTimeout(()=>{
+  pendingDatabaseTimer=null;
+  pendingDatabaseWrite=pendingDatabaseWrite.then(()=>persistDatabaseState()).catch(error=>{
+   console.error('VOLTRA PostgreSQL save failed:',error.message);
+  });
+ },250);
+ pendingDatabaseTimer.unref?.();
+}
+
+async function flushDatabaseSave(){
+ if(!postgresPool)return;
+ if(pendingDatabaseTimer){clearTimeout(pendingDatabaseTimer);pendingDatabaseTimer=null}
+ pendingDatabaseWrite=pendingDatabaseWrite.then(()=>persistDatabaseState());
+ await pendingDatabaseWrite;
+}
+
 const pendingCookieCaptchas=new Map();
-function save(){const tmp=DB+'.tmp';fs.writeFileSync(tmp,JSON.stringify(store));fs.renameSync(tmp,DB)}
+function save(){
+ try{
+  const tmp=DB+'.tmp';
+  fs.writeFileSync(tmp,JSON.stringify(store));
+  fs.renameSync(tmp,DB);
+ }catch(error){
+  if(!postgresPool)throw error;
+  console.warn('Local JSON snapshot unavailable; PostgreSQL remains the primary store:',error.message);
+ }
+ scheduleDatabaseSave();
+}
 const GIFT_CATALOG=[{"id":"gift-001","name":"Роза 1","emoji":"🌹","price":15,"rarity":"Обычный"},{"id":"gift-002","name":"Корона 1","emoji":"👑","price":16,"rarity":"Обычный"},{"id":"gift-003","name":"Кристалл 1","emoji":"💎","price":18,"rarity":"Обычный"},{"id":"gift-004","name":"Космос 1","emoji":"🌌","price":20,"rarity":"Обычный"},{"id":"gift-005","name":"Звезда 1","emoji":"🌟","price":22,"rarity":"Обычный"},{"id":"gift-006","name":"Сердце 1","emoji":"💖","price":24,"rarity":"Обычный"},{"id":"gift-007","name":"Дракон 1","emoji":"🐉","price":26,"rarity":"Обычный"},{"id":"gift-008","name":"Кот 1","emoji":"🐱","price":29,"rarity":"Обычный"},{"id":"gift-009","name":"Панда 1","emoji":"🐼","price":32,"rarity":"Обычный"},{"id":"gift-010","name":"Лиса 1","emoji":"🦊","price":35,"rarity":"Обычный"},{"id":"gift-011","name":"Единорог 1","emoji":"🦄","price":38,"rarity":"Обычный"},{"id":"gift-012","name":"Феникс 1","emoji":"🔥","price":42,"rarity":"Обычный"},{"id":"gift-013","name":"Молния 1","emoji":"⚡","price":46,"rarity":"Обычный"},{"id":"gift-014","name":"Планета 1","emoji":"🪐","price":50,"rarity":"Обычный"},{"id":"gift-015","name":"Луна 1","emoji":"🌙","price":55,"rarity":"Обычный"},{"id":"gift-016","name":"Солнце 1","emoji":"☀️","price":61,"rarity":"Обычный"},{"id":"gift-017","name":"Сакура 1","emoji":"🌸","price":67,"rarity":"Обычный"},{"id":"gift-018","name":"Бабочка 1","emoji":"🦋","price":73,"rarity":"Обычный"},{"id":"gift-019","name":"Кристальная роза 1","emoji":"🥀","price":80,"rarity":"Обычный"},{"id":"gift-020","name":"Алмазная корона 1","emoji":"💠","price":88,"rarity":"Обычный"},{"id":"gift-021","name":"Золотая рыбка 1","emoji":"🐠","price":97,"rarity":"Обычный"},{"id":"gift-022","name":"Лотос 1","emoji":"🪷","price":107,"rarity":"Обычный"},{"id":"gift-023","name":"Комета 1","emoji":"☄️","price":117,"rarity":"Обычный"},{"id":"gift-024","name":"Галактика 1","emoji":"🌠","price":128,"rarity":"Обычный"},{"id":"gift-025","name":"Роза 2","emoji":"🌹","price":141,"rarity":"Необычный"},{"id":"gift-026","name":"Корона 2","emoji":"👑","price":155,"rarity":"Необычный"},{"id":"gift-027","name":"Кристалл 2","emoji":"💎","price":170,"rarity":"Необычный"},{"id":"gift-028","name":"Космос 2","emoji":"🌌","price":186,"rarity":"Необычный"},{"id":"gift-029","name":"Звезда 2","emoji":"🌟","price":205,"rarity":"Необычный"},{"id":"gift-030","name":"Сердце 2","emoji":"💖","price":225,"rarity":"Необычный"},{"id":"gift-031","name":"Дракон 2","emoji":"🐉","price":247,"rarity":"Необычный"},{"id":"gift-032","name":"Кот 2","emoji":"🐱","price":271,"rarity":"Необычный"},{"id":"gift-033","name":"Панда 2","emoji":"🐼","price":297,"rarity":"Необычный"},{"id":"gift-034","name":"Лиса 2","emoji":"🦊","price":326,"rarity":"Необычный"},{"id":"gift-035","name":"Единорог 2","emoji":"🦄","price":358,"rarity":"Необычный"},{"id":"gift-036","name":"Феникс 2","emoji":"🔥","price":393,"rarity":"Необычный"},{"id":"gift-037","name":"Молния 2","emoji":"⚡","price":432,"rarity":"Необычный"},{"id":"gift-038","name":"Планета 2","emoji":"🪐","price":474,"rarity":"Необычный"},{"id":"gift-039","name":"Луна 2","emoji":"🌙","price":521,"rarity":"Необычный"},{"id":"gift-040","name":"Солнце 2","emoji":"☀️","price":572,"rarity":"Необычный"},{"id":"gift-041","name":"Сакура 2","emoji":"🌸","price":627,"rarity":"Необычный"},{"id":"gift-042","name":"Бабочка 2","emoji":"🦋","price":689,"rarity":"Необычный"},{"id":"gift-043","name":"Кристальная роза 2","emoji":"🥀","price":756,"rarity":"Необычный"},{"id":"gift-044","name":"Алмазная корона 2","emoji":"💠","price":830,"rarity":"Необычный"},{"id":"gift-045","name":"Золотая рыбка 2","emoji":"🐠","price":911,"rarity":"Необычный"},{"id":"gift-046","name":"Лотос 2","emoji":"🪷","price":1001,"rarity":"Необычный"},{"id":"gift-047","name":"Комета 2","emoji":"☄️","price":1098,"rarity":"Необычный"},{"id":"gift-048","name":"Галактика 2","emoji":"🌠","price":1206,"rarity":"Необычный"},{"id":"gift-049","name":"Роза 3","emoji":"🌹","price":1324,"rarity":"Редкий"},{"id":"gift-050","name":"Корона 3","emoji":"👑","price":1453,"rarity":"Редкий"},{"id":"gift-051","name":"Кристалл 3","emoji":"💎","price":1596,"rarity":"Редкий"},{"id":"gift-052","name":"Космос 3","emoji":"🌌","price":1752,"rarity":"Редкий"},{"id":"gift-053","name":"Звезда 3","emoji":"🌟","price":1923,"rarity":"Редкий"},{"id":"gift-054","name":"Сердце 3","emoji":"💖","price":2111,"rarity":"Редкий"},{"id":"gift-055","name":"Дракон 3","emoji":"🐉","price":2318,"rarity":"Редкий"},{"id":"gift-056","name":"Кот 3","emoji":"🐱","price":2545,"rarity":"Редкий"},{"id":"gift-057","name":"Панда 3","emoji":"🐼","price":2794,"rarity":"Редкий"},{"id":"gift-058","name":"Лиса 3","emoji":"🦊","price":3067,"rarity":"Редкий"},{"id":"gift-059","name":"Единорог 3","emoji":"🦄","price":3367,"rarity":"Редкий"},{"id":"gift-060","name":"Феникс 3","emoji":"🔥","price":3696,"rarity":"Редкий"},{"id":"gift-061","name":"Молния 3","emoji":"⚡","price":4058,"rarity":"Редкий"},{"id":"gift-062","name":"Планета 3","emoji":"🪐","price":4455,"rarity":"Редкий"},{"id":"gift-063","name":"Луна 3","emoji":"🌙","price":4891,"rarity":"Редкий"},{"id":"gift-064","name":"Солнце 3","emoji":"☀️","price":5369,"rarity":"Редкий"},{"id":"gift-065","name":"Сакура 3","emoji":"🌸","price":5895,"rarity":"Редкий"},{"id":"gift-066","name":"Бабочка 3","emoji":"🦋","price":6471,"rarity":"Редкий"},{"id":"gift-067","name":"Кристальная роза 3","emoji":"🥀","price":7105,"rarity":"Редкий"},{"id":"gift-068","name":"Алмазная корона 3","emoji":"💠","price":7800,"rarity":"Редкий"},{"id":"gift-069","name":"Золотая рыбка 3","emoji":"🐠","price":8563,"rarity":"Редкий"},{"id":"gift-070","name":"Лотос 3","emoji":"🪷","price":9400,"rarity":"Редкий"},{"id":"gift-071","name":"Комета 3","emoji":"☄️","price":10320,"rarity":"Редкий"},{"id":"gift-072","name":"Галактика 3","emoji":"🌠","price":11330,"rarity":"Редкий"},{"id":"gift-073","name":"Роза 4","emoji":"🌹","price":12438,"rarity":"Эпический"},{"id":"gift-074","name":"Корона 4","emoji":"👑","price":13655,"rarity":"Эпический"},{"id":"gift-075","name":"Кристалл 4","emoji":"💎","price":14991,"rarity":"Эпический"},{"id":"gift-076","name":"Космос 4","emoji":"🌌","price":16458,"rarity":"Эпический"},{"id":"gift-077","name":"Звезда 4","emoji":"🌟","price":18068,"rarity":"Эпический"},{"id":"gift-078","name":"Сердце 4","emoji":"💖","price":19836,"rarity":"Эпический"},{"id":"gift-079","name":"Дракон 4","emoji":"🐉","price":21776,"rarity":"Эпический"},{"id":"gift-080","name":"Кот 4","emoji":"🐱","price":23907,"rarity":"Эпический"},{"id":"gift-081","name":"Панда 4","emoji":"🐼","price":26246,"rarity":"Эпический"},{"id":"gift-082","name":"Лиса 4","emoji":"🦊","price":28813,"rarity":"Эпический"},{"id":"gift-083","name":"Единорог 4","emoji":"🦄","price":31632,"rarity":"Эпический"},{"id":"gift-084","name":"Феникс 4","emoji":"🔥","price":34727,"rarity":"Эпический"},{"id":"gift-085","name":"Молния 4","emoji":"⚡","price":38124,"rarity":"Эпический"},{"id":"gift-086","name":"Планета 4","emoji":"🪐","price":41854,"rarity":"Эпический"},{"id":"gift-087","name":"Луна 4","emoji":"🌙","price":45949,"rarity":"Эпический"},{"id":"gift-088","name":"Солнце 4","emoji":"☀️","price":50445,"rarity":"Эпический"},{"id":"gift-089","name":"Сакура 4","emoji":"🌸","price":55380,"rarity":"Эпический"},{"id":"gift-090","name":"Бабочка 4","emoji":"🦋","price":60798,"rarity":"Эпический"},{"id":"gift-091","name":"Кристальная роза 4","emoji":"🥀","price":66746,"rarity":"Эпический"},{"id":"gift-092","name":"Алмазная корона 4","emoji":"💠","price":73276,"rarity":"Эпический"},{"id":"gift-093","name":"Золотая рыбка 4","emoji":"🐠","price":80445,"rarity":"Эпический"},{"id":"gift-094","name":"Лотос 4","emoji":"🪷","price":88315,"rarity":"Эпический"},{"id":"gift-095","name":"Комета 4","emoji":"☄️","price":96956,"rarity":"Эпический"},{"id":"gift-096","name":"Галактика 4","emoji":"🌠","price":106441,"rarity":"Эпический"},{"id":"gift-097","name":"Роза 5","emoji":"🌹","price":116855,"rarity":"Легендарный"},{"id":"gift-098","name":"Корона 5","emoji":"👑","price":128288,"rarity":"Легендарный"},{"id":"gift-099","name":"Кристалл 5","emoji":"💎","price":140839,"rarity":"Легендарный"},{"id":"gift-100","name":"Космос 5","emoji":"🌌","price":154618,"rarity":"Легендарный"},{"id":"gift-101","name":"Звезда 5","emoji":"🌟","price":169745,"rarity":"Легендарный"},{"id":"gift-102","name":"Сердце 5","emoji":"💖","price":186352,"rarity":"Легендарный"},{"id":"gift-103","name":"Дракон 5","emoji":"🐉","price":204583,"rarity":"Легендарный"},{"id":"gift-104","name":"Кот 5","emoji":"🐱","price":224599,"rarity":"Легендарный"},{"id":"gift-105","name":"Панда 5","emoji":"🐼","price":246572,"rarity":"Легендарный"},{"id":"gift-106","name":"Лиса 5","emoji":"🦊","price":270696,"rarity":"Легендарный"},{"id":"gift-107","name":"Единорог 5","emoji":"🦄","price":297179,"rarity":"Легендарный"},{"id":"gift-108","name":"Феникс 5","emoji":"🔥","price":326254,"rarity":"Легендарный"},{"id":"gift-109","name":"Молния 5","emoji":"⚡","price":358173,"rarity":"Легендарный"},{"id":"gift-110","name":"Планета 5","emoji":"🪐","price":393214,"rarity":"Легендарный"},{"id":"gift-111","name":"Луна 5","emoji":"🌙","price":431685,"rarity":"Легендарный"},{"id":"gift-112","name":"Солнце 5","emoji":"☀️","price":473918,"rarity":"Легендарный"},{"id":"gift-113","name":"Сакура 5","emoji":"🌸","price":520284,"rarity":"Легендарный"},{"id":"gift-114","name":"Бабочка 5","emoji":"🦋","price":571186,"rarity":"Легендарный"},{"id":"gift-115","name":"Кристальная роза 5","emoji":"🥀","price":627068,"rarity":"Легендарный"},{"id":"gift-116","name":"Алмазная корона 5","emoji":"💠","price":688417,"rarity":"Легендарный"},{"id":"gift-117","name":"Золотая рыбка 5","emoji":"🐠","price":755769,"rarity":"Легендарный"},{"id":"gift-118","name":"Лотос 5","emoji":"🪷","price":829709,"rarity":"Легендарный"},{"id":"gift-119","name":"Комета 5","emoji":"☄️","price":910884,"rarity":"Легендарный"},{"id":"gift-120","name":"Галактика 5","emoji":"🌠","price":1000000,"rarity":"Легендарный"}];
 const clampOrdinaryGiftPrice=value=>Math.max(15,Math.min(1000,Math.round(Number(value)||15)));
 for(const gift of GIFT_CATALOG)gift.price=clampOrdinaryGiftPrice(gift.price);
@@ -1690,4 +1792,21 @@ wss.on('connection',(ws,req)=>{
  ws.on('close',()=>{const s=clients.get(uid);s?.delete(ws);if(s&&!s.size){leaveVoiceRoom(uid);clients.delete(uid);const disconnectedUser=userById(uid);if(disconnectedUser&&!disconnectedUser.alwaysOnline){disconnectedUser.lastSeen=Date.now();save()}broadcastPresence();for(const [peerId,set2] of clients){if(peerId===uid)continue;for(const q of set2)send(q,{t:'call-network-lost',from:uid,message:'Собеседник переподключается…'})}}});
  ws.on('error',()=>{});
 });
-server.listen(PORT,'0.0.0.0',()=>console.log('VOLTRA listening on '+PORT+'; persistent data at '+DATA));
+let shutdownStarted=false;
+async function shutdownVoltra(signal){
+ if(shutdownStarted)return;
+ shutdownStarted=true;
+ console.log('VOLTRA received '+signal+'; flushing database state');
+ try{server.close()}catch{}
+ try{for(const socket of wss.clients)socket.close(1001,'Server restarting')}catch{}
+ try{await flushDatabaseSave()}catch(error){console.error('Final PostgreSQL save failed:',error.message)}
+ try{if(postgresPool)await postgresPool.end()}catch(error){console.error('PostgreSQL pool shutdown failed:',error.message)}
+ process.exit(0);
+}
+process.once('SIGTERM',()=>{void shutdownVoltra('SIGTERM')});
+process.once('SIGINT',()=>{void shutdownVoltra('SIGINT')});
+server.listen(PORT,'0.0.0.0',()=>console.log('VOLTRA listening on '+PORT+'; data directory '+DATA+(postgresPool?'; Railway PostgreSQL enabled':' ; local JSON mode')));
+})( ).catch(error=>{
+ console.error('VOLTRA startup failed:',error);
+ process.exit(1);
+});
