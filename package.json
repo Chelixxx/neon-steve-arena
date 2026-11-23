@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node --check server.js && node --check prepare-and-start.js"
   },
   "dependencies": {
     "ws": "^8.18.0",
