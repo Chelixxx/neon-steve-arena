@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d1d">
+  <title>VOLTRA — общая база</title>
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">V</span>
+        <span>VOLTRA <small>SHARED ACCOUNT TEST</small></span>
+      </a>
+      <span class="connection" id="connectionState"><i></i> Не подключено</span>
+    </header>
+
+    <section class="intro" id="intro">
+      <div class="eyebrow">ОДИН АККАУНТ · ВСЕ УСТРОЙСТВА</div>
+      <h1>Твой VOLTRA.<br><span>Те же чаты, что на телефоне.</span></h1>
+      <p>Эта тестовая веб-страница подключается прямо к существующему VOLTRA-серверу. Новая учётная запись и отдельная база не создаются.</p>
+    </section>
+
+    <section class="panel auth-panel" id="authPanel">
+      <div class="panel-heading">
+        <div><div class="eyebrow">ВХОД В СУЩЕСТВУЮЩИЙ АККАУНТ</div><h2 id="authTitle">Войти в VOLTRA</h2></div>
+        <span class="secure-icon">✦</span>
+      </div>
+      <form id="phoneForm" class="form-stack">
+        <label for="phone">Номер телефона</label>
+        <input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00" required>
+        <button class="primary" type="submit" id="sendCodeButton">Получить код <span>→</span></button>
+      </form>
+      <form id="codeForm" class="form-stack hidden">
+        <label for="code">Код подтверждения</label>
+        <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="Код из VOLTRA" required>
+        <button class="primary" type="submit">Подтвердить вход <span>→</span></button>
+        <button class="link-button" type="button" id="changePhone">Изменить номер</button>
+      </form>
+      <form id="passwordForm" class="form-stack hidden">
+        <label for="password">Пароль двухэтапной проверки</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Пароль 2FA" required>
+        <button class="primary" type="submit">Завершить вход <span>→</span></button>
+      </form>
+      <p class="status" id="status" role="status">Подключение будет установлено через защищённый WebSocket.</p>
+      <p class="fineprint">Сессия браузера хранится в IndexedDB на этом устройстве. Не отправляй никому коды подтверждения и не делись файлами сессии.</p>
+    </section>
+
+    <section class="panel app-panel hidden" id="appPanel">
+      <div class="account-row">
+        <div class="avatar" id="avatar">V</div>
+        <div class="account-meta"><span class="eyebrow">ТЫ В СИСТЕМЕ</span><h2 id="accountName">VOLTRA</h2><p id="accountId"></p></div>
+        <button class="ghost" id="refreshButton" type="button">↻ Обновить</button>
+        <button class="ghost logout" id="logoutButton" type="button">Выйти</button>
+      </div>
+      <div class="workspace">
+        <aside class="dialog-column">
+          <div class="section-title"><h3>Чаты</h3><span id="dialogCount">0</span></div>
+          <div id="dialogList" class="dialog-list"><p class="empty">Загружаем чаты…</p></div>
+        </aside>
+        <section class="chat-column">
+          <div class="chat-heading" id="chatHeading">Выбери чат слева</div>
+          <div class="message-list" id="messageList"><p class="empty">История загрузится из общей базы после выбора чата.</p></div>
+          <form id="sendForm" class="send-form">
+            <input id="messageInput" autocomplete="off" placeholder="Сообщение…" disabled>
+            <button class="primary send-button" type="submit" disabled id="sendButton">➤</button>
+          </form>
+        </section>
+      </div>
+      <p class="fineprint">Это первый этап проверки общей авторизации и чатов. Остальные старые веб-разделы VOLTRA пока не перенесены на Gramsrv.</p>
+    </section>
+
+    <footer>VOLTRA · Единая серверная база PostgreSQL</footer>
+  </main>
+  <script type="module" src="/shared-login/main.mjs"></script>
+</body>
+</html>
