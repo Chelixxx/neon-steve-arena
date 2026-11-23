@@ -3,12 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "prestart": "npm run build:shared-login",
+    "start": "node server.js",
+    "build:shared-login": "vite build --config shared-login/vite.config.mjs",
+    "check": "node --check server.js && node --check shared-login/main.mjs"
   },
   "dependencies": {
-    "ws": "^8.18.0",
+    "@mtcute/web": "^0.32.8",
+    "@mtcute/wasm": "^0.32.8",
     "nodemailer": "^6.10.1",
-    "web-push": "^3.6.7"
+    "vite": "^6.0.0",
+    "web-push": "^3.6.7",
+    "ws": "^8.18.0"
   },
   "engines": {
     "node": ">=18"
